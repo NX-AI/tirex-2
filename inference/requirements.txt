@@ -1,0 +1,7 @@
+fastapi[standard]==0.138.0
+paho-mqtt==2.1.0
+pydantic==2.13.0
+fastmcp==3.4.0
+pydantic-settings==2.13.0
+requests==2.34.0
+tirex-2
