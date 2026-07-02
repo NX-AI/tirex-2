@@ -19,7 +19,7 @@ Run the GPU container:
 docker run --gpus all -p 8000:8000 -it ghcr.io/nx-ai/tirex2-gpu
 ```
 
-Both GPU and CPU containers has run a warmup forecast in order to compile parts of the model (CPU and GPU) and compile CUDA code (GPU)
+Both the CPU and GPU containers run a warmup forecast on startup so the model is compiled before the first request. torch.compile generates kernels for parts of the model (C++ on CPU, Triton on GPU), and on GPU it also JIT-compiles FlashRNN's native CUDA kernels. Warmup can take up to ~10-20 seconds.
 
 When the container is running and has the model loaded, it exposes the HTTP API at [http://localhost:8000/](http://localhost:8000/). Swagger documentation of the API is provided at [http://localhost:8000/docs](http://localhost:8000/docs).
 
@@ -34,11 +34,30 @@ curl -s -X POST "http://localhost:8000/univariate/forecast/mean" \
         "prediction_length": 5
       }'
 
+# Univariate batch (batch size 2): two independent series forecast in a single request
+curl -s -X POST "http://localhost:8000/univariate/forecast/mean" \
+  -H 'Content-Type: application/json' \
+  -d '{
+        "context": [[1, 2, 3, 4, 5, 6, 7, 8], [8, 7, 6, 5, 4, 3, 2, 1]],
+        "prediction_length": 5
+      }'
+
 # Multivariate (multi-target) series
 curl -s -X POST "http://localhost:8000/multivariate/forecast/mean" \
   -H 'Content-Type: application/json' \
   -d '{
         "context": [{"target": [[1, 2, 3, 4, 5, 6, 7, 8], [10, 20, 30, 40, 50, 60, 70, 80]]}],
+        "prediction_length": 5
+      }'
+
+# Multivariate batch (batch size 2): two independent multi-target series in a single request
+curl -s -X POST "http://localhost:8000/multivariate/forecast/mean" \
+  -H 'Content-Type: application/json' \
+  -d '{
+        "context": [
+          {"target": [[1, 2, 3, 4, 5, 6, 7, 8], [10, 20, 30, 40, 50, 60, 70, 80]]},
+          {"target": [[8, 7, 6, 5, 4, 3, 2, 1], [80, 70, 60, 50, 40, 30, 20, 10]]}
+        ],
         "prediction_length": 5
       }'
 
@@ -50,6 +69,23 @@ curl -s -X POST "http://localhost:8000/multivariate/forecast/mean" \
           "target": [[1, 2, 3, 4, 5, 6, 7, 8]],
           "future_covariates": [[0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0]]
         }],
+        "prediction_length": 5
+      }'
+
+# Multivariate with future covariates, batch (batch size 2): two independent series in a single request
+curl -s -X POST "http://localhost:8000/multivariate/forecast/mean" \
+  -H 'Content-Type: application/json' \
+  -d '{
+        "context": [
+          {
+            "target": [[1, 2, 3, 4, 5, 6, 7, 8]],
+            "future_covariates": [[0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0]]
+          },
+          {
+            "target": [[8, 7, 6, 5, 4, 3, 2, 1]],
+            "future_covariates": [[1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1]]
+          }
+        ],
         "prediction_length": 5
       }'
 ```
@@ -65,11 +101,31 @@ resp = requests.post(
 )
 print(resp.json())
 
+# Univariate batch (batch size 2): two independent series forecast in a single request
+resp = requests.post(
+    f"http://localhost:8000/univariate/forecast/mean",
+    json={"context": [[1, 2, 3, 4, 5, 6, 7, 8], [8, 7, 6, 5, 4, 3, 2, 1]], "prediction_length": 5},
+)
+print(resp.json())
+
 # Multivariate (multi-target) series
 resp = requests.post(
     f"http://localhost:8000/multivariate/forecast/mean",
     json={
         "context": [{"target": [[1, 2, 3, 4, 5, 6, 7, 8], [10, 20, 30, 40, 50, 60, 70, 80]]}],
+        "prediction_length": 5,
+    },
+)
+print(resp.json())
+
+# Multivariate batch (batch size 2): two independent multi-target series in a single request
+resp = requests.post(
+    f"http://localhost:8000/multivariate/forecast/mean",
+    json={
+        "context": [
+            {"target": [[1, 2, 3, 4, 5, 6, 7, 8], [10, 20, 30, 40, 50, 60, 70, 80]]},
+            {"target": [[8, 7, 6, 5, 4, 3, 2, 1], [80, 70, 60, 50, 40, 30, 20, 10]]},
+        ],
         "prediction_length": 5,
     },
 )
@@ -87,67 +143,50 @@ resp = requests.post(
     },
 )
 print(resp.json())
-```
 
-**JavaScript/Node.js:**
-```js
-const BASE_URL = "http://localhost:8000";
-const headers = { "Content-Type": "application/json" };
-
-const post = async (path, payload) => {
-  const res = await fetch(`${BASE_URL}${path}`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(payload),
-  });
-  return res.json();
-};
-
-// Univariate series
-console.log(await post("/univariate/forecast/mean", {
-  context: [[1, 2, 3, 4, 5, 6, 7, 8]],
-  prediction_length: 5,
-}));
-
-// Multivariate (multi-target) series
-console.log(await post("/multivariate/forecast/mean", {
-  context: [{ target: [[1, 2, 3, 4, 5, 6, 7, 8], [10, 20, 30, 40, 50, 60, 70, 80]] }],
-  prediction_length: 5,
-}));
-
-// Multivariate with future covariates
-console.log(await post("/multivariate/forecast/mean", {
-  context: [{
-    target: [[1, 2, 3, 4, 5, 6, 7, 8]],
-    future_covariates: [[0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0]],
-  }],
-  prediction_length: 5,
-}));
+# Multivariate with future covariates, batch (batch size 2): two independent series in a single request
+resp = requests.post(
+    f"http://localhost:8000/multivariate/forecast/mean",
+    json={
+        "context": [
+            {
+                "target": [[1, 2, 3, 4, 5, 6, 7, 8]],
+                "future_covariates": [[0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0]],
+            },
+            {
+                "target": [[8, 7, 6, 5, 4, 3, 2, 1]],
+                "future_covariates": [[1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1]],
+            },
+        ],
+        "prediction_length": 5,
+    },
+)
+print(resp.json())
 ```
 
 Every request is batched, so provide a list of timeseries as context, even when you only forecast a single timeseries. Bigger batch sizes are more efficient for the hardware, but too big batch sizes can lead to out of memory errors. There isn't any internal batching done, so the consumer of the API is responsible to call with an appropriate batch size for the hardware.
 
-The HTTP API also provides `/univariate/forecast/quantiles` and `/multivariate/forecast/quantiles`, where the 10, 20, 30, 50 (mean), 60, 70, 80 and 90% quantiles are returned, using the same arguments as the `/univariate/forecast/quantiles` and `/multivariate/forecast/quantiles` endpoints respectively.
+The HTTP API also provides `/univariate/forecast/quantiles` and `/multivariate/forecast/quantiles`, where the 10, 20, 30, 50 (mean), 60, 70, 80 and 90% quantiles are returned, using the same arguments as the `/univariate/forecast/mean` and `/multivariate/forecast/mean` endpoints respectively.
 
 ### MQTT API
 To use the MQTT API, you need an appropriate MQTT broker running. For some quick testing, a public test MQTT broker like [broker.emqx.io](https://broker.emqx.io) works (Do not send sensitive data to a public broker!). For testing we also use the [MQTTX CLI](https://mqttx.app/cli)
 
 Start the container with MQTT:
 ```
-docker run -p 8000:8000 -it -e MQTT_ENABLED=1 -e MQTT_BROKER_HOST=broker.emqx.io -e MQTT_BROKER_PORT=1883 ghcr.io/nx-ai/tirex-cpu
+docker run -p 8000:8000 -it -e MQTT_ENABLED=1 -e MQTT_BROKER_HOST=broker.emqx.io -e MQTT_BROKER_PORT=1883 ghcr.io/nx-ai/tirex2-cpu
 ```
 
 Subscribe to result topic:
 ```
-mqttx sub -t 'tirex/forecast/result' -h 'broker.emqx.io' -p 1883
+mqttx sub -t 'tirex/univariate/forecast/result' -h 'broker.emqx.io' -p 1883
 ```
 
 Send forecast request:
 ```
-mqttx pub -t 'tirex/forecast/request' -h 'broker.emqx.io' -p 1883 -m '{"id": "1234", "context": [[0, 1, 2, 3]], "prediction_length": 4}'
+mqttx pub -t 'tirex/univariate/forecast/request' -h 'broker.emqx.io' -p 1883 -m '{"id": "1234", "context": [[0, 1, 2, 3]], "prediction_length": 4}'
 ```
 
-If an error happens during processing the request, that error is published to the topic `tirex/forecast/error`.
+If an error happens during processing the request, that error is published to the topic `tirex/univariate/forecast/error`.
 
 ### MCP
 
@@ -164,22 +203,30 @@ To connect the MCP to a tool like Claude Desktop, follow their [guide](https://m
 
 ## Configuration Options
 
-You can set these env variables when running the container using the -e env flag, like `docker run -e MODEL_COMPILE=0 ghcr.io/nx-ai/tirex-cpu`
+You can set these env variables when running the container using the -e env flag, like `docker run -e MODEL_DEVICE=cuda ghcr.io/nx-ai/tirex2-cpu`
 
-| Environment Variable           | Default Value            | Description                                                     |
-| :----------------------------- | :----------------------- | :-------------------------------------------------------------- |
-| **MODEL_PATH**                 | `NX-AI/TiRex`            | The Huggingface model id.                                       |
-| **MQTT_ENABLED**               | `0`                      | Enable MQTT client functionality (1=True, 0=False)              |
-| **MQTT_BROKER_HOST**           | `None`                   | Hostname or IP address of the MQTT broker.                      |
-| **MQTT_BROKER_PORT**           | `None`                   | Port of the MQTT broker.                                        |
-| **MQTT_BROKER_USERNAME**       | `None`                   | Username for authenticating with the MQTT broker (if required). |
-| **MQTT_BROKER_PASSWORD**       | `None`                   | Password for authenticating with the MQTT broker (if required). |
-| **MQTT_TOPIC_FORECAST**        | `tirex/forecast/request` | MQTT topic to subscribe to for receiving forecast requests.     |
-| **MQTT_TOPIC_FORECAST_RESULT** | `tirex/forecast/result`  | MQTT topic to publish successful forecast results to.           |
-| **MQTT_TOPIC_FORECAST_ERROR**  | `tirex/forecast/error`   | MQTT topic to publish forecast error messages to.               |
+| Environment Variable                        | Default Value                         | Description                                                     |
+| :------------------------------------------ | :------------------------------------ | :-------------------------------------------------------------- |
+| **MODEL_PATH**                              | `NX-AI/TiRex-2`                       | The Huggingface model id.                                       |
+| **MODEL_DEVICE**                            | `cpu`                                 | Device to run the model on (`cpu` or `cuda`).                   |
+| **HTTP_HOST**                               | `0.0.0.0`                             | Host the HTTP server binds to.                                  |
+| **HTTP_PORT**                               | `8000`                                | Port the HTTP server binds to.                                  |
+| **MQTT_ENABLED**                            | `0`                                   | Enable MQTT client functionality (1=True, 0=False).             |
+| **MQTT_BROKER_HOST**                        | `None`                                | Hostname or IP address of the MQTT broker.                      |
+| **MQTT_BROKER_PORT**                        | `None`                                | Port of the MQTT broker.                                        |
+| **MQTT_BROKER_USERNAME**                    | `None`                                | Username for authenticating with the MQTT broker (if required). |
+| **MQTT_BROKER_PASSWORD**                    | `None`                                | Password for authenticating with the MQTT broker (if required). |
+| **MQTT_TOPIC_FORECAST**                     | `tirex/univariate/forecast/request`   | Topic to subscribe to for univariate forecast requests.         |
+| **MQTT_TOPIC_FORECAST_RESULT**              | `tirex/univariate/forecast/result`    | Topic to publish successful univariate forecast results to.     |
+| **MQTT_TOPIC_FORECAST_ERROR**               | `tirex/univariate/forecast/error`     | Topic to publish univariate forecast error messages to.         |
+| **MQTT_TOPIC_MULTIVARIATE_FORECAST**        | `tirex/multivariate/forecast/request` | Topic to subscribe to for multivariate forecast requests.       |
+| **MQTT_TOPIC_MULTIVARIATE_FORECAST_RESULT** | `tirex/multivariate/forecast/result`  | Topic to publish successful multivariate forecast results to.   |
+| **MQTT_TOPIC_MULTIVARIATE_FORECAST_ERROR**  | `tirex/multivariate/forecast/error`   | Topic to publish multivariate forecast error messages to.       |
 
 
 ## Build and run the docker container
+
+`NX-AI/TiRex-2` is a gated Hugging Face repo, so provide a read access token via `HF_TOKEN` to download the weights — either from your shell (`export HF_TOKEN=hf_xxxxxxxx`) or via an `--env-file`.
 
 ### CPU Container
 
@@ -190,7 +237,10 @@ docker build -f Dockerfile.cpu -t tirex2-inference-cpu .
 
 Run the CPU container:
 ```
-docker run -p 8000:8000 -it tirex2-inference-cpu
+docker run --rm -p 8000:8000 \
+  -e HF_TOKEN \
+  -v tirex-hf-cache:/home/appuser/.cache/huggingface \
+  tirex2-inference-cpu
 ```
 
 ### GPU Container
@@ -202,10 +252,17 @@ docker build -f Dockerfile.gpu -t tirex2-inference-gpu .
 
 Run the GPU container:
 ```
-docker run --gpus all -p 8000:8000 -it tirex2-inference-gpu
+docker run --rm --gpus 1 -p 8000:8000 \
+  -e HF_TOKEN \
+  -v tirex-hf-cache:/home/ubuntu/.cache/huggingface \
+  -v tirex-triton-cache:/var/cache/triton \
+  -v tirex-inductor-cache:/var/cache/torchinductor \
+  tirex2-inference-gpu
 ```
 
 ## Development Setup
+
+Running the server (and the tests) also downloads the gated weights, so set `HF_TOKEN` in your environment first (`export HF_TOKEN=hf_xxxxxxxx`) or run `huggingface-cli login`.
 
 ### Install Python dependencies:
 ```
@@ -214,17 +271,20 @@ pip install -r requirements.txt -r requirements-dev.txt
 
 ### Run the server:
 ```
+cd inference
 python -m app.main
 ```
 
 ### Run Tests:
 Run while starting the server locally:
 ```
+cd inference
 pytest tests
 ```
 
 Run tests against a running container:
 ```
+cd inference
 TEST_START_SERVER=0 TEST_PORT=8000 pytest tests -s
 ```
 

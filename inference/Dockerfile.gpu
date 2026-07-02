@@ -25,7 +25,7 @@ ENV PATH="/opt/venv/bin:${PATH}"
 RUN python -m pip install --upgrade pip setuptools wheel
 
 # WORKDIR /app
-COPY inference/requirements.txt .
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Remove pythoch cache and test folders
@@ -71,10 +71,10 @@ COPY --from=builder /opt/venv /opt/venv
 RUN install -d -o ubuntu -g ubuntu /home/ubuntu/app
 WORKDIR /home/ubuntu/app
 
-COPY inference/THIRD-PARTY-LICENSES.md .
+COPY THIRD-PARTY-LICENSES.md .
 
 # Keep your existing project layout (app/main.py, etc.)
-COPY --chown=ubuntu:ubuntu inference/app/ ./app/
+COPY --chown=ubuntu:ubuntu app/ ./app/
 
 # Optional: centralize JIT caches so you can persist them
 RUN mkdir -p /var/cache/triton /var/cache/torchinductor && \
