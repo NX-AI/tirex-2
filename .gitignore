@@ -1,0 +1,23 @@
+# pixi environments
+.pixi/*
+!.pixi/config.toml
+
+**/__pycache__/
+output/
+**/output/
+.zed/
+*.egg-info
+/model/
+*.csv
+build/
+dist/
+
+.ipynb_checkpoints/
+.idea/
+
+test/*
+!test/test_postprocessor_instantiation.py
+!test/test_tirex2_instantiation.py
+!test/test_api_adapter.py
+!test/test_forecast_model.py
+/venv

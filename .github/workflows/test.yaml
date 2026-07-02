@@ -1,0 +1,20 @@
+name: Run Core Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  core-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: prefix-dev/setup-pixi@v0.9.6
+        with:
+          environments: test-cpu
+          frozen: true
+
+      - name: Run tests on CPU
+        run: pixi run -e test-cpu test

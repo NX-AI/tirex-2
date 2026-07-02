@@ -1,0 +1,55 @@
+# From https://docs.github.com/en/actions/tutorials/build-and-test-code/python#publishing-to-pypi
+
+name: Publish Python Package
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: prefix-dev/setup-pixi@v0.9.6
+        with:
+          environments: pypi-build
+          frozen: true
+
+      - name: Build release distributions
+        run: pixi run -e pypi-build python -m build
+
+      - name: Upload distributions
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-dists
+          path: dist/
+
+
+  pypi-publish:
+    runs-on: ubuntu-latest
+    if: ${{ github.repository == 'NX-AI/tirex-2' }}
+
+    needs:
+      - release-build
+
+    permissions:
+      id-token: write # this permission is mandatory for trusted publishing
+
+    environment:
+      name: pypi
+      url: https://pypi.org/p/tirex-2
+
+    steps:
+      - name: Retrieve release distributions
+        uses: actions/download-artifact@v8
+        with:
+          name: release-dists
+          path: dist/
+
+      - name: Publish release distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
