@@ -6,6 +6,8 @@ import time
 
 import paho.mqtt.client as mqtt
 import requests
+from paho.mqtt.packettypes import PacketTypes
+from paho.mqtt.properties import Properties
 
 from app.config import Settings
 
@@ -14,21 +16,22 @@ class TirexMQTTClient:
     def __init__(self, config: Settings):
         self.config: Settings = config
 
-        self.client = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION2)
+        self.client = mqtt.Client(
+            client_id=config.mqtt_client_id,
+            callback_api_version=mqtt.CallbackAPIVersion.VERSION2,
+            protocol=mqtt.MQTTv5,
+        )
+
         if config.mqtt_broker_username is not None:
             self.client.username_pw_set(username=config.mqtt_broker_username, password=config.mqtt_broker_password)
 
         self.topic_handlers = {
-            config.mqtt_topic_forecast: {
+            config.mqtt_topic_univariate_forecast: {
                 "endpoint": "/univariate/forecast/quantiles",
-                "result_topic": config.mqtt_topic_forecast_result,
-                "error_topic": config.mqtt_topic_forecast_error,
                 "multivariate": False,
             },
             config.mqtt_topic_multivariate_forecast: {
                 "endpoint": "/multivariate/forecast/quantiles",
-                "result_topic": config.mqtt_topic_multivariate_forecast_result,
-                "error_topic": config.mqtt_topic_multivariate_forecast_error,
                 "multivariate": True,
             },
         }
@@ -40,9 +43,16 @@ class TirexMQTTClient:
 
     def on_message(self, client, userdata, msg):
         handler = self.topic_handlers.get(msg.topic)
-        if handler is None:
-            print(f"Received message on unhandled topic: {msg.topic}")
+
+        response_topic = getattr(msg.properties, "ResponseTopic", None)
+        if response_topic is None:
+            print(f"Rejecting request on {msg.topic}: no ResponseTopic")
             return
+        correlation_data = getattr(msg.properties, "CorrelationData", None)
+
+        out_props = Properties(PacketTypes.PUBLISH)
+        if correlation_data is not None:
+            out_props.CorrelationData = correlation_data
 
         msg_id = None
         try:
@@ -52,11 +62,11 @@ class TirexMQTTClient:
             quantiles, mean = self.predict(handler, context, prediction_length)
 
             message = {"id": msg_id, "mean": mean, "quantiles": quantiles}
-            self.client.publish(handler["result_topic"], json.dumps(message))
+            self.client.publish(response_topic, json.dumps(message), qos=1, properties=out_props)
         except Exception as e:
             print(f"Error processing message: {e}")
             message = {"id": msg_id, "error": str(e)}
-            self.client.publish(handler["error_topic"], json.dumps(message))
+            self.client.publish(response_topic, json.dumps(message), qos=1, properties=out_props)
 
     def predict(self, handler, context, prediction_length):
         response = requests.post(
@@ -82,7 +92,15 @@ class TirexMQTTClient:
             print(f"MQTT is waiting for the HTTP server at {self.http_url} to load the model and go online")
             self.wait_for_api()
             print(f"Connecting to MQTT broker at {self.config.mqtt_broker_host}:{self.config.mqtt_broker_port}")
-            self.client.connect(self.config.mqtt_broker_host, self.config.mqtt_broker_port, keepalive)
+            connect_props = Properties(PacketTypes.CONNECT)
+            connect_props.SessionExpiryInterval = self.config.mqtt_session_expiry
+            self.client.connect(
+                self.config.mqtt_broker_host,
+                self.config.mqtt_broker_port,
+                keepalive,
+                clean_start=False,
+                properties=connect_props,
+            )
             self.client.loop_forever()
         finally:
             self.disconnect()
@@ -92,15 +110,15 @@ class TirexMQTTClient:
         print("MQTT client disconnected")
 
     def on_connect(self, client, userdata, connect_flags, reason_code, properties):
-        if reason_code == 0:
+        if reason_code.is_failure:
+            print(f"Failed to connect to MQTT broker with code: {reason_code}")
+        else:
             print("Connected to MQTT broker")
             for topic in self.topic_handlers:
-                client.subscribe(topic)
-        else:
-            print(f"Failed to connect to MQTT broker with code: {reason_code}")
+                client.subscribe(topic, qos=1)
 
     def on_disconnect(self, client, userdata, disconnect_flags, reason_code, properties):
-        if reason_code != 0:
+        if reason_code.is_failure:
             print(f"Unexpected disconnection from MQTT broker with code: {reason_code}")
 
     def wait_for_api(self, timeout=300):

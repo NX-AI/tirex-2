@@ -169,24 +169,33 @@ Every request is batched, so provide a list of timeseries as context, even when 
 The HTTP API also provides `/univariate/forecast/quantiles` and `/multivariate/forecast/quantiles`, where the 10, 20, 30, 50 (mean), 60, 70, 80 and 90% quantiles are returned, using the same arguments as the `/univariate/forecast/mean` and `/multivariate/forecast/mean` endpoints respectively.
 
 ### MQTT API
-To use the MQTT API, you need an appropriate MQTT broker running. For some quick testing, a public test MQTT broker like [broker.emqx.io](https://broker.emqx.io) works (Do not send sensitive data to a public broker!). For testing we also use the [MQTTX CLI](https://mqttx.app/cli)
+The MQTT integration uses **MQTT v5** with a request/reply pattern. TiRex subscribes to the forecast **request** topics and publishes each result back to the **response topic the requester specifies on the request** (the MQTT v5 `Response Topic` property). Every client therefore receives only its own results — there is no shared result topic.
+
+To use the MQTT API you need a **v5-capable** MQTT broker running. For some quick testing, a public test MQTT broker like [broker.emqx.io](https://broker.emqx.io) works (Do not send sensitive data to a public broker!). For testing we also use the [MQTTX CLI](https://mqttx.app/cli).
 
 Start the container with MQTT:
 ```
 docker run -p 8000:8000 -it -e MQTT_ENABLED=1 -e MQTT_BROKER_HOST=broker.emqx.io -e MQTT_BROKER_PORT=1883 ghcr.io/nx-ai/tirex2-cpu
 ```
 
-Subscribe to result topic:
+Each request must be sent over MQTT v5 and set a **Response Topic** telling TiRex where to publish the result. Optionally set **Correlation Data** to match the reply back to the request. Requests without a Response Topic are rejected.
+
+Subscribe to your own reply topic (choose any topic unique to your client), over MQTT v5:
 ```
-mqttx sub -t 'tirex/univariate/forecast/result' -h 'broker.emqx.io' -p 1883
+mqttx sub -V 5 -t 'tirex/my-client/result' -h 'broker.emqx.io' -p 1883
 ```
 
-Send forecast request:
+Send a forecast request, pointing its Response Topic at that reply topic:
 ```
-mqttx pub -t 'tirex/univariate/forecast/request' -h 'broker.emqx.io' -p 1883 -m '{"id": "1234", "context": [[0, 1, 2, 3]], "prediction_length": 4}'
+mqttx pub -V 5 \
+  -t 'tirex/univariate/forecast/request' \
+  --response-topic 'tirex/my-client/result' \
+  --correlation-data '1234' \
+  -h 'broker.emqx.io' -p 1883 \
+  -m '{"id": "1234", "context": [[0, 1, 2, 3]], "prediction_length": 4}'
 ```
 
-If an error happens during processing the request, that error is published to the topic `tirex/univariate/forecast/error`.
+The result is published to your Response Topic, with the Correlation Data echoed back. Successful results contain `mean` and `quantiles`; if an error happens during processing, the message published to the same Response Topic contains an `error` field instead.
 
 ### MCP
 
@@ -216,12 +225,10 @@ You can set these env variables when running the container using the -e env flag
 | **MQTT_BROKER_PORT**                        | `None`                                | Port of the MQTT broker.                                        |
 | **MQTT_BROKER_USERNAME**                    | `None`                                | Username for authenticating with the MQTT broker (if required). |
 | **MQTT_BROKER_PASSWORD**                    | `None`                                | Password for authenticating with the MQTT broker (if required). |
-| **MQTT_TOPIC_FORECAST**                     | `tirex/univariate/forecast/request`   | Topic to subscribe to for univariate forecast requests.         |
-| **MQTT_TOPIC_FORECAST_RESULT**              | `tirex/univariate/forecast/result`    | Topic to publish successful univariate forecast results to.     |
-| **MQTT_TOPIC_FORECAST_ERROR**               | `tirex/univariate/forecast/error`     | Topic to publish univariate forecast error messages to.         |
+| **MQTT_CLIENT_ID**                          | `tirex-worker`                        | Stable, unique client id so the broker can resume the session on reconnect. |
+| **MQTT_SESSION_EXPIRY**                     | `3600`                                | Seconds the broker retains the session (and queued requests) while disconnected. |
+| **MQTT_TOPIC_UNIVARIATE_FORECAST**          | `tirex/univariate/forecast/request`   | Topic to subscribe to for univariate forecast requests.         |
 | **MQTT_TOPIC_MULTIVARIATE_FORECAST**        | `tirex/multivariate/forecast/request` | Topic to subscribe to for multivariate forecast requests.       |
-| **MQTT_TOPIC_MULTIVARIATE_FORECAST_RESULT** | `tirex/multivariate/forecast/result`  | Topic to publish successful multivariate forecast results to.   |
-| **MQTT_TOPIC_MULTIVARIATE_FORECAST_ERROR**  | `tirex/multivariate/forecast/error`   | Topic to publish multivariate forecast error messages to.       |
 
 
 ## Build and run the docker container

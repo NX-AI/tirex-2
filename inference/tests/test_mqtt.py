@@ -9,6 +9,8 @@ from uuid import uuid4
 import paho.mqtt.client as mqtt
 import pytest
 from paho.mqtt.client import MQTTMessage
+from paho.mqtt.packettypes import PacketTypes
+from paho.mqtt.properties import Properties
 
 from conftest import (
     MEDIAN_QUANTILE_INDEX,
@@ -28,7 +30,10 @@ Q = MEDIAN_QUANTILE_INDEX
 
 @pytest.fixture(scope="module")
 def mqtt_client():
-    client = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION2)
+    client = mqtt.Client(
+        callback_api_version=mqtt.CallbackAPIVersion.VERSION2,
+        protocol=mqtt.MQTTv5,
+    )
     try:
         client.connect(mqtt_host, mqtt_port, 60)
         client.loop_start()
@@ -65,50 +70,56 @@ def message_listener(mqtt_client):
     mqtt_client.on_message = None
 
 
-def _roundtrip(message_listener, request_topic, result_topic, context):
+def _roundtrip(message_listener, request_topic, context):
     client, message_queue = message_listener
-    client.subscribe(result_topic)
 
-    id = str(uuid4())
-    msg = {"id": id, "context": context, "prediction_length": PREDICTION_LENGTH}
-    client.publish(request_topic, json.dumps(msg))
+    correlation = str(uuid4())
+    reply_topic = f"tirex/test/reply/{correlation}"
+    client.subscribe(reply_topic, qos=1)
 
-    msg: MQTTMessage = message_queue.get(timeout=test_timeout)
-    assert msg.topic == result_topic
+    props = Properties(PacketTypes.PUBLISH)
+    props.ResponseTopic = reply_topic
+    props.CorrelationData = correlation.encode()
 
+    request = {"id": correlation, "context": context, "prediction_length": PREDICTION_LENGTH}
+    client.publish(request_topic, json.dumps(request), qos=1, properties=props)
+
+    try:
+        while True:
+            msg: MQTTMessage = message_queue.get(timeout=test_timeout)
+            if getattr(msg.properties, "CorrelationData", None) == correlation.encode():
+                break
+    finally:
+        client.unsubscribe(reply_topic)
+
+    assert msg.topic == reply_topic
     payload = json.loads(msg.payload.decode())
-    assert payload["id"] == id
+    assert "error" not in payload, payload.get("error")
     return payload
 
 
 def test_mqtt_univariate(message_listener, api_server):
-    # return shape mean: [series][timestep]
     payload = _roundtrip(
         message_listener,
         "tirex/univariate/forecast/request",
-        "tirex/univariate/forecast/result",
         [TARGET],
     )
     assert_forecast_close(payload["mean"], [REFERENCE.uni[0, Q]])
 
 
 def test_mqtt_multivariate(message_listener, api_server):
-    # return shape mean: [series][variate][timestep]
     payload = _roundtrip(
         message_listener,
         "tirex/multivariate/forecast/request",
-        "tirex/multivariate/forecast/result",
         [MULTIVARIATE_SERIES],
     )
     assert_forecast_close(payload["mean"], [REFERENCE.multi[:, Q, :]])
 
 
 def test_mqtt_batch(message_listener, api_server):
-    # The same univariate series repeated must give the same per-item forecast.
     payload = _roundtrip(
         message_listener,
         "tirex/univariate/forecast/request",
-        "tirex/univariate/forecast/result",
         [TARGET, TARGET],
     )
     assert_forecast_close(payload["mean"], [REFERENCE.uni[0, Q], REFERENCE.uni[0, Q]])

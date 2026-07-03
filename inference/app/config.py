@@ -16,13 +16,8 @@ class Settings(BaseSettings):
     mqtt_broker_port: int | None = None
     mqtt_broker_username: str | None = None
     mqtt_broker_password: str | None = None
+    mqtt_client_id: str = "tirex-worker"
+    mqtt_session_expiry: int = 3600
 
-    # Univariate forecast topics
-    mqtt_topic_forecast: str = "tirex/univariate/forecast/request"
-    mqtt_topic_forecast_result: str = "tirex/univariate/forecast/result"
-    mqtt_topic_forecast_error: str = "tirex/univariate/forecast/error"
-
-    # Multivariate forecast topics
+    mqtt_topic_univariate_forecast: str = "tirex/univariate/forecast/request"
     mqtt_topic_multivariate_forecast: str = "tirex/multivariate/forecast/request"
-    mqtt_topic_multivariate_forecast_result: str = "tirex/multivariate/forecast/result"
-    mqtt_topic_multivariate_forecast_error: str = "tirex/multivariate/forecast/error"
