@@ -71,15 +71,15 @@ def assert_default_prediction_correct(forecast: list[float]):
 # References
 # --------------------------------------------------------------------------- #
 
-_TESTS_DIR = Path(__file__).parent
-_REFERENCES_DIR = _TESTS_DIR / "references"
-_INPUT = json.loads((_REFERENCES_DIR / "reference_input.json").read_text())
-_OUTPUT = json.loads((_REFERENCES_DIR / "reference_output_cpu.json").read_text())
+TESTS_DIR = Path(__file__).parent
+REFERENCES_DIR = TESTS_DIR / "references"
+INPUT = json.loads((REFERENCES_DIR / "reference_input.json").read_text())
+OUTPUT = json.loads((REFERENCES_DIR / "reference_output_cpu.json").read_text())
 
-PREDICTION_LENGTH = _INPUT["H"]
-TARGET = _INPUT["target"]
-OTHER_TARGET = _INPUT["other_target"]
-FUTURE_COVARIATES = _INPUT["future_covariates"]
+PREDICTION_LENGTH = INPUT["H"]
+TARGET = INPUT["target"]
+OTHER_TARGET = INPUT["other_target"]
+FUTURE_COVARIATES = INPUT["future_covariates"]
 
 UNIVARIATE_SERIES = {"target": [TARGET], "past_covariates": None, "future_covariates": None}
 MULTIVARIATE_SERIES = {"target": [TARGET], "past_covariates": None, "future_covariates": FUTURE_COVARIATES}
@@ -87,9 +87,9 @@ MULTITARGET_SERIES = {"target": [TARGET, OTHER_TARGET], "past_covariates": None,
 
 # [num_target_variates, num_quantiles, prediction_length].
 REFERENCE = SimpleNamespace(
-    uni=np.array(_OUTPUT["uni"], dtype=np.float32),
-    multi=np.array(_OUTPUT["multi"], dtype=np.float32),
-    multitarget=np.array(_OUTPUT["multitarget"], dtype=np.float32),
+    univariate=np.array(OUTPUT["univariate"], dtype=np.float32),
+    multivariate=np.array(OUTPUT["multivariate"], dtype=np.float32),
+    multitarget=np.array(OUTPUT["multitarget"], dtype=np.float32),
 )
 MEDIAN_QUANTILE_INDEX = 4
 

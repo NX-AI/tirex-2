@@ -7,7 +7,13 @@ import re
 import pytest
 from fastmcp import Client
 
-from conftest import assert_default_prediction_correct, get_default_context
+from conftest import (
+    MEDIAN_QUANTILE_INDEX,
+    PREDICTION_LENGTH,
+    REFERENCE,
+    TARGET,
+    assert_forecast_close,
+)
 
 
 @pytest.fixture
@@ -19,12 +25,11 @@ async def main_mcp_client(api_server):
 async def test_list_tools(main_mcp_client: Client):
     list_tools = await main_mcp_client.list_tools()
 
-    assert len(list_tools) == 1
+    assert len(list_tools) == 2
 
 
 async def test_mcp(main_mcp_client):
-    context, prediction_length = get_default_context()
-    params = {"context": context[0], "prediction_length": prediction_length}
+    params = {"context": TARGET, "prediction_length": PREDICTION_LENGTH}
 
     result = await main_mcp_client.call_tool("tirex_model", params)
 
@@ -33,4 +38,5 @@ async def test_mcp(main_mcp_client):
 
     result_list = json.loads(re.search(r"Forecasted values:\s*(\[.*?\])", result.data, re.DOTALL).group(1))
 
-    assert_default_prediction_correct([result_list])
+    # MCP is single-series and returns the median quantile, matching the univariate reference.
+    assert_forecast_close(result_list, REFERENCE.univariate[0, MEDIAN_QUANTILE_INDEX])

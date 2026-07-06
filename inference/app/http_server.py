@@ -4,6 +4,7 @@
 import torch
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from fastmcp import FastMCP
 from pydantic import BaseModel
 
 from app.config import Settings
@@ -111,3 +112,76 @@ def multivariate_forecast_quantiles(req: MultivariateForecastRequest) -> list[li
     forecasts = model.predict(contexts, req.prediction_length)
     # forecasts: [variate, quantile, timestep]; keep all variates -> f.
     return [f.tolist() for f in forecasts]
+
+
+# --------------------------------------------------------------------------- #
+# MCP API
+# --------------------------------------------------------------------------- #
+
+
+mcp = FastMCP("TiRex MCP")
+
+disclaimer = (
+    "Disclaimer: NXAI is not responsible for any incorrect interpretations of the "
+    "forecasted values by LLMs. Check the TiRex license for more details: "
+    "https://github.com/NX-AI/tirex\n\n"
+)
+
+
+@mcp.tool()
+async def tirex_model(context: list[float], prediction_length: int) -> str:
+    """Use the TiRex model to forecast time series data."""
+    # MCP is the only API that isn't batched: a single univariate series.
+
+    input_length = len(context)
+    ts = TimeseriesType(target=_to_tensor([context]), past_covariates=None, future_covariates=None)
+    forecasts = model.predict([ts], prediction_length)
+    # forecast: [variate, quantile, timestep]; single variate -> [0], median quantile.
+    mean = forecasts[0][0, MEDIAN_QUANTILE_INDEX, :].tolist()
+
+    return (
+        "TiRex Forecast Results:\n"
+        f"Input data length: {input_length}\n"
+        f"Prediction length: {prediction_length}\n\n"
+        f"Forecasted values: {mean}\n\n"
+        f"{disclaimer}"
+    )
+
+
+@mcp.tool()
+async def tirex_model_multivariate(
+    target: list[list[float]],
+    prediction_length: int,
+    past_covariates: list[list[float]] | None = None,
+    future_covariates: list[list[float]] | None = None,
+) -> str:
+    """Use the TiRex model to forecast multivariate time series data.
+
+    `target` is a list of variates, each a list of values over time ([V, T]).
+    Optional `past_covariates` / `future_covariates` follow the same [V, T] layout.
+    """
+    # MCP is the only API that isn't batched: a single multivariate series.
+
+    input_length = len(target[0]) if target else 0
+    ts = TimeseriesType(
+        target=_to_tensor(target),
+        past_covariates=_to_tensor(past_covariates),
+        future_covariates=_to_tensor(future_covariates),
+    )
+    forecasts = model.predict([ts], prediction_length)
+    # forecast: [variate, quantile, timestep]; take the median quantile per variate.
+    mean = forecasts[0][:, MEDIAN_QUANTILE_INDEX, :].tolist()
+
+    return (
+        "TiRex Multivariate Forecast Results:\n"
+        f"Number of variates: {len(mean)}\n"
+        f"Input data length: {input_length}\n"
+        f"Prediction length: {prediction_length}\n\n"
+        f"Forecasted values (per variate): {mean}\n\n"
+        f"{disclaimer}"
+    )
+
+
+mcp_app = mcp.http_app(path="/")
+app.router.lifespan_context = mcp_app.router.lifespan_context
+app.mount("/mcp", mcp_app)

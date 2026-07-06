@@ -104,7 +104,7 @@ def test_mqtt_univariate(message_listener, api_server):
         "tirex/univariate/forecast/request",
         [TARGET],
     )
-    assert_forecast_close(payload["mean"], [REFERENCE.uni[0, Q]])
+    assert_forecast_close(payload["mean"], [REFERENCE.univariate[0, Q]])
 
 
 def test_mqtt_multivariate(message_listener, api_server):
@@ -113,7 +113,7 @@ def test_mqtt_multivariate(message_listener, api_server):
         "tirex/multivariate/forecast/request",
         [MULTIVARIATE_SERIES],
     )
-    assert_forecast_close(payload["mean"], [REFERENCE.multi[:, Q, :]])
+    assert_forecast_close(payload["mean"], [REFERENCE.multivariate[:, Q, :]])
 
 
 def test_mqtt_batch(message_listener, api_server):
@@ -122,4 +122,4 @@ def test_mqtt_batch(message_listener, api_server):
         "tirex/univariate/forecast/request",
         [TARGET, TARGET],
     )
-    assert_forecast_close(payload["mean"], [REFERENCE.uni[0, Q], REFERENCE.uni[0, Q]])
+    assert_forecast_close(payload["mean"], [REFERENCE.univariate[0, Q], REFERENCE.univariate[0, Q]])

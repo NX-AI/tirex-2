@@ -7,19 +7,23 @@ This docker container runs the TiRex model and provides the following APIs to in
 
 ## Using the docker container
 
+<strong>ℹ️ Note:</strong> To gain access to our model weights, please generate yourself a Hugging Face access token.
+    <a href="https://huggingface.co/settings/tokens/new?canReadGatedRepos=true&tokenType=fineGrained" target="_blank" style="color: #1890ff; text-decoration: none; font-weight: bold;">Click here</a>
+    to generate the token and ensure that you enable <code>"Read access to contents of all public gated repos you can access".</code> When running the Docker image, pass your generated huggingface token as an environment variable.
+
 ### HTTP API
 
 Run the CPU container:
 ```
-docker run -p 8000:8000 -it ghcr.io/nx-ai/tirex2-cpu
+docker run -it -p 8000:8000 -e HF_TOKEN=$YOUR_HF_TOKEN ghcr.io/nx-ai/tirex2-cpu
 ```
 
 Run the GPU container:
 ```
-docker run --gpus all -p 8000:8000 -it ghcr.io/nx-ai/tirex2-gpu
+docker run -it --gpus 1 -p 8000:8000 -e HF_TOKEN=$YOUR_HF_TOKEN ghcr.io/nx-ai/tirex2-gpu
 ```
 
-Both the CPU and GPU containers run a warmup forecast on startup so the model is compiled before the first request. torch.compile generates kernels for parts of the model (C++ on CPU, Triton on GPU), and on GPU it also JIT-compiles FlashRNN's native CUDA kernels. Warmup can take up to ~10-20 seconds.
+Both the CPU and GPU containers run a warmup forecast on startup so the model is compiled before the first request. torch.compile generates kernels for parts of the model (C++ on CPU, Triton on GPU). Download of the model and warmup can take up to ~10-20 seconds.
 
 When the container is running and has the model loaded, it exposes the HTTP API at [http://localhost:8000/](http://localhost:8000/). Swagger documentation of the API is provided at [http://localhost:8000/docs](http://localhost:8000/docs).
 
@@ -173,9 +177,15 @@ The MQTT integration uses **MQTT v5** with a request/reply pattern. TiRex subscr
 
 To use the MQTT API you need a **v5-capable** MQTT broker running. For some quick testing, a public test MQTT broker like [broker.emqx.io](https://broker.emqx.io) works (Do not send sensitive data to a public broker!). For testing we also use the [MQTTX CLI](https://mqttx.app/cli).
 
+Install the MQTTX CLI:
+```
+# Linux x86_64 — standalone binary
+curl -sL https://github.com/emqx/MQTTX/releases/latest/download/mqttx-cli-linux-x64 -o mqttx && sudo install mqttx /usr/local/bin/mqttx
+```
+
 Start the container with MQTT:
 ```
-docker run -p 8000:8000 -it -e MQTT_ENABLED=1 -e MQTT_BROKER_HOST=broker.emqx.io -e MQTT_BROKER_PORT=1883 ghcr.io/nx-ai/tirex2-cpu
+docker run -p 8000:8000 -it -e HF_TOKEN=$YOUR_HF_TOKEN -e MQTT_ENABLED=1 -e MQTT_BROKER_HOST=broker.emqx.io -e MQTT_BROKER_PORT=1883 ghcr.io/nx-ai/tirex2-cpu
 ```
 
 Each request must be sent over MQTT v5 and set a **Response Topic** telling TiRex where to publish the result. Optionally set **Correlation Data** to match the reply back to the request. Requests without a Response Topic are rejected.
@@ -233,20 +243,18 @@ You can set these env variables when running the container using the -e env flag
 
 ## Build and run the docker container
 
-`NX-AI/TiRex-2` is a gated Hugging Face repo, so provide a read access token via `HF_TOKEN` to download the weights — either from your shell (`export HF_TOKEN=hf_xxxxxxxx`) or via an `--env-file`.
-
 ### CPU Container
 
 Build the CPU image:
 ```
+cd inference
 docker build -f Dockerfile.cpu -t tirex2-inference-cpu .
 ```
 
 Run the CPU container:
 ```
 docker run --rm -p 8000:8000 \
-  -e HF_TOKEN \
-  -v tirex-hf-cache:/home/appuser/.cache/huggingface \
+  -e HF_TOKEN=$YOUR_HF_TOKEN \
   tirex2-inference-cpu
 ```
 
@@ -260,10 +268,7 @@ docker build -f Dockerfile.gpu -t tirex2-inference-gpu .
 Run the GPU container:
 ```
 docker run --rm --gpus 1 -p 8000:8000 \
-  -e HF_TOKEN \
-  -v tirex-hf-cache:/home/ubuntu/.cache/huggingface \
-  -v tirex-triton-cache:/var/cache/triton \
-  -v tirex-inductor-cache:/var/cache/torchinductor \
+  -e HF_TOKEN=$YOUR_HF_TOKEN \
   tirex2-inference-gpu
 ```
 
@@ -278,20 +283,17 @@ pip install -r requirements.txt -r requirements-dev.txt
 
 ### Run the server:
 ```
-cd inference
 python -m app.main
 ```
 
 ### Run Tests:
 Run while starting the server locally:
 ```
-cd inference
 pytest tests
 ```
 
 Run tests against a running container:
 ```
-cd inference
 TEST_START_SERVER=0 TEST_PORT=8000 pytest tests -s
 ```
 

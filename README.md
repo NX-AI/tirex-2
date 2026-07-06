@@ -102,6 +102,10 @@ _ = plot_multivariate(ts, forecast, engine="matplotlib")
 To reproduce our results for the [GIFT-Eval](https://huggingface.co/spaces/Salesforce/GIFT-Eval) and [fev-bench](https://huggingface.co/spaces/autogluon/fev-bench) leaderboards, follow the instructions in
 [/examples/gifteval/](./examples/gifteval/README.md) and [/examples/fevbench/](./examples/fevbench/README.md), respectively.
 
+## TiRex Docker image
+
+For detailed instructions on building and running TiRex-2 in a Docker container, see the [Docker README](./inference/README.md)
+
 ## Cite
 
 If you use TiRex in your research, please cite our work:
