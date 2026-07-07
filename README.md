@@ -65,19 +65,18 @@ curl -fsSL https://pixi.sh/install.sh | sh
 
 ## Getting started
 
-The most easy way for you to get started is by checking out our ["Getting Started" notebook](examples/getting_started.ipynb). Moreover, you can jump straight into testing out TiRex using [Google Colab](https://colab.research.google.com/github/NX-AI/tirex-2/blob/main/examples/getting_started.ipynb). If you have cloned this repository, you can also easily start the notebook via Pixi by running:
-```bash
-pixi run notebook
-```
-Note that for `pixi`, depending on your CUDA version and use-case, you may need to use another environment, e.g., `-e example-cu128`, that are defined in [pyproject.toml](pyproject.toml) under section `tool.pixi.environments`.
-
-> :information_source: **Note:** Our model weights are gated on Hugging Face. To download them, [generate yourself a Hugging Face access token](https://huggingface.co/settings/tokens/new?canReadGatedRepos=true&tokenType=fineGrained) (make sure to enable "Read access to contents of all public gated repos you can access") and set it before loading the model:
+> :information_source: **Note:** TiRex-2's model weights are gated on Hugging Face. To download them, [generate yourself a Hugging Face access token](https://huggingface.co/settings/tokens/new?canReadGatedRepos=true&tokenType=fineGrained) (make sure to enable Read access to contents of all public gated repos you can access) and set it before loading the model:
 > ```python
 > import os
 >
 > os.environ["HF_TOKEN"] = "<insert-hf-token>"
 > ```
 
+The most easy way for you to get started is by checking out our ["Getting Started" notebook](examples/getting_started.ipynb). Moreover, you can jump straight into testing out TiRex using [Google Colab](https://colab.research.google.com/github/NX-AI/tirex-2/blob/main/examples/getting_started.ipynb). If you have cloned this repository, you can also easily start the notebook via Pixi by running:
+```bash
+pixi run notebook
+```
+Note that for `pixi`, depending on your CUDA version and use-case, you may need to use another environment, e.g., `-e example-cu128`, that are defined in [pyproject.toml](pyproject.toml) under section `tool.pixi.environments`.
 
 ### Minimal usage predicting a simple sine wave
 ```python
