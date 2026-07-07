@@ -17,7 +17,7 @@
 
 This repository provides the pre-trained multivariate forecasting model TiRex-2 introduced in the paper [TiRex-2: Generalizing TiRex to Multivariate Data and Streaming](https://arxiv.org/pdf/2607.01204).
 
-> :rocket: **TiRex-2 Pro:** This repository is our open-source release. Our pro version extends TiRex-2 with streaming, hardware-optimized inference (edge, embedded, and industrial PCs, among others), finetuning, and classification & regression support — see [TiRex-2 Pro](#tirex-2-pro) below or contact us at [contact@nx-ai.com](mailto:contact@nx-ai.com).
+> **TiRex-2 Pro:** This repository is our open-source release. Our pro version extends TiRex-2 with streaming, hardware-optimized inference (edge, embedded, and industrial PCs, among others), finetuning, and classification & regression support — see [TiRex-2 Pro](#tirex-2-pro) below or contact us at [contact@nx-ai.com](mailto:contact@nx-ai.com).
 
 ## TiRex-2
 
@@ -63,14 +63,26 @@ We use [Pixi](https://pixi.prefix.dev/latest/) for our development and benchmark
 curl -fsSL https://pixi.sh/install.sh | sh
 ```
 
-## Getting started
+### Access to Model Weights
 
-> :information_source: **Note:** TiRex-2's model weights are gated on Hugging Face. To download them, [generate yourself a Hugging Face access token](https://huggingface.co/settings/tokens/new?canReadGatedRepos=true&tokenType=fineGrained) (make sure to enable Read access to contents of all public gated repos you can access) and set it before loading the model:
-> ```python
-> import os
->
-> os.environ["HF_TOKEN"] = "<insert-hf-token>"
-> ```
+TiRex-2's model weights are gated on Hugging Face. To be able to access them, either [log in via the Hugging Face CLI](https://huggingface.co/docs/huggingface_hub/guides/cli#hf-auth-login), or [generate yourself a Hugging Face access token](https://huggingface.co/settings/tokens/new?canReadGatedRepos=true&tokenType=fineGrained) (make sure to enable Read access to contents of all public gated repos you can access) and set it before loading the model:
+
+#### CLI
+```bash
+# log in to Hugging Face and follow the prompts
+hf auth login
+```
+
+#### Access Token
+```python
+# set access token as environment variable
+import os
+os.environ["HF_TOKEN"] = "<insert-hf-token>"
+```
+
+On Google Colab, you can instead store it as a Colab secret (via the key icon in the sidebar) named `HF_TOKEN`, which is picked up automatically without pasting the token into a cell.
+
+## Getting started
 
 The most easy way for you to get started is by checking out our ["Getting Started" notebook](examples/getting_started.ipynb). Moreover, you can jump straight into testing out TiRex using [Google Colab](https://colab.research.google.com/github/NX-AI/tirex-2/blob/main/examples/getting_started.ipynb). If you have cloned this repository, you can also easily start the notebook via Pixi by running:
 ```bash
@@ -138,10 +150,10 @@ TiRex-2 already provides state-of-the-art performance for zero-shot prediction, 
 
 Our pro version extends TiRex-2 with additional capabilities, including:
 
-- 📊 **Streaming**: incremental forecast updates as new observations arrive, without recomputing over the full history.
-- 🏎️ **Speed**: performance-optimized inference, including optimization for dedicated hardware such as edge, embedded, and industrial PC deployments.
-- 🚀 **Finetuning**: models fine-tuned on your data or with different pretraining.
-- 🎨 **Classification & Regression**: TiRex-2 adapted for classification and regression tasks.
+- **Streaming**: incremental forecast updates as new observations arrive, without recomputing over the full history.
+- **Speed**: performance-optimized inference, including optimization for dedicated hardware such as edge, embedded, and industrial PC deployments.
+- **Finetuning**: models fine-tuned on your data or with different pretraining.
+- **Classification & Regression**: TiRex-2 adapted for classification and regression tasks.
 
 If you are interested in any of these, please contact us at [contact@nx-ai.com](mailto:contact@nx-ai.com).
 

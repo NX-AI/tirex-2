@@ -15,7 +15,7 @@ dependencies = [
 	"flashrnn>=1.0.4",
 	"xlstm~=2.0.3",
 	"PyYAML>=6",
-	"huggingface-hub~=0.32.0",
+	"huggingface-hub~=0.36.0",
 ]
 
 [project.optional-dependencies]
