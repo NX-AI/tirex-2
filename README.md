@@ -65,12 +65,12 @@ curl -fsSL https://pixi.sh/install.sh | sh
 
 ### Access to Model Weights
 
-TiRex-2's model weights are gated on Hugging Face. To be able to access them, either [log in via the Hugging Face CLI](https://huggingface.co/docs/huggingface_hub/guides/cli#hf-auth-login), or [generate yourself a Hugging Face access token](https://huggingface.co/settings/tokens/new?canReadGatedRepos=true&tokenType=fineGrained) (make sure to enable Read access to contents of all public gated repos you can access) and set it before loading the model:
+TiRex-2's model weights are gated on Hugging Face. To be able to access them, either [log in via the Hugging Face CLI](https://huggingface.co/docs/huggingface_hub/guides/cli), or [generate yourself a Hugging Face access token](https://huggingface.co/settings/tokens/new?canReadGatedRepos=true&tokenType=fineGrained) (make sure to enable Read access to contents of all public gated repos you can access) and set it before loading the model:
 
 #### CLI
 ```bash
 # log in to Hugging Face and follow the prompts
-hf auth login
+huggingface-cli login
 ```
 
 #### Access Token
