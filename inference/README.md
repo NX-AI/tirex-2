@@ -11,7 +11,7 @@ This docker container runs the TiRex model and provides the following APIs to in
     <a href="https://huggingface.co/settings/tokens/new?canReadGatedRepos=true&tokenType=fineGrained" target="_blank" style="color: #1890ff; text-decoration: none; font-weight: bold;">Click here</a>
     to generate the token and ensure that you enable <code>"Read access to contents of all public gated repos you can access".</code> When running the Docker image, pass your generated huggingface token as an environment variable.
 
-The CPU image is built for `linux/amd64` and `linux/arm64`, so it can run on Linux, macOS, and Windows with Docker Desktop. The GPU image is a CUDA image for `linux/amd64` and requires an NVIDIA GPU plus Docker GPU support, for example the NVIDIA Container Toolkit on Linux or Docker Desktop with WSL2 GPU support on Windows.
+These images are Linux containers. The CPU image targets `linux/amd64` and `linux/arm64`; run it on Linux, macOS, or Windows with Docker Desktop's Linux container backend. The GPU image is a CUDA Linux image for `linux/amd64`; run it on Linux with the NVIDIA Container Toolkit or on Windows with Docker Desktop's WSL2 backend and NVIDIA WSL GPU support.
 
 ### HTTP API
 
