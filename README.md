@@ -55,7 +55,7 @@ Install with additional dependencies:
 pip install "tirex-2[examples,fev,gluonts]"
 ```
 
-TiRex is currently only tested on Linux and MacOS.
+The Python package installation is currently only tested on Linux and macOS. Docker usage is documented separately and includes Linux, macOS, and Windows Docker Desktop instructions.
 
 ### Via Pixi
 We use [Pixi](https://pixi.prefix.dev/latest/) for our development and benchmarking environment to ensure that it is set up correctly. Run the following command to install it on your machine:
@@ -144,6 +144,10 @@ fig.show()
 ### Benchmarking
 To reproduce our results for the [GIFT-Eval](https://huggingface.co/spaces/Salesforce/GIFT-Eval) and [fev-bench](https://huggingface.co/spaces/autogluon/fev-bench) leaderboards, follow the instructions in
 [/examples/gifteval/](./examples/gifteval/README.md) and [/examples/fevbench/](./examples/fevbench/README.md), respectively.
+
+## TiRex Docker image
+
+For detailed instructions on building and running TiRex-2 in a Docker container, see the [Docker README](./inference/README.md).
 
 ## TiRex-2 Pro
 TiRex-2 already provides state-of-the-art performance for zero-shot prediction, so you can use this open-source release without training on your own data.
