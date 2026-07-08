@@ -165,3 +165,7 @@ where = ["src"]
 testpaths = [
     "tests",
 ]
+
+# triton import to linux only
+[tool.uv]
+override-dependencies = ["triton; sys_platform == 'linux'"]
