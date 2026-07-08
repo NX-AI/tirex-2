@@ -11,16 +11,28 @@ This docker container runs the TiRex model and provides the following APIs to in
     <a href="https://huggingface.co/settings/tokens/new?canReadGatedRepos=true&tokenType=fineGrained" target="_blank" style="color: #1890ff; text-decoration: none; font-weight: bold;">Click here</a>
     to generate the token and ensure that you enable <code>"Read access to contents of all public gated repos you can access".</code> When running the Docker image, pass your generated huggingface token as an environment variable.
 
+The CPU image is built for `linux/amd64` and `linux/arm64`, so it can run on Linux, macOS, and Windows with Docker Desktop. The GPU image is a CUDA image for `linux/amd64` and requires an NVIDIA GPU plus Docker GPU support, for example the NVIDIA Container Toolkit on Linux or Docker Desktop with WSL2 GPU support on Windows.
+
 ### HTTP API
 
-Run the CPU container:
-```
+Run the CPU container on Linux/macOS Bash:
+```bash
 docker run -it -p 8000:8000 -e HF_TOKEN=$YOUR_HF_TOKEN ghcr.io/nx-ai/tirex2-cpu
 ```
 
-Run the GPU container:
+Run the CPU container on Windows PowerShell:
+```powershell
+docker run -it -p 8000:8000 -e HF_TOKEN=$env:HF_TOKEN ghcr.io/nx-ai/tirex2-cpu
 ```
+
+Run the GPU container on a Linux host with NVIDIA GPU support:
+```bash
 docker run -it --gpus 1 -p 8000:8000 -e HF_TOKEN=$YOUR_HF_TOKEN ghcr.io/nx-ai/tirex2-gpu
+```
+
+Run the GPU container on Windows PowerShell:
+```powershell
+docker run -it --gpus 1 -p 8000:8000 -e HF_TOKEN=$env:HF_TOKEN ghcr.io/nx-ai/tirex2-gpu
 ```
 
 Both the CPU and GPU containers run a warmup forecast on startup so the model is compiled before the first request. torch.compile generates kernels for parts of the model (C++ on CPU, Triton on GPU). Download of the model and warmup can take up to ~10-20 seconds.
@@ -245,36 +257,50 @@ You can set these env variables when running the container using the -e env flag
 
 ### CPU Container
 
-Build the CPU image:
-```
+Build the CPU image on Linux/macOS Bash or Windows PowerShell:
+```bash
 cd inference
 docker build -f Dockerfile.cpu -t tirex2-inference-cpu .
 ```
 
-Run the CPU container:
-```
+Run the CPU container on Linux/macOS Bash:
+```bash
 docker run --rm -p 8000:8000 \
   -e HF_TOKEN=$YOUR_HF_TOKEN \
+  tirex2-inference-cpu
+```
+
+Run the CPU container on Windows PowerShell:
+```powershell
+docker run --rm -p 8000:8000 `
+  -e HF_TOKEN=$env:HF_TOKEN `
   tirex2-inference-cpu
 ```
 
 ### GPU Container
 
 Build the GPU Docker image:
-```
+```bash
 docker build -f Dockerfile.gpu -t tirex2-inference-gpu .
 ```
 
-Run the GPU container:
-```
+Run the GPU container on a Linux host with NVIDIA GPU support:
+```bash
 docker run --rm --gpus 1 -p 8000:8000 \
   -e HF_TOKEN=$YOUR_HF_TOKEN \
   tirex2-inference-gpu
 ```
 
+Run the GPU container on Windows PowerShell:
+```powershell
+docker run --rm --gpus 1 -p 8000:8000 `
+  -e HF_TOKEN=$env:HF_TOKEN `
+  tirex2-inference-gpu
+```
+
 ## Development Setup
 
-Running the server (and the tests) also downloads the gated weights, so set `HF_TOKEN` in your environment first (`export HF_TOKEN=hf_xxxxxxxx`) or run `huggingface-cli login`.
+Running the server (and the tests) also downloads the gated weights, so set `HF_TOKEN` in your environment first (`export HF_TOKEN=hf_xxxxxxxx` on Linux/macOS Bash, `$env:HF_TOKEN="hf_xxxxxxxx"` on Windows PowerShell) or run `huggingface-cli login`.
 
 ### Install Python dependencies:
 ```
@@ -293,8 +319,15 @@ pytest tests
 ```
 
 Run tests against a running container:
-```
+```bash
 TEST_START_SERVER=0 TEST_PORT=8000 pytest tests -s
+```
+
+On Windows PowerShell:
+```powershell
+$env:TEST_START_SERVER="0"
+$env:TEST_PORT="8000"
+pytest tests -s
 ```
 
 ## License

@@ -1,5 +1,9 @@
 name: Build and Push Docker Images
 on:
+  pull_request:
+    paths:
+      - 'inference/**'
+      - '.github/workflows/docker-build.yaml'
   workflow_run:
     workflows: ['Publish Python Package']
     types: [completed]
@@ -7,6 +11,47 @@ on:
   workflow_dispatch:
 
 jobs:
+  docker-build-smoke:
+    name: Docker Build Smoke
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'pull_request' }}
+    permissions:
+      contents: read
+
+    steps:
+    - uses: actions/checkout@v5
+
+    - name: Free up disk space
+      run: |
+        sudo rm -rf /opt/hostedtoolcache
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /usr/local/lib/android
+        sudo rm -rf /opt/ghc
+        sudo apt-get clean
+        docker system prune -af --volumes
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build CPU image
+      uses: docker/build-push-action@v6
+      with:
+        platforms: linux/amd64
+        context: inference
+        file: inference/Dockerfile.cpu
+        push: false
+
+    - name: Clean up after CPU build
+      run: docker system prune -af --volumes
+
+    - name: Build GPU image
+      uses: docker/build-push-action@v6
+      with:
+        platforms: linux/amd64
+        context: inference
+        file: inference/Dockerfile.gpu
+        push: false
+
   build-and-push-docker-images:
     name: Build and Push Docker Images
     runs-on: ubuntu-latest

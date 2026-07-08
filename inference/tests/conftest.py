@@ -4,6 +4,7 @@
 import json
 import os
 import subprocess
+import sys
 import time
 from pathlib import Path
 from types import SimpleNamespace
@@ -20,9 +21,11 @@ mqtt_host = os.getenv("TEST_MQTT_BROKER_HOST", "broker.emqx.io")
 mqtt_port = int(os.getenv("TEST_MQTT_BROKER_PORT", "1883"))
 
 
-def wait_for_api(healthcheck_url, timeout=30):
+def wait_for_api(healthcheck_url, timeout=30, process=None):
     print("Start for model load")
     for i in range(timeout):
+        if process is not None and process.poll() is not None:
+            raise RuntimeError(f"Server exited with code {process.returncode}. See test-server.log for details.")
         try:
             response = requests.get(healthcheck_url)
             if response.status_code == 200:
@@ -38,20 +41,42 @@ def wait_for_api(healthcheck_url, timeout=30):
 @pytest.fixture(scope="session")
 def api_server():
     base_url = f"http://{base_host}:{base_port}"
-    server_command = f"HTTP_HOST={base_host} HTTP_PORT={base_port} MQTT_ENABLED=1 MQTT_BROKER_HOST={mqtt_host} MQTT_BROKER_PORT={mqtt_port} python -m app.main > test-server.log"
+    process = None
+    log_file = None
 
     try:
-        process = None
         if start_server:
-            # Can't redirect stdout to subprocess.PIPE, so we write it into the test-server.log.
-            process = subprocess.Popen(server_command, stdout=None, shell=True)
-        wait_for_api(f"{base_url}/health", timeout=30)
+            env = os.environ.copy()
+            env.update(
+                {
+                    "HTTP_HOST": base_host,
+                    "HTTP_PORT": str(base_port),
+                    "MQTT_ENABLED": "1",
+                    "MQTT_BROKER_HOST": mqtt_host,
+                    "MQTT_BROKER_PORT": str(mqtt_port),
+                }
+            )
+            log_file = open("test-server.log", "w", encoding="utf-8")
+            process = subprocess.Popen(
+                [sys.executable, "-m", "app.main"],
+                env=env,
+                stdout=log_file,
+                stderr=subprocess.STDOUT,
+            )
+        wait_for_api(f"{base_url}/health", timeout=30, process=process)
 
         yield base_url
     finally:
         if process is not None:
-            process.kill()
-            process.wait()
+            if process.poll() is None:
+                process.terminate()
+                try:
+                    process.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait()
+        if log_file is not None:
+            log_file.close()
 
 
 def get_default_context():
