@@ -45,14 +45,6 @@ We use [Pixi](https://pixi.prefix.dev/latest/) for our development and benchmark
 curl -fsSL https://pixi.sh/install.sh | sh
 ```
 
-### Installation on MacOS/Windows
-
-For macOS and Windows platform please use [uv](https://docs.astral.sh/uv/) package
-
-```bash
-uv pip install tirex-2
-```
-
 ## Getting started
 
 The most easy way for you to get started is by checking out our ["Getting Started" notebook](examples/getting_started.ipynb). Moreover, you can jump straight into testing out TiRex using [Google Colab](https://colab.research.google.com/github/NX-AI/tirex-2/blob/main/examples/getting_started.ipynb). If you have cloned this repository, you can also easily start the notebook via Pixi by running:
