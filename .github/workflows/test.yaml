@@ -18,3 +18,26 @@ jobs:
 
       - name: Run tests on CPU
         run: pixi run -e test-cpu test
+
+  core-tests-pip:
+    name: core-tests (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up MSVC (for torch.compile on windows)
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install tirex-2 from source
+        run: pip install ".[gluonts,fev]" pytest
+
+      - name: Run tests on CPU
+        run: pytest test/
