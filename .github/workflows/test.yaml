@@ -33,7 +33,11 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install tirex-2 from source (with test extras)
+      - name: Set up MSVC (for torch.compile on windows)
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install tirex-2 from source
         run: pip install ".[gluonts,fev]" pytest
 
       - name: Run tests on CPU
