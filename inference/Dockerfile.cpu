@@ -1,0 +1,83 @@
+# Copyright (c) NXAI GmbH.
+# This software may be used and distributed according to the terms of the NXAI Community License Agreement.
+
+# -------------------------
+# Stage 1: Build
+# -------------------------
+FROM python:3.13-slim AS build
+
+ARG DEBIAN_FRONTEND=noninteractive
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        build-essential \
+        curl \
+        git && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir torch==2.9.1 --index-url https://download.pytorch.org/whl/cpu
+
+COPY requirements.txt ./requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Remove pythoch cache and test folders
+RUN find /usr/local/lib/python3.13/site-packages -type d \
+        \( -name '__pycache__' -o -name tests -o -name test \) -prune -exec rm -rf {} +
+
+# Remove packagesd, which are not used. Still to be tested
+# Transformers paackage is in xlSTM, but runs without errors
+RUN pip uninstall -y \
+        ipykernel ipython jedi debugpy \
+        jupyter-client jupyter-core pyzmq tornado nest-asyncio comm \
+        prompt_toolkit pygments traitlets matplotlib-inline stack-data executing \
+        asttokens parso pexpect ptyprocess decorator wcwidth \
+        joypy seaborn \
+        matplotlib pillow fonttools contourpy kiwisolver cycler pyparsing \
+        scipy pandas pytz tzdata \
+        transformers tokenizers safetensors regex \
+    || true
+
+
+# -------------------------
+# --- Stage 2: Runtime
+# -------------------------
+FROM python:3.13-slim
+
+ARG DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+# Bring in packages installed in build stage
+COPY --from=build /usr/local /usr/local
+
+# Create non-root user
+RUN useradd --create-home --uid 1000 --shell /bin/bash appuser
+
+# Create a writable workdir owned by appuser
+RUN install -d -o appuser -g appuser /home/appuser/app
+
+# Now set WORKDIR (it already exists and is owned by appuser)
+WORKDIR /home/appuser/app
+
+COPY THIRD-PARTY-LICENSES.md .
+
+# Copy app code; keep a single COPY with chown
+COPY --chown=appuser:appuser app/ ./app/
+
+USER appuser
+EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+CMD ["python", "-m", "app.main"]

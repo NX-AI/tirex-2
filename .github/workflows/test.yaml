@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - triton-macos-fix
   pull_request:
 
 jobs:
