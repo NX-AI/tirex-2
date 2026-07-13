@@ -61,6 +61,7 @@ def _plot_forecast_matplotlib(
     label_forecast=None,
     label_ground_truth=None,
     label_quantile=None,
+    view_min_x=None,
     ax=None,
 ):
     try:
@@ -104,12 +105,12 @@ def _plot_forecast_matplotlib(
     if context is not None and (ground_truth is not None or point_forecast is not None):
         ax.axvline(x_context[-1], color=COLOR_CUTOFF_LINE, linestyle=":")
 
-    min_x = min(
-        x_context[0] if x_context is not None else np.inf,
-        x_forecast[0] if x_forecast is not None else np.inf,
-        x_ground_truth[0] if x_ground_truth is not None else np.inf,
-    )
-    ax.set_xlim(left=min_x)
+    # Only min/max over the endpoints that actually exist to avoid comparing
+    # foreign-typed sentinels (e.g. pandas Timestamp vs. np.inf) which crashes.
+    x_series = [xs for xs in (x_context, x_forecast, x_ground_truth) if xs is not None]
+    if x_series:
+        left = view_min_x if view_min_x is not None else min(xs[0] for xs in x_series)
+        ax.set_xlim(left=left)
     ax.legend()
     ax.grid()
 
@@ -129,6 +130,7 @@ def _plot_forecast_plotly(
     label_forecast=None,
     label_ground_truth=None,
     label_quantile=None,
+    view_min_x=None,
     fig=None,
     row=None,
     col=None,
@@ -249,18 +251,13 @@ def _plot_forecast_plotly(
             col=col,
         )
 
-    min_x = min(
-        x_context[0] if x_context is not None else np.inf,
-        x_forecast[0] if x_forecast is not None else np.inf,
-        x_ground_truth[0] if x_ground_truth is not None else np.inf,
-    )
-
-    max_x = max(
-        x_context[-1] if x_context is not None else 0,
-        x_forecast[-1] if x_forecast is not None else 0,
-        x_ground_truth[-1] if x_ground_truth is not None else 0,
-    )
-    fig.update_xaxes(range=[min_x, max_x], autorange=False, row=row, col=col)
+    # Only min/max over the endpoints that actually exist to avoid comparing
+    # foreign-typed sentinels (e.g. pandas Timestamp vs. np.inf) which crashes.
+    x_series = [xs for xs in (x_context, x_forecast, x_ground_truth) if xs is not None]
+    if x_series:
+        min_x = view_min_x if view_min_x is not None else min(xs[0] for xs in x_series)
+        max_x = max(xs[-1] for xs in x_series)
+        fig.update_xaxes(range=[min_x, max_x], autorange=False, row=row, col=col)
     return fig
 
 
@@ -299,7 +296,8 @@ def plot_forecast(
     engine : str, optional
         What framework to use for rendering the plots.
     max_context_to_show : int, optional
-        If set, limits the number of context points to show for better visibility of forecasts.
+        Caps how many context points are visible by zooming the x-axis to where the
+        forecast begins; no context data is cut away. Defaults to 3x the forecast horizon.
     ax : matplotlib.Axes or plotly.go.Figure, optional
         The matplotlib axes / plotly figure object to plot on.
     **kwargs
@@ -334,9 +332,17 @@ def plot_forecast(
         )
 
     x_context = x[:context_size] if context is not None else None
-    if max_context_to_show is not None:
-        x_context = x_context[-max_context_to_show:]
-        context = context[-max_context_to_show:]
+
+    # Zoom the view to where the forecast begins without cutting any context data
+    # away. `max_context_to_show` caps how many context points are visible; the
+    # full context is still plotted, only the x-axis range is narrowed. Default to
+    # showing at most 3x the forecast horizon of context.
+    if max_context_to_show is None:
+        max_context_to_show = 3 * max(forecast_size, ground_truth_size)
+
+    view_min_x = None
+    if context is not None and 0 < max_context_to_show < context_size:
+        view_min_x = x_context[-max_context_to_show]
 
     def connect_to_context(v, is_x_axis=False):
         if CONNECT_FORECAST_TO_CONTEXT and context is not None and len(context) > 0:
@@ -350,6 +356,7 @@ def plot_forecast(
         label_context="Context",
         label_ground_truth="Ground Truth Future",
         label_forecast="Forecast (Median)",
+        view_min_x=view_min_x,
     )
 
     if ground_truth is not None:
