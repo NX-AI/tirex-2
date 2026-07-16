@@ -704,7 +704,7 @@ def _plot_multivariate_plotly(
 
 def plot_multivariate(
     input: TimeseriesType,
-    forecast: torch.Tensor | np.ndarray,
+    forecast: torch.Tensor | np.ndarray | None = None ,
     ground_truth: torch.Tensor | np.ndarray | None = None,
     x: Sequence | None = None,
     quantiles: tuple[float, float] = (0.1, 0.9),
@@ -773,7 +773,7 @@ def plot_multivariate(
         x=x[cov_slice_start:],
         quantiles=quantiles,
         quantile_levels=quantile_levels,
-        forecast=forecast[target_index],
+        forecast=forecast[target_index] if forecast is not None else None,
         ground_truth=ground_truth,
         cov_lookup=cov_lookup,
         title=title,
