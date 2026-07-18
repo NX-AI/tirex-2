@@ -397,13 +397,20 @@ def _plot_covariates_plotly(
     """
     Plots multivariate covariates into a specified Plotly figure/subplot.
 
-    Args:
-        covariates (dict): Format -> {'covariate_name': {'x': x_array, 'y': y_array}}
-        fig (go.Figure): Plotly figure object.
-        row (int): Row index for the subplot.
-        col (int): Column index for the subplot.
-        cutoff_x (float/datetime): The x-axis value where the forecast starts.
-        color_cutoff_line (str): Color of the vertical cutoff line.
+    Parameters
+    ----------
+    covariates : dict
+        Format -> ``{'covariate_name': {'x': x_array, 'y': y_array}}``
+    fig : go.Figure
+        Plotly figure object.
+    row : int
+        Row index for the subplot.
+    col : int
+        Column index for the subplot.
+    cutoff_x : float or datetime
+        The x-axis value where the forecast starts.
+    color_cutoff_line : str
+        Color of the vertical cutoff line.
     """
     try:
         import plotly.express as px

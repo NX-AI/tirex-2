@@ -1,0 +1,92 @@
+site_name: TiRex-2
+site_description: Documentation for TiRex-2, a pretrained multivariate time series forecasting model.
+site_url: https://nx-ai.github.io/tirex-2/
+repo_name: NX-AI/tirex-2
+repo_url: https://github.com/NX-AI/tirex-2
+edit_uri: edit/main/docs/
+copyright: Copyright &copy; NXAI GmbH
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: black
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: black
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.top
+    - search.suggest
+    - toc.follow
+
+nav:
+  - Home: index.md
+  - Introduction: introduction.md
+  - Getting started:
+      - Installation: getting-started/install.md
+      - Quickstart: getting-started/quickstart.md
+  - How-to guides:
+      - Forecasting: how-to/forecasting.md
+      - Covariates: how-to/covariates.md
+      - Streaming: how-to/streaming.md
+  - Benchmarks: benchmarks.md
+  - Deployment: deployment.md
+  - TiRex-2 Pro: pro.md
+  - Contributing: contributing.md
+  - API reference:
+      - Overview: api/index.md
+      - Forecasting: api/forecast.md
+      - Demo: api/demo.md
+      - Plotting: api/plotting.md
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            docstring_style: numpy
+            show_source: true
+            show_root_heading: true
+            members_order: source
+            separate_signature: true
+            show_signature_annotations: true
+            filters: ["!^_"]
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - tables
+  - toc:
+      permalink: true
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/NX-AI/tirex-2
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/tirex-2/
+    - icon: simple/huggingface
+      link: https://huggingface.co/NX-AI/TiRex-2

@@ -11,6 +11,7 @@ output/
 *.csv
 build/
 dist/
+/site/
 
 .ipynb_checkpoints/
 .idea/

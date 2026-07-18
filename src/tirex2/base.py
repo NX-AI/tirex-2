@@ -73,6 +73,16 @@ def load_model(
         The instantiated backbone (with the checkpoint weights loaded, set to
         evaluation mode) wrapped in a :class:`ForecastModel` that exposes the
         high-level ``forecast`` / ``forecast_gluon`` API.
+
+    Examples
+    --------
+    >>> import torch
+    >>> from tirex2 import TimeseriesType, load_model
+    >>> model = load_model("NX-AI/TiRex-2", device="cpu")
+    >>> ts = TimeseriesType(target=torch.randn(1, 128), past_covariates=None, future_covariates=None)
+    >>> forecast = model.forecast([ts], prediction_length=32, output_type="numpy")[0]
+    >>> forecast.shape
+    (1, 9, 32)
     """
     if device.startswith("cuda") and not torch.cuda.is_available():
         raise RuntimeError("Execution on CUDA was requested but is not available.")

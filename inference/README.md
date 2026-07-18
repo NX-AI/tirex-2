@@ -332,4 +332,4 @@ pytest tests -s
 
 ## License
 
-TiRex is licensed under the [NXAI community license](../LICENSE).
+TiRex-2 is licensed under the [Apache License 2.0](../LICENSE).

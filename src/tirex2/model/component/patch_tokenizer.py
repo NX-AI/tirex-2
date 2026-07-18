@@ -7,10 +7,14 @@ from torch import nn
 class Tokenizer:
     """Tokenizer that applies sliding-window patching with optional left padding.
 
-    Args:
-        output_patch_size: Number of timesteps produced per output patch.
-        input_patch_size: Window size used when unfolding the input sequence.
-        input_patch_stride: Stride between successive input patches.
+    Parameters
+    ----------
+    output_patch_size : int
+        Number of timesteps produced per output patch.
+    input_patch_size : int
+        Window size used when unfolding the input sequence.
+    input_patch_stride : int
+        Stride between successive input patches.
     """
 
     def __init__(
@@ -40,10 +44,14 @@ class Tokenizer:
 class Patch(nn.Module):
     """Utility module that unfolds 1D tensors into patches with optional padding.
 
-    Args:
-        patch_size: Size of each extracted patch.
-        patch_stride: Step between adjacent patches; must divide ``patch_size``.
-        left_pad: If ``True``, pad on the left; otherwise pad on the right.
+    Parameters
+    ----------
+    patch_size : int
+        Size of each extracted patch.
+    patch_stride : int
+        Step between adjacent patches; must divide ``patch_size``.
+    left_pad : bool
+        If ``True``, pad on the left; otherwise pad on the right.
     """
 
     def __init__(self, patch_size: int, patch_stride: int, left_pad: bool = False) -> None:
