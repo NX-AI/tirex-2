@@ -7,6 +7,7 @@
 [![GitHub](https://img.shields.io/badge/GitHub-NX--AI%2Ftirex--2-181717?logo=github)](https://github.com/NX-AI/tirex-2)
 [![PyPI](https://img.shields.io/pypi/v/tirex-2?color=blue)](https://pypi.org/project/tirex-2/)
 [![Docker](https://img.shields.io/badge/GHCR-tirex2--cpu%20%2F%20tirex2--gpu-2496ED?logo=docker&logoColor=white)](https://github.com/NX-AI/tirex-2/pkgs/container/tirex2-cpu)
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/NX-AI/tirex-2/blob/main/examples/getting_started.ipynb)
 
 TiRex-2 is a **pretrained time series foundation model** that forecasts one or many target
 variates directly from their history, optionally conditioned on past and future-known

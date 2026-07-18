@@ -68,7 +68,18 @@ print(ts.n_past_covariates, ts.n_future_covariates)  # 0, 2 — both covariates 
 `Demo.to_timeseries_type(include_covariates=False)` builds the same series without any
 covariates, which is useful for comparing forecasts with and without covariate information
 side by side (as done in the [Quickstart](../getting-started/quickstart.md) covariate
-example).
+example). The bottom panel below plots the covariates themselves; the top two panels compare
+the univariate forecast (no covariates) against the multivariate one (with covariates) on the
+same series — the multivariate forecast tracks the wandering level and the promotion spikes
+that the univariate forecast, lacking that information, cannot:
+
+![TiRex-2 forecast on a non-stationary series with a continuous driver and a promotion flag](../images/nonstationary_driver_future_known.png)
+
+[`Demo.create_holidays_demo()`][tirex2.demo.Demo] builds a similar scenario with a single
+future-known holiday flag driving irregular multiplicative spikes that are unpredictable from
+the target's own history alone:
+
+![TiRex-2 forecast on daily demand with a future-known holiday flag](../images/holidays_future_known.png)
 
 ## HTTP API equivalent
 

@@ -2,8 +2,10 @@
 
 The easiest way to get started is the
 ["Getting Started" notebook](https://github.com/NX-AI/tirex-2/blob/main/examples/getting_started.ipynb),
-which you can also run directly in
-[Google Colab](https://colab.research.google.com/github/NX-AI/tirex-2/blob/main/examples/getting_started.ipynb).
+which you can also run directly in Google Colab:
+
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/NX-AI/tirex-2/blob/main/examples/getting_started.ipynb)
+
 If you have cloned the repository, start it locally via Pixi:
 
 ```bash
@@ -37,7 +39,7 @@ fig = plot_multivariate(ts, forecast, engine="matplotlib")
 fig.show()
 ```
 
-![output of plot_multivariate function visualizing context and forecast](https://raw.githubusercontent.com/NX-AI/tirex-2/refs/heads/main/resources/sine-wave-prediction.png)
+![output of plot_multivariate function visualizing context and forecast](../images/sine-wave-prediction.png)
 
 ## Covariate example
 
@@ -68,7 +70,7 @@ fig = plot_demo_forecast(demo, *forecasts, engine="matplotlib")
 fig.show()
 ```
 
-![output of plot_multivariate function visualizing context and forecast of multivariate input](https://raw.githubusercontent.com/NX-AI/tirex-2/refs/heads/main/resources/multivariate-prediction.png)
+![output of plot_multivariate function visualizing context and forecast of multivariate input](../images/multivariate-prediction.png)
 
 ## Next steps
 

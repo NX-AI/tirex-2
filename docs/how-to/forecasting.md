@@ -40,6 +40,8 @@ forecast = model.forecast([ts], prediction_length=64, output_type="numpy")[0]
 # forecast.shape == (1, 9, 64)  -> (num_target_variates, num_quantiles, prediction_length)
 ```
 
+![Sine-wave context and forecast produced by plot_multivariate](../images/sine-wave-prediction.png)
+
 ## Multivariate forecasting
 
 Pass a target with more than one row to forecast several variates jointly from a single
@@ -52,6 +54,8 @@ ts = TimeseriesType(target=context, past_covariates=None, future_covariates=None
 forecast = model.forecast([ts], prediction_length=64, output_type="numpy")[0]
 # forecast.shape == (3, 9, 64)
 ```
+
+![Multivariate context and forecast, with future-known covariates plotted below](../images/multivariate-prediction.png)
 
 ## Batching multiple series
 
