@@ -46,7 +46,7 @@ for background and the [paper](https://arxiv.org/pdf/2607.01204) for details.
 
 ## TiRex-2 Pro
 
-This repository is NX-AI's open-source release. A Pro version extends TiRex-2 with:
+This repository is NXAI's open-source release. A Pro version extends TiRex-2 with:
 
 - **Streaming**: incremental forecast updates as new observations arrive, without recomputing
   over the full history.

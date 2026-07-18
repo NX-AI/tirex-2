@@ -32,6 +32,9 @@ theme:
     - navigation.instant
     - navigation.tracking
     - navigation.sections
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.path
     - navigation.top
     - search.suggest
     - toc.follow
@@ -50,6 +53,7 @@ nav:
   - Deployment: deployment.md
   - TiRex-2 Pro: pro.md
   - Contributing: contributing.md
+  - About NXAI: about.md
   - API reference:
       - Overview: api/index.md
       - Forecasting: api/forecast.md
@@ -72,6 +76,7 @@ plugins:
             filters: ["!^_"]
 
 markdown_extensions:
+  - attr_list
   - admonition
   - pymdownx.details
   - pymdownx.superfences
