@@ -56,3 +56,19 @@ This repository is NXAI's open-source release. A Pro version extends TiRex-2 wit
 - **Classification & Regression**: TiRex-2 adapted for classification and regression tasks.
 
 See [TiRex-2 Pro](pro.md) for details, or contact [contact@nx-ai.com](mailto:contact@nx-ai.com).
+
+## Cite Our Work
+
+If you use TiRex-2 in your research, please cite our work:
+
+```bibtex
+@misc{podest2026tirex2generalizingtirexmultivariate,
+      title={TiRex-2: Generalizing TiRex to Multivariate Data and Streaming},
+      author={Patrick Podest and Marco Pichler and Elias Bürger and Levente Zólyomi and Bernhard Voggenberger and Wilhelm Berghammer and Daniel Klotz and Sebastian Böck and Günter Klambauer and Sepp Hochreiter},
+      year={2026},
+      eprint={2607.01204},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2607.01204},
+}
+```
