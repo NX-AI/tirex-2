@@ -8,6 +8,8 @@ copyright: Copyright &copy; NXAI GmbH
 
 theme:
   name: material
+  logo: images/tirex.svg
+  favicon: images/tirex.svg
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default

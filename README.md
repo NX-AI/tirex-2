@@ -8,6 +8,7 @@
 [![Hugging Face](https://img.shields.io/badge/HuggingFace-TiRex--2-yellow?logo=huggingface)](https://huggingface.co/NX-AI/TiRex-2)
 [![PyPI](https://img.shields.io/pypi/v/tirex-2?color=blue)](https://pypi.org/project/tirex-2/)
 [![PyPI Downloads](https://static.pepy.tech/personalized-badge/tirex-2?period=total&units=INTERNATIONAL_SYSTEM&left_color=GREY&right_color=BLUE&left_text=downloads)](https://pepy.tech/projects/tirex-2)
+[![Docker](https://img.shields.io/badge/GHCR-tirex2--cpu%20%2F%20tirex2--gpu-2496ED?logo=docker&logoColor=white)](https://github.com/NX-AI/tirex-2/pkgs/container/tirex2-cpu)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 [![docs](https://img.shields.io/website?url=https%3A%2F%2Fnx-ai.github.io%2Ftirex-2%2F&label=docs&up_message=online&up_color=green&down_message=offline&down_color=red)](https://nx-ai.github.io/tirex-2/)
 [![Tests](https://github.com/NX-AI/tirex-2/actions/workflows/test.yaml/badge.svg)](https://github.com/NX-AI/tirex-2/actions/workflows/test.yaml)
