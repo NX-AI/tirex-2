@@ -139,6 +139,22 @@ fig.show()
 ```
 ![output of plot_multivariate function visualizing context and forecast of multivariate input](/resources/multivariate-prediction.png)
 
+### Optional FlexAttention for large multivariate batches
+
+The default dense attention backend avoids compilation overhead and is suitable for small batches. For large
+CUDA batches containing many independent multivariate series, opt into the block-sparse FlexAttention backend
+when loading the checkpoint:
+
+```python
+model = load_model("NX-AI/TiRex-2", device="cuda", use_flex_attention=True)
+forecasts = model.forecast(timeseries, prediction_length=64, batch_size=64)
+```
+
+FlexAttention compiles its CUDA kernel on first use and can be slower for small batches, so benchmark both the
+backend and `batch_size` on the target GPU. Leave `use_flex_attention` unset to preserve the checkpoint setting
+and package default, or pass `False` to force dense attention. The two CUDA kernels are numerically close but
+not bit-identical; re-evaluate forecast metrics when changing backends in reproducible benchmarks.
+
 
 
 ### Benchmarking
