@@ -13,22 +13,22 @@ These images are Linux containers. The CPU image targets `linux/amd64` and `linu
 
 Run the CPU container on Linux/macOS Bash:
 ```bash
-docker run -it -p 8000:8000 -e HF_TOKEN=$YOUR_HF_TOKEN ghcr.io/nx-ai/tirex2-cpu
+docker run -it -p 8000:8000 ghcr.io/nx-ai/tirex2-cpu
 ```
 
 Run the CPU container on Windows PowerShell:
 ```powershell
-docker run -it -p 8000:8000 -e HF_TOKEN=$env:HF_TOKEN ghcr.io/nx-ai/tirex2-cpu
+docker run -it -p 8000:8000 ghcr.io/nx-ai/tirex2-cpu
 ```
 
 Run the GPU container on a Linux host with NVIDIA GPU support:
 ```bash
-docker run -it --gpus 1 -p 8000:8000 -e HF_TOKEN=$YOUR_HF_TOKEN ghcr.io/nx-ai/tirex2-gpu
+docker run -it --gpus 1 -p 8000:8000 ghcr.io/nx-ai/tirex2-gpu
 ```
 
 Run the GPU container on Windows PowerShell:
 ```powershell
-docker run -it --gpus 1 -p 8000:8000 -e HF_TOKEN=$env:HF_TOKEN ghcr.io/nx-ai/tirex2-gpu
+docker run -it --gpus 1 -p 8000:8000 ghcr.io/nx-ai/tirex2-gpu
 ```
 
 Both the CPU and GPU containers run a warmup forecast on startup so the model is compiled before the first request. torch.compile generates kernels for parts of the model (C++ on CPU, Triton on GPU). Download of the model and warmup can take up to ~10-20 seconds.
@@ -178,7 +178,7 @@ print(resp.json())
 
 Every request is batched, so provide a list of timeseries as context, even when you only forecast a single timeseries. Bigger batch sizes are more efficient for the hardware, but too big batch sizes can lead to out of memory errors. There isn't any internal batching done, so the consumer of the API is responsible to call with an appropriate batch size for the hardware.
 
-The HTTP API also provides `/univariate/forecast/quantiles` and `/multivariate/forecast/quantiles`, where the 10, 20, 30, 50 (mean), 60, 70, 80 and 90% quantiles are returned, using the same arguments as the `/univariate/forecast/mean` and `/multivariate/forecast/mean` endpoints respectively.
+The HTTP API also provides `/univariate/forecast/quantiles` and `/multivariate/forecast/quantiles`, where the 10, 20, 30, 40, 50 (mean), 60, 70, 80 and 90% quantiles are returned, using the same arguments as the `/univariate/forecast/mean` and `/multivariate/forecast/mean` endpoints respectively.
 
 ### MQTT API
 The MQTT integration uses **MQTT v5** with a request/reply pattern. TiRex subscribes to the forecast **request** topics and publishes each result back to the **response topic the requester specifies on the request** (the MQTT v5 `Response Topic` property). Every client therefore receives only its own results — there is no shared result topic.
@@ -193,7 +193,7 @@ curl -sL https://github.com/emqx/MQTTX/releases/latest/download/mqttx-cli-linux-
 
 Start the container with MQTT:
 ```
-docker run -p 8000:8000 -it -e HF_TOKEN=$YOUR_HF_TOKEN -e MQTT_ENABLED=1 -e MQTT_BROKER_HOST=broker.emqx.io -e MQTT_BROKER_PORT=1883 ghcr.io/nx-ai/tirex2-cpu
+docker run -p 8000:8000 -it -e MQTT_ENABLED=1 -e MQTT_BROKER_HOST=broker.emqx.io -e MQTT_BROKER_PORT=1883 ghcr.io/nx-ai/tirex2-cpu
 ```
 
 Each request must be sent over MQTT v5 and set a **Response Topic** telling TiRex where to publish the result. Optionally set **Correlation Data** to match the reply back to the request. Requests without a Response Topic are rejected.
@@ -261,16 +261,12 @@ docker build -f Dockerfile.cpu -t tirex2-inference-cpu .
 
 Run the CPU container on Linux/macOS Bash:
 ```bash
-docker run --rm -p 8000:8000 \
-  -e HF_TOKEN=$YOUR_HF_TOKEN \
-  tirex2-inference-cpu
+docker run --rm -p 8000:8000 tirex2-inference-cpu
 ```
 
 Run the CPU container on Windows PowerShell:
 ```powershell
-docker run --rm -p 8000:8000 `
-  -e HF_TOKEN=$env:HF_TOKEN `
-  tirex2-inference-cpu
+docker run --rm -p 8000:8000 tirex2-inference-cpu
 ```
 
 ### GPU Container
@@ -282,16 +278,12 @@ docker build -f Dockerfile.gpu -t tirex2-inference-gpu .
 
 Run the GPU container on a Linux host with NVIDIA GPU support:
 ```bash
-docker run --rm --gpus 1 -p 8000:8000 \
-  -e HF_TOKEN=$YOUR_HF_TOKEN \
-  tirex2-inference-gpu
+docker run --rm --gpus 1 -p 8000:8000 tirex2-inference-gpu
 ```
 
 Run the GPU container on Windows PowerShell:
 ```powershell
-docker run --rm --gpus 1 -p 8000:8000 `
-  -e HF_TOKEN=$env:HF_TOKEN `
-  tirex2-inference-gpu
+docker run --rm --gpus 1 -p 8000:8000 tirex2-inference-gpu
 ```
 
 ## Development Setup
