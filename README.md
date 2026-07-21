@@ -63,25 +63,6 @@ We use [Pixi](https://pixi.prefix.dev/latest/) for our development and benchmark
 curl -fsSL https://pixi.sh/install.sh | sh
 ```
 
-### Access to Model Weights
-
-TiRex-2's model weights are gated on Hugging Face. To be able to access them, either [log in via the Hugging Face CLI](https://huggingface.co/docs/huggingface_hub/guides/cli), or [generate yourself a Hugging Face access token](https://huggingface.co/settings/tokens/new?canReadGatedRepos=true&tokenType=fineGrained) (make sure to enable Read access to contents of all public gated repos you can access) and set it before loading the model:
-
-#### CLI
-```bash
-# log in to Hugging Face and follow the prompts
-huggingface-cli login
-```
-
-#### Access Token
-```python
-# set access token as environment variable
-import os
-os.environ["HF_TOKEN"] = "<insert-hf-token>"
-```
-
-On Google Colab, you can instead store it as a Colab secret (via the key icon in the sidebar) named `HF_TOKEN`, which is picked up automatically without pasting the token into a cell.
-
 ## Getting started
 
 The most easy way for you to get started is by checking out our ["Getting Started" notebook](examples/getting_started.ipynb). Moreover, you can jump straight into testing out TiRex using [Google Colab](https://colab.research.google.com/github/NX-AI/tirex-2/blob/main/examples/getting_started.ipynb). If you have cloned this repository, you can also easily start the notebook via Pixi by running:
