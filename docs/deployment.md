@@ -23,32 +23,28 @@ Both images run a warmup forecast on startup so the model is `torch.compile`d (C
 CPU, Triton on GPU) before the first real request; this download-and-warmup step can take up
 to ~10-20 seconds.
 
-You'll need a Hugging Face access token for the gated weights — see
-[Installation: Access to model weights](getting-started/install.md#access-to-model-weights)
-for how to generate one.
-
 ### Run the CPU image
 
 ```bash
-docker run -it -p 8000:8000 -e HF_TOKEN=$YOUR_HF_TOKEN ghcr.io/nx-ai/tirex2-cpu
+docker run -it -p 8000:8000 ghcr.io/nx-ai/tirex2-cpu
 ```
 
 PowerShell:
 
 ```powershell
-docker run -it -p 8000:8000 -e HF_TOKEN=$env:HF_TOKEN ghcr.io/nx-ai/tirex2-cpu
+docker run -it -p 8000:8000 ghcr.io/nx-ai/tirex2-cpu
 ```
 
 ### Run the GPU image
 
 ```bash
-docker run -it --gpus 1 -p 8000:8000 -e HF_TOKEN=$YOUR_HF_TOKEN ghcr.io/nx-ai/tirex2-gpu
+docker run -it --gpus 1 -p 8000:8000 ghcr.io/nx-ai/tirex2-gpu
 ```
 
 PowerShell:
 
 ```powershell
-docker run -it --gpus 1 -p 8000:8000 -e HF_TOKEN=$env:HF_TOKEN ghcr.io/nx-ai/tirex2-gpu
+docker run -it --gpus 1 -p 8000:8000 ghcr.io/nx-ai/tirex2-gpu
 ```
 
 Once running, the HTTP API is at `http://localhost:8000/`, with Swagger docs at
@@ -153,7 +149,7 @@ curl -sL https://github.com/emqx/MQTTX/releases/latest/download/mqttx-cli-linux-
 Start the container with MQTT enabled:
 
 ```bash
-docker run -p 8000:8000 -it -e HF_TOKEN=$YOUR_HF_TOKEN -e MQTT_ENABLED=1 -e MQTT_BROKER_HOST=broker.emqx.io -e MQTT_BROKER_PORT=1883 ghcr.io/nx-ai/tirex2-cpu
+docker run -p 8000:8000 -it -e MQTT_ENABLED=1 -e MQTT_BROKER_HOST=broker.emqx.io -e MQTT_BROKER_PORT=1883 ghcr.io/nx-ai/tirex2-cpu
 ```
 
 Subscribe to your own reply topic first, over MQTT v5:
@@ -223,18 +219,15 @@ Set these as environment variables via `-e`, e.g.
 ```bash
 cd inference
 docker build -f Dockerfile.cpu -t tirex2-inference-cpu .
-docker run --rm -p 8000:8000 -e HF_TOKEN=$YOUR_HF_TOKEN tirex2-inference-cpu
+docker run --rm -p 8000:8000 tirex2-inference-cpu
 ```
 
 ```bash
 docker build -f Dockerfile.gpu -t tirex2-inference-gpu .
-docker run --rm --gpus 1 -p 8000:8000 -e HF_TOKEN=$YOUR_HF_TOKEN tirex2-inference-gpu
+docker run --rm --gpus 1 -p 8000:8000 tirex2-inference-gpu
 ```
 
 ## Development setup
-
-Running the server (and its tests) downloads the gated weights, so set `HF_TOKEN` first
-(`export HF_TOKEN=hf_xxxxxxxx`, or `huggingface-cli login`):
 
 ```bash
 pip install -r requirements.txt -r requirements-dev.txt

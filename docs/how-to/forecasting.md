@@ -8,7 +8,7 @@ objects — one per series in the batch. Each holds:
 - `target`: tensor of shape `(num_target_variates, context_length)`.
 - `past_covariates`: `None`, or a tensor of shape `(num_past_covariates, context_length)`.
 - `future_covariates`: `None`, or a tensor of shape
-  `(num_future_covariates, >= context_length + prediction_length)` (extra trailing steps
+  `(n_future_covariates, context_length + prediction_length)` (extra trailing steps
   beyond what's needed are ignored). See [Covariates](covariates.md) for a full walkthrough.
 
 A single-variate `target` (a plain 1D series) is still passed as a 2D tensor with
@@ -33,10 +33,11 @@ the backbone; unknown attributes fall through to the underlying model, so
 import torch
 from tirex2 import TimeseriesType
 
-context = torch.randn(1, 512)  # (num_target_variates=1, context_length)
-ts = TimeseriesType(target=context, past_covariates=None, future_covariates=None)
+# (num_target_variates=1, context_length)
+context = torch.sin(torch.arange(128).float() / 8)
+ts_univariate = TimeseriesType(target=context, past_covariates=None, future_covariates=None)
 
-forecast = model.forecast([ts], prediction_length=64, output_type="numpy")[0]
+forecast = model.forecast([ts_univariate], prediction_length=64, output_type="numpy")[0]
 # forecast.shape == (1, 9, 64)  -> (num_target_variates, num_quantiles, prediction_length)
 ```
 
@@ -44,18 +45,46 @@ forecast = model.forecast([ts], prediction_length=64, output_type="numpy")[0]
 
 ## Multivariate forecasting
 
+The primary goal of multitarget forecasting is to model complex systems where multiple interacting signals jointly, allowing the model to capture both the temporal structure within each individual time series and the cross-variate dependencies across them
+
 Pass a target with more than one row to forecast several variates jointly from a single
 checkpoint — no separate model or per-variate training is needed:
 
-```python
-context = torch.randn(3, 512)  # 3 target variates sharing one context window
-ts = TimeseriesType(target=context, past_covariates=None, future_covariates=None)
 
-forecast = model.forecast([ts], prediction_length=64, output_type="numpy")[0]
-# forecast.shape == (3, 9, 64)
+```python
+import torch
+from tirex2 import TimeseriesType
+from tirex2.demo import Demo
+
+demo_nonstationary = Demo.create_nonstationary_demo()
+demo_holidays = Demo.create_holidays_demo()
+
+# Stack variates together
+multi_target = torch.stack(
+    [
+        torch.from_numpy(demo_holidays.target_context),
+        torch.from_numpy(demo_nonstationary.target_context),
+    ]
+)
+
+multi_target_ts = TimeseriesType(
+    target=multi_target,
+    past_covariates=None,
+    future_covariates=None,
+)
+
+multi_target_forecast = model.forecast(
+    [multi_target_ts],
+    prediction_length=42,
+    output_type="numpy",
+    batch_size=1,
+)[0]
+
+# forecast.shape == (2, 9, 42)  -> (num_target_variates, num_quantiles, prediction_length)
 ```
 
-![Multivariate context and forecast, with future-known covariates plotted below](../images/multivariate-prediction.png)
+See [Covariates](covariates.md) for past vs. future-known covariates.
+
 
 ## Batching multiple series
 
@@ -63,6 +92,12 @@ forecast = model.forecast([ts], prediction_length=64, output_type="numpy")[0]
 variates and a different context length, and covariates are optional per series:
 
 ```python
+context_length = 512
+
+ts_a = torch.randn(1, context_length)
+ts_b = torch.randn(1, context_length)
+ts_c = torch.randn(1, context_length)
+
 forecasts = model.forecast([ts_a, ts_b, ts_c], prediction_length=64, output_type="numpy")
 # forecasts is a list, one entry per input series
 ```

@@ -19,13 +19,14 @@ target = torch.randn(1, context_length)
 past_covariates = torch.randn(2, context_length)  # 2 past-only covariates
 
 ts = TimeseriesType(target=target, past_covariates=past_covariates, future_covariates=None)
+forecast = model.forecast([ts], prediction_length=prediction_length, output_type="numpy")[0]
 ```
 
 ## Future-known covariates
 
 `future_covariates` are known ahead of time for the whole forecast horizon — calendar
 features, holidays, promotions, or scheduled interventions are typical examples. Shape:
-`(num_future_covariates, >= context_length + prediction_length)`; if you pass more steps than
+`(num_future_covariates, context_length + prediction_length)`; if you pass more steps than
 `context_length + prediction_length`, the extra trailing steps are ignored.
 
 ```python
@@ -39,8 +40,7 @@ forecast = model.forecast([ts], prediction_length=prediction_length, output_type
 
 ## Combining both
 
-Past and future covariates can be combined freely on the same series, and are independent of
-the number of target variates:
+Past and future covariates can be combined freely on the same series:
 
 ```python
 ts = TimeseriesType(
@@ -57,43 +57,32 @@ builds exactly this kind of input — a continuous future-known driver that sets
 baseline level, plus a binary future-known promotion flag that adds spikes:
 
 ```python
+import torch
+from tirex2 import TimeseriesType
 from tirex2.demo import Demo
 
-demo = Demo.create_nonstationary_demo()
-ts = demo.to_timeseries_type(include_covariates=True)
+demo_nonstationary = Demo.create_nonstationary_demo()
+# univariate target shape: (1, context_length)
+target = torch.from_numpy(demo_nonstationary.target_context).unsqueeze(0)
 
-print(ts.n_past_covariates, ts.n_future_covariates)  # 0, 2 — both covariates here are future-known
+# future-known covariates shape: (n_covariates, context_length + horizon)
+future_covariates = torch.from_numpy(
+    np.stack([np.concatenate([c.context, c.future]) for c in demo_nonstationary.covariates]).astype(np.float32)
+)
+
+# multivariate forecast conditioning: the target plus future-known covariates.
+multivariate_nonstationary = TimeseriesType(
+    target=target,
+    past_covariates=None,
+    future_covariates=future_covariates,
+)
+
+forecast = model.forecast(
+    timeseries=[multivariate_nonstationary],
+    prediction_length=42,
+    output_type="numpy",
+)[0]
+
+# forecast.shape == (1, 9, 42)  -> (num_target_variates, num_quantiles, prediction_length)
 ```
-
-`Demo.to_timeseries_type(include_covariates=False)` builds the same series without any
-covariates, which is useful for comparing forecasts with and without covariate information
-side by side (as done in the [Quickstart](../getting-started/quickstart.md) covariate
-example). The bottom panel below plots the covariates themselves; the top two panels compare
-the univariate forecast (no covariates) against the multivariate one (with covariates) on the
-same series — the multivariate forecast tracks the wandering level and the promotion spikes
-that the univariate forecast, lacking that information, cannot:
-
-![TiRex-2 forecast on a non-stationary series with a continuous driver and a promotion flag](../images/nonstationary_driver_future_known.png)
-
-[`Demo.create_holidays_demo()`][tirex2.demo.Demo] builds a similar scenario with a single
-future-known holiday flag driving irregular multiplicative spikes that are unpredictable from
-the target's own history alone:
-
-![TiRex-2 forecast on daily demand with a future-known holiday flag](../images/holidays_future_known.png)
-
-## HTTP API equivalent
-
-The [deployment](../deployment.md) HTTP API exposes the same future-covariate conditioning
-for the multivariate endpoints, e.g.:
-
-```bash
-curl -s -X POST "http://localhost:8000/multivariate/forecast/mean" \
-  -H 'Content-Type: application/json' \
-  -d '{
-        "context": [{
-          "target": [[1, 2, 3, 4, 5, 6, 7, 8]],
-          "future_covariates": [[0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0]]
-        }],
-        "prediction_length": 5
-      }'
-```
+![Multivariate context and forecast, with future-known covariates plotted below](../images/multivariate-prediction.png)
