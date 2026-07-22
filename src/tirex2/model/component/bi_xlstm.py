@@ -47,7 +47,7 @@ class BiXLSTM(nn.Module):
         Index of this block in the overall stack.
     num_blocks : int
         Total number of blocks in the stack.
-    device : {"cpu", "cuda"}
+    device : {"cpu", "cuda", "mps"}
         Device used to choose recurrent kernels.
     dropout : float
         Dropout probability applied in the combination projection.
@@ -64,7 +64,7 @@ class BiXLSTM(nn.Module):
         config: xLSTMMixedConfig,
         block_idx: int,
         num_blocks: int,
-        device: Literal["cpu", "cuda"],
+        device: Literal["cpu", "cuda", "mps"],
         dropout: float = 0.0,
         share_weights: bool = True,
         cell_type: Literal["slstm", "mlstm"] = "slstm",
