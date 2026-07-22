@@ -31,11 +31,13 @@ the backbone; unknown attributes fall through to the underlying model, so
 
 ```python
 import torch
-from tirex2 import TimeseriesType
+from tirex2 import TimeseriesType, load_model
 
 # (num_target_variates=1, context_length)
 context = torch.sin(torch.arange(128).float() / 8)
 ts_univariate = TimeseriesType(target=context, past_covariates=None, future_covariates=None)
+
+model = load_model("NX-AI/TiRex-2", device="cpu")
 
 forecast = model.forecast([ts_univariate], prediction_length=64, output_type="numpy")[0]
 # forecast.shape == (1, 9, 64)  -> (num_target_variates, num_quantiles, prediction_length)
@@ -45,7 +47,7 @@ forecast = model.forecast([ts_univariate], prediction_length=64, output_type="nu
 
 ## Multivariate forecasting
 
-The primary goal of multitarget forecasting is to model complex systems where multiple interacting signals jointly, allowing the model to capture both the temporal structure within each individual time series and the cross-variate dependencies across them
+The primary goal of multitarget forecasting is to model complex systems where multiple signals interact jointly, allowing the model to capture both the temporal structure within each individual time series and the cross-variate dependencies among them.
 
 Pass a target with more than one row to forecast several variates jointly from a single
 checkpoint — no separate model or per-variate training is needed:
@@ -53,7 +55,7 @@ checkpoint — no separate model or per-variate training is needed:
 
 ```python
 import torch
-from tirex2 import TimeseriesType
+from tirex2 import TimeseriesType, load_model
 from tirex2.demo import Demo
 
 demo_nonstationary = Demo.create_nonstationary_demo()
@@ -72,6 +74,8 @@ multi_target_ts = TimeseriesType(
     past_covariates=None,
     future_covariates=None,
 )
+
+model = load_model("NX-AI/TiRex-2", device="cpu")
 
 multi_target_forecast = model.forecast(
     [multi_target_ts],

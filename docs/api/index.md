@@ -9,10 +9,6 @@ API surface exported from the top-level `tirex2` package.
   [Quickstart](../getting-started/quickstart.md).
 - [Plotting](plotting.md) — `plot_multivariate`, `plot_forecast`, `plot_covariate`.
 
-## Loading a model
-
 ::: tirex2.load_model
-
-## `TimeseriesType`
 
 ::: tirex2.TimeseriesType

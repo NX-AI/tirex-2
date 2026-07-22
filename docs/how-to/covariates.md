@@ -12,13 +12,17 @@ the target's `context_length` exactly.
 
 ```python
 import torch
-from tirex2 import TimeseriesType
+from tirex2 import TimeseriesType, load_model
 
 context_length = 512
+prediction_length=42
 target = torch.randn(1, context_length)
+
 past_covariates = torch.randn(2, context_length)  # 2 past-only covariates
 
 ts = TimeseriesType(target=target, past_covariates=past_covariates, future_covariates=None)
+
+model = load_model("NX-AI/TiRex-2", device="cpu")
 forecast = model.forecast([ts], prediction_length=prediction_length, output_type="numpy")[0]
 ```
 
@@ -30,12 +34,20 @@ features, holidays, promotions, or scheduled interventions are typical examples.
 `context_length + prediction_length`, the extra trailing steps are ignored.
 
 ```python
-prediction_length = 64
+import torch
+from tirex2 import TimeseriesType, load_model
+
+context_length = 512
+prediction_length=42
+target = torch.randn(1, context_length)
+
 future_covariates = torch.zeros(1, context_length + prediction_length)
 future_covariates[0, 100::7] = 1.0  # e.g. a weekly recurring event flag
 
 ts = TimeseriesType(target=target, past_covariates=None, future_covariates=future_covariates)
-forecast = model.forecast([ts], prediction_length=prediction_length, output_type="numpy")[0]
+
+model = load_model("NX-AI/TiRex-2", device="cpu")
+forecast = model.forecast([ts], prediction_length=42, output_type="numpy")[0]
 ```
 
 ## Combining both
@@ -58,8 +70,9 @@ baseline level, plus a binary future-known promotion flag that adds spikes:
 
 ```python
 import torch
-from tirex2 import TimeseriesType
+from tirex2 import TimeseriesType, load_model
 from tirex2.demo import Demo
+import numpy as np
 
 demo_nonstationary = Demo.create_nonstationary_demo()
 # univariate target shape: (1, context_length)
@@ -76,6 +89,8 @@ multivariate_nonstationary = TimeseriesType(
     past_covariates=None,
     future_covariates=future_covariates,
 )
+
+model = load_model("NX-AI/TiRex-2", device="cpu")
 
 forecast = model.forecast(
     timeseries=[multivariate_nonstationary],
