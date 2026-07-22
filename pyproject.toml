@@ -16,6 +16,7 @@ dependencies = [
 	"xlstm~=2.0.3",
 	"PyYAML>=6",
 	"huggingface-hub~=0.32.0",
+	"triton-windows>=3.0; sys_platform == 'win32'",
 ]
 
 [project.optional-dependencies]
