@@ -15,7 +15,7 @@ jobs:
       TEST_MQTT_BROKER_PORT: "1883"
     services:
       mqtt:
-        image: emqx/emqx:5
+        image: emqx/emqx:5.10.4
         ports:
           - 1883:1883
         options: >-
