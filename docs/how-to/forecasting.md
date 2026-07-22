@@ -96,12 +96,34 @@ See [Covariates](covariates.md) for past vs. future-known covariates.
 variates and a different context length, and covariates are optional per series:
 
 ```python
-context_length = 512
+import torch
+from tirex2 import TimeseriesType, load_model
 
-ts_a = torch.randn(1, context_length)
-ts_b = torch.randn(1, context_length)
-ts_c = torch.randn(1, context_length)
+context_length_a = 128
+ts_a = torch.randn(1, context_length_a)
+ts_a = TimeseriesType(
+    target=ts_a,
+    past_covariates=None,
+    future_covariates=None,
+)
 
+context_length_b = 128
+ts_b = torch.randn(1, context_length_b)
+ts_b = TimeseriesType(
+    target=ts_b,
+    past_covariates=None,
+    future_covariates=None,
+)
+
+context_length_c = 128
+ts_c = torch.randn(1, context_length_c)
+ts_c = TimeseriesType(
+    target=ts_c,
+    past_covariates=None,
+    future_covariates=None,
+)
+
+model = load_model("NX-AI/TiRex-2", device="cpu")
 forecasts = model.forecast([ts_a, ts_b, ts_c], prediction_length=64, output_type="numpy")
 # forecasts is a list, one entry per input series
 ```

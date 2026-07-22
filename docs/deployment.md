@@ -111,8 +111,8 @@ full set of curl/Python examples, including batched multivariate-with-covariates
 
 ### `/quantiles` vs `/mean`
 
-The `/mean` endpoints return the median forecast. The `/quantiles` endpoints return all 8
-quantiles (10, 20, 30, 50, 60, 70, 80, 90%) for the same inputs.
+The `/mean` endpoints return the median forecast. The `/quantiles` endpoints return all 9
+quantiles (10, 20, 30, 40, 50, 60, 70, 80, 90%) for the same inputs.
 
 ### Python client example
 
