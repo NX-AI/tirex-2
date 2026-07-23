@@ -14,6 +14,7 @@
 [![Tests](https://github.com/NX-AI/tirex-2/actions/workflows/test.yaml/badge.svg)](https://github.com/NX-AI/tirex-2/actions/workflows/test.yaml)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit)
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/NX-AI/tirex-2/blob/main/examples/getting_started.ipynb)
+[![TiRex-2 Demo](https://img.shields.io/badge/HuggingFace-TiRex--2%20Demo-yellow?logo=huggingface)](https://huggingface.co/spaces/NX-AI/TiRex-2-demo)
 
 </div>
 
