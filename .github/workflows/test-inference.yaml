@@ -1,0 +1,38 @@
+name: Run Inference Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  inference-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          # cache: 'pip' # Caching didn't make the CI faster and cache is quite big (4GB)
+
+      - name: Install inference dependencies
+        working-directory: ./inference
+        run: |
+          pip install -r requirements.txt -r requirements-dev.txt --extra-index-url https://download.pytorch.org/whl/cpu
+
+      - name: Run static inference checks
+        working-directory: ./inference
+        run: python -m compileall app tests
+
+      - name: Run inference tests
+        working-directory: ./inference
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          if [ -z "$HF_TOKEN" ]; then
+            echo "HF_TOKEN secret is not configured; skipping gated inference tests."
+            exit 0
+          fi
+          pytest tests -s
