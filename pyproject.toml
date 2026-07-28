@@ -1,21 +1,23 @@
 [project]
 name = "tirex-2"
-version = "0.1.1"
+version = "0.2.1"
 description = "TiRex-2 time series forecasting inference"
 authors = [
 	{ name = "NXAI" }
 ]
 readme = "README.md"
 license = { text = "Apache-2.0" }
-requires-python = ">=3.11,<3.14"
+requires-python = ">=3.11"
 dependencies = [
-	"torch>=2.8,<2.10",
-	"numpy~=2.1.3",
+	"torch>=2.8.0",
+	"torch>=2.10.0; python_version >= '3.14'",
+	"numpy>=2.1.3",
+	"numpy>=2.3.3; python_version >= '3.14'",
 	"einops~=0.8.1",
-	"flashrnn>=1.0.4",
+	"flashrnn>=1.0.5",
 	"xlstm~=2.0.3",
 	"PyYAML>=6",
-	"huggingface-hub~=0.32.0",
+	"huggingface-hub>=0.35.3",
 ]
 
 [project.optional-dependencies]
