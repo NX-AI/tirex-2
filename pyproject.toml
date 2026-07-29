@@ -29,13 +29,13 @@ examples = [
 
 fev = [
 	"fev",
-	"datasets==3.6.0",
-	"pyarrow>=21.0.0",
+	"datasets>=4.4.0,<5",
+	"pyarrow>=22.0.0",
 ]
 
 gluonts = [
 	"gluonts>=0.16.2",
-	"pandas~=2.2.3",
+	"pandas~=2.3.3",
 ]
 
 [build-system]

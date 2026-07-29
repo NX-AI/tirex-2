@@ -41,7 +41,7 @@ jobs:
         run: pip install torch --index-url https://download.pytorch.org/whl/cpu
 
       - name: Install tirex-2 from source
-        run: pip install "${{ matrix.python-version == '3.14' && '.' || '.[gluonts,fev]' }}" pytest pandas
+        run: pip install ".[gluonts,fev]" pytest pandas
 
       - name: Run tests on CPU
         run: pytest test/
