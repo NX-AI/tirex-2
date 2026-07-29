@@ -38,6 +38,10 @@ gluonts = [
 	"pandas~=2.2.3",
 ]
 
+pandas = [
+	"pandas~=2.2.3",
+]
+
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
@@ -167,3 +171,6 @@ where = ["src"]
 testpaths = [
     "tests",
 ]
+
+[tool.uv]
+override-dependencies = ["triton; sys_platform == 'linux'"]

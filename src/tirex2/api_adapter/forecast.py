@@ -2,16 +2,21 @@
 
 import logging
 import time
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import torch
 
 from ..model.types import TimeseriesType
 
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    import pandas as pd
+
 logger = logging.getLogger(__file__)
 
-ForecastOutputType = Literal["torch", "numpy", "gluonts", "fev"]
+ForecastOutputType = Literal["torch", "numpy", "gluonts", "fev", "pandas"]
 
 
 def _is_oom_error(exc: BaseException) -> bool:
@@ -41,6 +46,12 @@ def _format_output(forecasts, meta, output_type, quantile_levels):
         return [f.cpu() for f in forecasts]
     elif output_type == "numpy":
         return [f.cpu().numpy() for f in forecasts]
+    elif output_type == "pandas":
+        try:
+            from .pandas_adapter import format_pandas_output
+        except ImportError:
+            raise ValueError("output_type pandas needs pandas but pandas is not available (not installed)!")
+        return format_pandas_output(forecasts, meta, quantile_levels)
     elif output_type == "gluonts":
         try:
             from .gluon import format_gluonts_output
@@ -255,7 +266,7 @@ def _gen_forecast(
     if meta is None:
         meta = [{} for _ in timeseries]
 
-    if output_type not in ["numpy", "torch", "gluonts", "fev"]:
+    if output_type not in ["numpy", "torch", "gluonts", "fev", "pandas"]:
         raise ValueError("Invalid output type")
 
     if output_type == "fev" and yield_per_batch:
@@ -263,7 +274,10 @@ def _gen_forecast(
     if return_inference_time and yield_per_batch:
         raise ValueError("return_inference_time=True is not supported with yield_per_batch=True.")
 
-    adaptive_output_type = "torch" if output_type == "fev" else output_type
+    # 'fev' and 'pandas' render the whole dataset into a single object, so they must be formatted
+    # once at the end rather than per batch; with yield_per_batch, 'pandas' streams one frame per batch.
+    deferred_format = output_type == "fev" or (output_type == "pandas" and not yield_per_batch)
+    adaptive_output_type = "torch" if deferred_format else output_type
     batch_outputs = _predict_adaptive(
         model,
         timeseries,
@@ -283,7 +297,7 @@ def _gen_forecast(
     for formatted in batch_outputs:
         all_forecasts.extend(formatted)
     inference_time_s = time.monotonic() - inference_start if inference_start is not None else None
-    if output_type == "fev":
+    if deferred_format:
         result = _format_output(all_forecasts, meta, output_type, quantile_levels)
     else:
         result = all_forecasts
@@ -386,6 +400,71 @@ class ForecastModel:
             raise ValueError("forecast_gluon needs GluonTS but GluonTS is not available (not installed)!")
 
         timeseries, meta = build_gluon_timeseries(gluonDataset, multivariate=multivariate, **data_kwargs)
+        return _gen_forecast(
+            self.model,
+            timeseries,
+            meta,
+            prediction_length,
+            output_type,
+            batch_size,
+            yield_per_batch,
+            self._quantile_levels(),
+            **predict_kwargs,
+        )
+
+    def forecast_df(
+        self,
+        df: "pd.DataFrame",
+        prediction_length: int,
+        target: "str | Sequence[str] | None" = None,
+        id_column: str | None = None,
+        timestamp_column: str | None = None,
+        past_covariates: "str | Sequence[str] | None" = None,
+        future_covariates: "str | Sequence[str] | None" = None,
+        future_df: "pd.DataFrame | None" = None,
+        multivariate: bool = False,
+        output_type: ForecastOutputType = "pandas",
+        batch_size: int = 512,
+        yield_per_batch: bool = False,
+        **predict_kwargs,
+    ):
+        """Forecast the series held in a pandas ``DataFrame``.
+
+        The frame may be long-format - many series stacked, identified by ``id_column`` - or a
+        single series, and its time axis may come from ``timestamp_column`` or from a
+        ``DatetimeIndex``. Target columns default to every numeric column that is not the id
+        column, the timestamp column or a covariate column. With ``multivariate=False`` (default)
+        each target column is forecast as an independent univariate series; with
+        ``multivariate=True`` the target columns of a series are forecast jointly.
+
+        Known-future covariates need their horizon values, supplied via ``future_df`` in the same
+        layout as ``df``.
+
+        The default ``output_type="pandas"`` returns one long-format ``DataFrame``: a row per
+        series, target column and forecast step, with a ``prediction`` column (the median) and one
+        column per quantile level. Timestamps continue the input's inferred frequency; when no
+        usable time axis exists they are integer positions relative to the series start. The other
+        output types behave as in :meth:`forecast`.
+
+        Extra ``predict_kwargs`` are forwarded verbatim to :meth:`TiRex2.predict` (see
+        :meth:`forecast`).
+        """
+        assert batch_size >= 1, "Batch size must be >= 1"
+        try:
+            from .pandas_adapter import build_df_timeseries
+        except ImportError:
+            raise ValueError("forecast_df needs pandas but pandas is not available (not installed)!")
+
+        timeseries, meta = build_df_timeseries(
+            df,
+            target=target,
+            id_column=id_column,
+            timestamp_column=timestamp_column,
+            past_covariates=past_covariates,
+            future_covariates=future_covariates,
+            future_df=future_df,
+            multivariate=multivariate,
+        )
         return _gen_forecast(
             self.model,
             timeseries,
