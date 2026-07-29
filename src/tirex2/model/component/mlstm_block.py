@@ -145,9 +145,14 @@ class mLSTMLayer(nn.Module):
         return y
 
 
-def _mlstm_backend_config(config: xLSTMMixedConfig, device: Literal["cpu", "cuda"]) -> mLSTMBackendConfig:
-    """Return the mLSTM kernel backend matching the requested runtime device."""
-    if device == "cpu":
+def _mlstm_backend_config(config: xLSTMMixedConfig, device: Literal["cpu", "cuda", "mps"]) -> mLSTMBackendConfig:
+    """Return the mLSTM kernel backend matching the requested runtime device.
+
+    ``"mps"`` shares the ``"cpu"`` configuration: the pure-PyTorch native kernels
+    are device-agnostic and run on Apple Metal, whereas the Triton kernels used by
+    ``"cuda"`` are unavailable there.
+    """
+    if device in ("cpu", "mps"):
         return mLSTMBackendConfig(
             chunkwise_kernel="chunkwise--native_autograd",
             sequence_kernel="native_sequence__native",
@@ -173,10 +178,10 @@ def _mlstm_backend_config(config: xLSTMMixedConfig, device: Literal["cpu", "cuda
             inference_state_dtype="float32",
         )
 
-    raise ValueError(f"device must be 'cpu' or 'cuda', got {device!r}.")
+    raise ValueError(f"device must be 'cpu', 'cuda', or 'mps', got {device!r}.")
 
 
-def init_cell(config: xLSTMMixedConfig, device: Literal["cpu", "cuda"]) -> mLSTMLayer:
+def init_cell(config: xLSTMMixedConfig, device: Literal["cpu", "cuda", "mps"]) -> mLSTMLayer:
     """Instantiate an mLSTM cell for the requested runtime device."""
     layer = mLSTMLayer(
         conv_mLSTMLayerConfig(
