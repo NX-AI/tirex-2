@@ -19,7 +19,7 @@ from .component.variate_mixing_block import (
 )
 from .types import TimeseriesType
 
-Device = Literal["cpu", "cuda"]
+Device = Literal["cpu", "cuda", "mps"]
 MatmulPrecision = Literal["highest", "high", "medium"]
 
 logger = logging.getLogger(__file__)
@@ -27,8 +27,8 @@ logger = logging.getLogger(__file__)
 
 def _normalize_device(device: str) -> Device:
     """Normalize the public runtime device selector used by TiRex2."""
-    if device not in ("cpu", "cuda"):
-        raise ValueError(f"device must be 'cpu' or 'cuda', got {device!r}.")
+    if device not in ("cpu", "cuda", "mps"):
+        raise ValueError(f"device must be 'cpu', 'cuda', or 'mps', got {device!r}.")
     return device
 
 
@@ -90,9 +90,10 @@ class MultivariateStackConfig:
             Whether the attention variate mixers should RMS-normalize their
             query/key vectors. Injected into every mixer built from a dict
             template (default: True).
-        device : {"cpu", "cuda"}
+        device : {"cpu", "cuda", "mps"}
             Runtime device used to choose recurrent kernels. This overrides
-            any serialized time mixer device/backend setting.
+            any serialized time mixer device/backend setting. ``"mps"`` uses the
+            same pure-PyTorch (native) kernels as ``"cpu"``, run on Apple Metal.
         """
         templates = {}
         for name, template in config["templates"].items():

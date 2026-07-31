@@ -14,6 +14,27 @@ logger = logging.getLogger(__file__)
 ForecastOutputType = Literal["torch", "numpy", "gluonts", "fev"]
 
 
+def _is_oom_error(exc: BaseException) -> bool:
+    """Return whether ``exc`` is an out-of-memory error, on CUDA or MPS.
+
+    CUDA raises :class:`torch.cuda.OutOfMemoryError`; MPS currently surfaces OOM
+    as a plain :class:`RuntimeError` whose message mentions running out of memory.
+    """
+    if isinstance(exc, torch.cuda.OutOfMemoryError):
+        return True
+    if isinstance(exc, RuntimeError):
+        return "out of memory" in str(exc).lower()
+    return False
+
+
+def _empty_device_cache(device: str) -> None:
+    """Release the caching allocator for ``device`` (no-op on CPU)."""
+    if device.startswith("cuda"):
+        torch.cuda.empty_cache()
+    elif device == "mps":
+        torch.mps.empty_cache()
+
+
 def _format_output(forecasts, meta, output_type, quantile_levels):
     """Render a batch of per-series ``[V_t, Q, H]`` forecasts in the requested output format."""
     if output_type == "torch":
@@ -42,11 +63,11 @@ def _predict_adaptive(
     quantile_levels,
     **predict_kwargs,
 ):
-    """Yield formatted forecasts batch by batch, halving the batch size on CUDA OOM.
+    """Yield formatted forecasts batch by batch, halving the batch size on device OOM.
 
     Walks contiguous ``[start, end)`` windows of at most ``batch_size`` series,
     forecasting and formatting each (slicing ``meta`` alongside ``timeseries``).
-    When a window raises :class:`torch.cuda.OutOfMemoryError`, the CUDA cache is
+    When a window runs out of memory (CUDA or MPS), the device cache is
     cleared, the batch size is halved (floor of 1), and the *same* window is retried
     at the smaller size. The reduced size persists for the rest of this call, so a
     single oversized window pins it down only here - a fresh call starts again from
@@ -59,6 +80,7 @@ def _predict_adaptive(
     """
     assert batch_size >= 1, "Batch size must be >= 1"
     num_items = len(timeseries)
+    device = str(getattr(model, "device", "cpu"))
     start = 0
     current = batch_size
     while start < num_items:
@@ -66,13 +88,15 @@ def _predict_adaptive(
         try:
             forecasts = model.predict(timeseries[start:end], prediction_length, **predict_kwargs)
             formatted = _format_output(forecasts, meta[start:end], output_type, quantile_levels)
-        except torch.cuda.OutOfMemoryError:
-            torch.cuda.empty_cache()
+        except (torch.cuda.OutOfMemoryError, RuntimeError) as exc:
+            if not _is_oom_error(exc):
+                raise
+            _empty_device_cache(device)
             if current == 1:
-                logger.error("CUDA OOM at batch size 1 (series index %d); cannot shrink further.", start)
+                logger.error("Device OOM at batch size 1 (series index %d); cannot shrink further.", start)
                 raise
             current = max(1, current // 2)
-            logger.warning("CUDA OOM at series index %d; halving batch size to %d and retrying.", start, current)
+            logger.warning("Device OOM at series index %d; halving batch size to %d and retrying.", start, current)
             continue
         yield formatted
         start = end

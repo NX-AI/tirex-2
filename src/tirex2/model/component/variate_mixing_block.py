@@ -40,7 +40,7 @@ class TimeMixerConfig:
     num_heads: int = 4
     num_slstm_heads: int | None = None
 
-    device: Literal["cpu", "cuda"] = "cuda"
+    device: Literal["cpu", "cuda", "mps"] = "cuda"
 
 
 @dataclass

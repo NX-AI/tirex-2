@@ -21,4 +21,7 @@ test/*
 !test/test_tirex2_instantiation.py
 !test/test_api_adapter.py
 !test/test_forecast_model.py
+!test/test_fev_adapter.py
+!test/test_references.py
+!test/references/
 /venv

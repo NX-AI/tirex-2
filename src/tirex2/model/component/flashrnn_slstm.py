@@ -340,17 +340,19 @@ class sLSTMFlashRNNLayer(_FlashRNNLayer):
         return bias_int
 
 
-def _flashrnn_backend(device: Literal["cpu", "cuda"]) -> str:
+def _flashrnn_backend(device: Literal["cpu", "cuda", "mps"]) -> str:
     match device:
-        case "cpu":
+        case "cpu" | "mps":
+            # The "vanilla" backend is pure PyTorch and device-agnostic, so it
+            # runs on Apple Metal; FlashRNN's fused "cuda" backend does not.
             return "vanilla"
         case "cuda":
             return "cuda"
         case _:
-            raise ValueError(f"device must be 'cpu' or 'cuda', got {device!r}.")
+            raise ValueError(f"device must be 'cpu', 'cuda', or 'mps', got {device!r}.")
 
 
-def init_cell(config: xLSTMMixedConfig, block_idx: int, num_blocks: int, device: Literal["cpu", "cuda"]):
+def init_cell(config: xLSTMMixedConfig, block_idx: int, num_blocks: int, device: Literal["cpu", "cuda", "mps"]):
     """Instantiate an sLSTM cell for the requested runtime device."""
     return sLSTMFlashRNNLayer(
         FlashRNNLayerConfig(

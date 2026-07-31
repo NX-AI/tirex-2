@@ -60,9 +60,10 @@ def load_model(
         Local directory holding ``model-config.yaml`` and ``model.ckpt``. Values
         of the form ``hf://org/repo`` or ``org/repo`` are treated as Hugging Face
         model repo ids and downloaded with :func:`huggingface_hub.snapshot_download`.
-    device : {"cpu", "cuda"}
+    device : {"cpu", "cuda", "mps"}
         Runtime device and recurrent-kernel family to use. This overrides any
-        device/backend stored in the checkpoint config.
+        device/backend stored in the checkpoint config. ``"mps"`` runs on Apple
+        Metal using the same pure-PyTorch (native) kernels as ``"cpu"``.
     hf_kwargs : dict, optional
         Extra keyword arguments forwarded to ``snapshot_download`` for Hugging
         Face paths, e.g. ``{"revision": "main", "local_files_only": True}``.
@@ -86,6 +87,8 @@ def load_model(
     """
     if device.startswith("cuda") and not torch.cuda.is_available():
         raise RuntimeError("Execution on CUDA was requested but is not available.")
+    if device == "mps" and not torch.backends.mps.is_available():
+        raise RuntimeError("Execution on MPS was requested but is not available.")
 
     ckpt_dir = _resolve_ckpt_dir(ckpt_path, hf_kwargs=hf_kwargs)
     config_file = ckpt_dir / CONFIG_FILENAME
