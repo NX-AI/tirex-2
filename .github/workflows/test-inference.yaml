@@ -28,11 +28,4 @@ jobs:
 
       - name: Run inference tests
         working-directory: ./inference
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: |
-          if [ -z "$HF_TOKEN" ]; then
-            echo "HF_TOKEN secret is not configured; skipping gated inference tests."
-            exit 0
-          fi
-          pytest tests -s
+        run: pytest tests -s
