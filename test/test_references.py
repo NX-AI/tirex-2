@@ -13,6 +13,7 @@ pytestmark = pytest.mark.skipif(sys.platform != "linux", reason="reference outpu
 REFERENCES = Path(__file__).parent / "references"
 CHECKPOINT = "NX-AI/TiRex-2"
 RTOL, ATOL = 1e-5, 1e-5
+FLEX_RTOL, FLEX_ATOL = 1e-4, 1e-4
 
 
 def _reference(name: str) -> dict:
