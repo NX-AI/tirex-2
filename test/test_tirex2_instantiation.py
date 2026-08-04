@@ -84,6 +84,34 @@ def test_load_model_device_overrides_checkpoint_config(tmp_path, small_model_kwa
     assert {block.config.time_mixer.device for block in loaded.model.stack} == {"cpu"}
 
 
+@pytest.mark.parametrize(
+    "checkpoint_value, override",
+    [(False, True), (True, False)],
+    ids=["enable", "disable"],
+)
+def test_load_model_can_override_flex_attention(
+    tmp_path,
+    small_model_kwargs,
+    require_flex_attention,
+    checkpoint_value,
+    override,
+):
+    config = small_model_kwargs("cpu")
+    model = TiRex2(**config)
+    for template in config["stack_config"]["templates"].values():
+        template["variate_mixer"]["use_flex_attention"] = checkpoint_value
+
+    with (tmp_path / CONFIG_FILENAME).open("w") as f:
+        yaml.safe_dump(config, f)
+    torch.save(model.state_dict(), tmp_path / CKPT_FILENAME)
+
+    loaded = load_model(str(tmp_path), device="cpu", use_flex_attention=override)
+
+    assert all(block.config.variate_mixer.use_flex_attention is override for block in loaded.model.stack)
+    assert all(block.variate_mixer.use_flex_attention is override for block in loaded.model.stack)
+    assert all(block.variate_mixer.attn.use_flex_attention is override for block in loaded.model.stack)
+
+
 def test_tirex2_init_can_opt_into_matmul_precision(small_model_kwargs, monkeypatch):
     config = small_model_kwargs("cpu")
     precision_calls = []

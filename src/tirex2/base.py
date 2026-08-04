@@ -51,6 +51,7 @@ def load_model(
     device: str = "cuda",
     *,
     hf_kwargs: dict[str, Any] | None = None,
+    use_flex_attention: bool | None = None,
 ) -> ForecastModel:
     """Load an inference-ready :class:`TiRex2` from a checkpoint directory or HF repo.
 
@@ -67,6 +68,12 @@ def load_model(
     hf_kwargs : dict, optional
         Extra keyword arguments forwarded to ``snapshot_download`` for Hugging
         Face paths, e.g. ``{"revision": "main", "local_files_only": True}``.
+    use_flex_attention : bool, optional
+        Override every variate mixer's checkpoint setting. ``True`` enables
+        block-sparse FlexAttention, which can reduce the cost of large grouped
+        multivariate batches on CUDA but adds first-call compilation overhead.
+        ``False`` forces dense attention. Leave as ``None`` to preserve the
+        checkpoint configuration and package defaults.
 
     Returns
     -------
@@ -92,6 +99,9 @@ def load_model(
         config: dict[str, Any] = yaml.safe_load(f)
 
     config["device"] = device
+    if use_flex_attention is not None:
+        for template in config["stack_config"]["templates"].values():
+            template["variate_mixer"]["use_flex_attention"] = use_flex_attention
     model = TiRex2(**config)
 
     checkpoint = torch.load(weights_file, map_location="cpu", weights_only=True)
