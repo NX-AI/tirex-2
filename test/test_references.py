@@ -6,6 +6,7 @@ import pytest
 import torch
 
 from tirex2 import TimeseriesType, load_model
+from tirex2.model.component.attention_block import is_flex_attention_available
 
 pytestmark = pytest.mark.skipif(sys.platform != "linux", reason="reference outputs were recorded on Linux")
 
@@ -35,12 +36,26 @@ SCENARIOS = {
 }
 
 
-@pytest.fixture(scope="module")
-def model():
+def _load_reference_model(**kwargs):
     try:
-        return load_model(CHECKPOINT, device="cpu")
+        return load_model(CHECKPOINT, device="cpu", **kwargs)
     except Exception as exc:
         pytest.skip(f"reference checkpoint {CHECKPOINT} is unavailable: {exc}")
+
+
+@pytest.fixture(scope="module")
+def model():
+    return _load_reference_model()
+
+
+@pytest.fixture(scope="module")
+def flex_model():
+    if not is_flex_attention_available():
+        pytest.skip("FlexAttention is not available in this PyTorch installation")
+
+    model = _load_reference_model(use_flex_attention=True)
+    assert all(block.variate_mixer.attn.use_flex_attention for block in model.model.stack)
+    return model
 
 
 @pytest.mark.parametrize("scenario", list(SCENARIOS))
@@ -50,3 +65,12 @@ def test_forecast_matches_cpu_reference(model, scenario):
 
     assert forecast.shape == expected.shape
     torch.testing.assert_close(forecast, expected, rtol=RTOL, atol=ATOL)
+
+
+@pytest.mark.parametrize("scenario", list(SCENARIOS))
+def test_flex_attention_forecast_matches_cpu_reference(flex_model, scenario):
+    forecast = flex_model.forecast([SCENARIOS[scenario]], prediction_length=H, output_type="torch")[0]
+    expected = torch.tensor(REFERENCE_OUTPUT[scenario], dtype=torch.float32)
+
+    assert forecast.shape == expected.shape
+    torch.testing.assert_close(forecast, expected, rtol=FLEX_RTOL, atol=FLEX_ATOL)

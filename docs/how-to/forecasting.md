@@ -27,6 +27,12 @@ model = load_model("NX-AI/TiRex-2", device="cpu")  # or device="cuda"
 the backbone; unknown attributes fall through to the underlying model, so
 `model.quantiles` and similar backbone attributes remain reachable directly.
 
+`use_flex_attention` overrides every variate mixer's checkpoint setting. `True` enables block-sparse FlexAttention, which can reduce the cost of large grouped multivariate batches on CUDA but adds first-call compilation overhead. `False` forces dense attention. Leave it unset to keep the checkpoint configuration.
+
+```python
+model = load_model("NX-AI/TiRex-2", device="cuda", use_flex_attention=True)
+```
+
 ## Univariate forecasting
 
 ```python
