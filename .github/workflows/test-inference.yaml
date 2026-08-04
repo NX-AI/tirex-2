@@ -9,6 +9,21 @@ on:
 jobs:
   inference-tests:
     runs-on: ubuntu-latest
+    env:
+      # Local Broker
+      TEST_MQTT_BROKER_HOST: localhost
+      TEST_MQTT_BROKER_PORT: "1883"
+    services:
+      mqtt:
+        image: emqx/emqx:5.10.4
+        ports:
+          - 1883:1883
+        options: >-
+          --health-cmd "emqx ctl status"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+          --health-start-period 10s
     steps:
       - uses: actions/checkout@v5
       - name: Setup Python
@@ -28,11 +43,4 @@ jobs:
 
       - name: Run inference tests
         working-directory: ./inference
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: |
-          if [ -z "$HF_TOKEN" ]; then
-            echo "HF_TOKEN secret is not configured; skipping gated inference tests."
-            exit 0
-          fi
-          pytest tests -s
+        run: pytest tests -s

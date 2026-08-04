@@ -28,6 +28,29 @@ class Covariate:
 
 @dataclass
 class Demo:
+    """A synthetic forecasting scenario for showcasing TiRex-2, built by
+    :meth:`create_nonstationary_demo` or :meth:`create_holidays_demo`.
+
+    Bundles a target series (split into context and held-out future) with the
+    covariates that explain it, and converts to a :class:`~tirex2.model.types.TimeseriesType`
+    ready to pass to :meth:`~tirex2.api_adapter.forecast.ForecastModel.forecast`.
+
+    Examples
+    --------
+    >>> from tirex2 import load_model
+    >>> from tirex2.demo import Demo, plot_demo_forecast
+    >>> model = load_model("NX-AI/TiRex-2", device="cpu")
+    >>> demo = Demo.create_nonstationary_demo()
+    >>> ts_univariate = demo.to_timeseries_type(include_covariates=False)
+    >>> ts_multivariate = demo.to_timeseries_type(include_covariates=True)
+    >>> forecasts = model.forecast(
+    ...     timeseries=[ts_univariate, ts_multivariate],
+    ...     prediction_length=demo.horizon,
+    ...     output_type="numpy",
+    ... )
+    >>> fig = plot_demo_forecast(demo, *forecasts, engine="matplotlib")
+    """
+
     title: str
     description: str
     target_context: np.ndarray  # (context_length,)
