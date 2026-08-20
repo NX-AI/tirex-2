@@ -1,3 +1,4 @@
+# Copyright (c) NXAI GmbH.
 """Feed-forward network module with optional residual connection."""
 
 import torch

@@ -1,3 +1,4 @@
+# Copyright (c) NXAI GmbH.
 from dataclasses import dataclass
 
 import torch

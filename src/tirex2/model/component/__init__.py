@@ -1,3 +1,4 @@
+# Copyright (c) NXAI GmbH.
 from .attention_block import AttentionBlock, AttentionLayer
 from .bi_xlstm import BiXLSTM
 from .flashrnn_slstm import FlashRNNLayerConfig, sLSTMFlashRNNLayer

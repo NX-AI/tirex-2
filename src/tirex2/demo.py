@@ -1,3 +1,4 @@
+# Copyright (c) NXAI GmbH.
 # to prevent warnings that 'Demo' is not found in class-function annotations
 from __future__ import annotations
 

@@ -1,3 +1,4 @@
+# Copyright (c) NXAI GmbH.
 """Loading utilities for inference-ready :class:`TiRex2` checkpoints."""
 
 from pathlib import Path

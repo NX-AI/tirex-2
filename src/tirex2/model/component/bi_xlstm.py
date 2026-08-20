@@ -1,3 +1,4 @@
+# Copyright (c) NXAI GmbH.
 """This module exposes xLSTM blocks combining recurrent kernels with feed-forward adapters."""
 
 from typing import Literal

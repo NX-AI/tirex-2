@@ -1,3 +1,4 @@
+# Copyright (c) NXAI GmbH.
 import importlib
 import logging
 from dataclasses import dataclass, replace

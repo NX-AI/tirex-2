@@ -1,3 +1,4 @@
+# Copyright (c) NXAI GmbH.
 from dataclasses import dataclass
 from typing import Any, Literal
 
@@ -172,7 +173,6 @@ class MultivariateBlock(nn.Module):
         # This treats L as the new batch dimension and mixes across B*V (all variates)
         x_variate = rearrange(time_output, "bv l p -> l bv p", bv=BV, l=L, p=P)  # [L, B*V, P]
 
-        # Apply variate mixing
         variate_output, _ = _unwrap_output(
             self.variate_mixer(x_variate, group_vector=group_vector, target_mask=target_mask)
         )
@@ -180,7 +180,7 @@ class MultivariateBlock(nn.Module):
         # Transpose back: [L, B*V, P] -> [B*V, L, P]
         x = rearrange(variate_output, "l bv p -> bv l p", l=L, bv=BV, p=P)
 
-        return x, {}  # TODO: return state as well for streaming
+        return x, {}
 
     def _build_time_mixer(self, config: TimeMixerConfig, block_idx: int, num_blocks: int) -> nn.Module:
         """Instantiate time mixing model from configuration.

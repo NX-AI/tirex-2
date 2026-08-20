@@ -1,3 +1,4 @@
+# Copyright (c) NXAI GmbH.
 """Patch-based tokenization utilities for TiRex models."""
 
 import torch

@@ -1,3 +1,4 @@
+# Copyright (c) NXAI GmbH.
 from .tirex2 import TiRex2
 from .types import TimeseriesType
 

@@ -1,3 +1,4 @@
+# Copyright (c) NXAI GmbH.
 """Residual MLP building blocks used across TiRex modules."""
 
 import torch

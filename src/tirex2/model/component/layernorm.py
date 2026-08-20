@@ -1,3 +1,4 @@
+# Copyright (c) NXAI GmbH.
 import torch
 from torch import nn
 

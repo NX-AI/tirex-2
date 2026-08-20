@@ -1,3 +1,4 @@
+# Copyright (c) NXAI GmbH.
 """High-level forecasting API wrapping a :class:`TiRex2` backbone."""
 
 import logging

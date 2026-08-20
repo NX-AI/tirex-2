@@ -1,3 +1,4 @@
+# Copyright (c) NXAI GmbH.
 from .api_adapter import ForecastModel
 from .base import load_model
 from .model import TimeseriesType, TiRex2

@@ -1,3 +1,4 @@
+# Copyright (c) NXAI GmbH.
 """Random past-window standardization for stochastic normalization."""
 
 import torch

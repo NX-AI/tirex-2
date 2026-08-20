@@ -1,3 +1,4 @@
+# Copyright (c) NXAI GmbH.
 """Single-pass, native-multivariate postprocessor with per-target differencing."""
 
 import logging

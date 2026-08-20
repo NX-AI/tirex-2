@@ -1,3 +1,4 @@
+# Copyright (c) NXAI GmbH.
 from collections.abc import Sequence
 from itertools import chain
 
@@ -725,7 +726,6 @@ def plot_multivariate(
 
     if x is None:
         x = np.arange(full_size)
-        # x = np.arange(-input.past_length, max_future_length) + 1
     elif len(x) < full_size:
         raise ValueError(
             "Not enough 'x' values provided to have one for every timestep in context, forecast, and ground truth window."

@@ -1,6 +1,6 @@
+# Copyright (c) NXAI GmbH.
 """Wrapper around xlstm mLSTM blocks with TiRex-specific tweaks."""
 
-# From xlstm large
 from dataclasses import dataclass
 from typing import Literal
 
