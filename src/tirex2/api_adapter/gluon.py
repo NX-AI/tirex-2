@@ -1,4 +1,6 @@
 # Copyright (c) NXAI GmbH.
+# Licensed under the Apache License, Version 2.0; see LICENSE for details.
+
 """GluonTS data extraction and forecast formatting for the multivariate adapter."""
 
 import pandas as pd

@@ -1,4 +1,6 @@
 # Copyright (c) NXAI GmbH.
+# Licensed under the Apache License, Version 2.0; see LICENSE for details.
+
 import math
 import warnings
 from typing import Any
@@ -301,7 +303,6 @@ class AttentionBlock(torch.nn.Module):
         self.dropout = dropout
         self.use_qk_norm = use_qk_norm
         self.use_flex_attention = use_flex_attention
-        # disable_singleton_attention has no effect when disable_singleton_block is set
         self._collect_group_stats_this_step = False
         self.use_post_norm = False
 

@@ -1,4 +1,6 @@
 # Copyright (c) NXAI GmbH.
+# Licensed under the Apache License, Version 2.0; see LICENSE for details.
+
 """FlashRNN-backed sLSTM layers and configuration helpers."""
 
 from abc import ABC, abstractmethod

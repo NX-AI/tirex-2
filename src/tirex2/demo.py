@@ -1,5 +1,6 @@
 # Copyright (c) NXAI GmbH.
-# to prevent warnings that 'Demo' is not found in class-function annotations
+# Licensed under the Apache License, Version 2.0; see LICENSE for details.
+
 from __future__ import annotations
 
 from collections.abc import Iterable, Sequence

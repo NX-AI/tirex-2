@@ -1,4 +1,6 @@
 # Copyright (c) NXAI GmbH.
+# Licensed under the Apache License, Version 2.0; see LICENSE for details.
+
 """High-level forecasting API wrapping a :class:`TiRex2` backbone."""
 
 import logging
@@ -150,8 +152,6 @@ def build_fev_timeseries(
     merged_ds = datasets.concatenate_datasets([past_data, future_data_renamed], axis=1).with_format("torch")
 
     def map_sample(sample):
-        # ``.map`` does not apply the dataset's ``with_format("torch")`` transform, so the
-        # callback receives plain Python lists; convert them to tensors explicitly.
         covariates = []
         for col in known_dynamic_columns:
             try:

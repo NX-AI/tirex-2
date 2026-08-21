@@ -1,4 +1,6 @@
 # Copyright (c) NXAI GmbH.
+# Licensed under the Apache License, Version 2.0; see LICENSE for details.
+
 from .attention_block import AttentionBlock, AttentionLayer
 from .bi_xlstm import BiXLSTM
 from .flashrnn_slstm import FlashRNNLayerConfig, sLSTMFlashRNNLayer

@@ -1,4 +1,6 @@
 # Copyright (c) NXAI GmbH.
+# Licensed under the Apache License, Version 2.0; see LICENSE for details.
+
 """Assemble batches of :class:`TimeseriesType` from plain tensor/array/list inputs."""
 
 import itertools
