@@ -1309,17 +1309,17 @@ which you can also run directly in Google Colab:</p>
 <span class="kn">from</span><span class="w"> </span><span class="nn">tirex2.plotting</span><span class="w"> </span><span class="kn">import</span> <span class="n">plot_multivariate</span>  <span class="c1"># requires matplotlib to be installed</span>
 
 <span class="c1"># load model</span>
-<span class="n">model</span> <span class="o">=</span> <span class="n">load_model</span><span class="p">(</span><span class="s2">&quot;NX-AI/TiRex-2&quot;</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cpu&quot;</span><span class="p">)</span>  <span class="c1"># use `device=&quot;cuda&quot;` if cuda is available</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">load_model</span><span class="p">(</span><span class="s2">"NX-AI/TiRex-2"</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">"cpu"</span><span class="p">)</span>  <span class="c1"># use `device="cuda"` if cuda is available</span>
 
 <span class="c1"># generate data - target expects time series of shape (n_targets, context_length)</span>
 <span class="n">context</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">128</span><span class="p">)</span><span class="o">.</span><span class="n">float</span><span class="p">()</span> <span class="o">/</span> <span class="mi">8</span><span class="p">)</span>
 <span class="n">ts</span> <span class="o">=</span> <span class="n">TimeseriesType</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">past_covariates</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">future_covariates</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
 
 <span class="c1"># perform forecast - each forecast is of shape (n_targets, 9 quantiles, prediction_length)</span>
-<span class="n">forecast</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">forecast</span><span class="p">([</span><span class="n">ts</span><span class="p">],</span> <span class="n">prediction_length</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span> <span class="n">output_type</span><span class="o">=</span><span class="s2">&quot;numpy&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">forecast</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">forecast</span><span class="p">([</span><span class="n">ts</span><span class="p">],</span> <span class="n">prediction_length</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span> <span class="n">output_type</span><span class="o">=</span><span class="s2">"numpy"</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
 
 <span class="c1"># visualize result</span>
-<span class="n">fig</span> <span class="o">=</span> <span class="n">plot_multivariate</span><span class="p">(</span><span class="n">ts</span><span class="p">,</span> <span class="n">forecast</span><span class="p">,</span> <span class="n">engine</span><span class="o">=</span><span class="s2">&quot;matplotlib&quot;</span><span class="p">)</span>
+<span class="n">fig</span> <span class="o">=</span> <span class="n">plot_multivariate</span><span class="p">(</span><span class="n">ts</span><span class="p">,</span> <span class="n">forecast</span><span class="p">,</span> <span class="n">engine</span><span class="o">=</span><span class="s2">"matplotlib"</span><span class="p">)</span>
 <span class="n">fig</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </code></pre></div>
 <p><img alt="output of plot_multivariate function visualizing context and forecast" src="../../images/sine-wave-prediction.png" /></p>
@@ -1330,7 +1330,7 @@ covariates.</p>
 <span class="kn">from</span><span class="w"> </span><span class="nn">tirex2.demo</span><span class="w"> </span><span class="kn">import</span> <span class="n">Demo</span><span class="p">,</span> <span class="n">plot_demo_forecast</span>
 
 <span class="c1"># load model</span>
-<span class="n">model</span> <span class="o">=</span> <span class="n">load_model</span><span class="p">(</span><span class="s2">&quot;NX-AI/TiRex-2&quot;</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cpu&quot;</span><span class="p">)</span>  <span class="c1"># use `device=&quot;cuda&quot;` if cuda is available</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">load_model</span><span class="p">(</span><span class="s2">"NX-AI/TiRex-2"</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">"cpu"</span><span class="p">)</span>  <span class="c1"># use `device="cuda"` if cuda is available</span>
 
 <span class="c1"># load data</span>
 <span class="n">demo</span> <span class="o">=</span> <span class="n">Demo</span><span class="o">.</span><span class="n">create_nonstationary_demo</span><span class="p">()</span>
@@ -1341,11 +1341,11 @@ covariates.</p>
 <span class="n">forecasts</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">forecast</span><span class="p">(</span>
     <span class="n">timeseries</span><span class="o">=</span><span class="p">[</span><span class="n">ts_univariate</span><span class="p">,</span> <span class="n">ts_multivariate</span><span class="p">],</span>
     <span class="n">prediction_length</span><span class="o">=</span><span class="n">demo</span><span class="o">.</span><span class="n">horizon</span><span class="p">,</span>
-    <span class="n">output_type</span><span class="o">=</span><span class="s2">&quot;numpy&quot;</span><span class="p">,</span>
+    <span class="n">output_type</span><span class="o">=</span><span class="s2">"numpy"</span><span class="p">,</span>
 <span class="p">)</span>
 
 <span class="c1"># visualize result</span>
-<span class="n">fig</span> <span class="o">=</span> <span class="n">plot_demo_forecast</span><span class="p">(</span><span class="n">demo</span><span class="p">,</span> <span class="o">*</span><span class="n">forecasts</span><span class="p">,</span> <span class="n">engine</span><span class="o">=</span><span class="s2">&quot;matplotlib&quot;</span><span class="p">)</span>
+<span class="n">fig</span> <span class="o">=</span> <span class="n">plot_demo_forecast</span><span class="p">(</span><span class="n">demo</span><span class="p">,</span> <span class="o">*</span><span class="n">forecasts</span><span class="p">,</span> <span class="n">engine</span><span class="o">=</span><span class="s2">"matplotlib"</span><span class="p">)</span>
 <span class="n">fig</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </code></pre></div>
 <p><img alt="output of plot_multivariate function visualizing context and forecast of multivariate input" src="../../images/multivariate-prediction.png" /></p>

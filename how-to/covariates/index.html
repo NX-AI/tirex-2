@@ -1332,8 +1332,8 @@ the target's <code>context_length</code> exactly.</p>
 
 <span class="n">ts</span> <span class="o">=</span> <span class="n">TimeseriesType</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">target</span><span class="p">,</span> <span class="n">past_covariates</span><span class="o">=</span><span class="n">past_covariates</span><span class="p">,</span> <span class="n">future_covariates</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
 
-<span class="n">model</span> <span class="o">=</span> <span class="n">load_model</span><span class="p">(</span><span class="s2">&quot;NX-AI/TiRex-2&quot;</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cpu&quot;</span><span class="p">)</span>
-<span class="n">forecast</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">forecast</span><span class="p">([</span><span class="n">ts</span><span class="p">],</span> <span class="n">prediction_length</span><span class="o">=</span><span class="n">prediction_length</span><span class="p">,</span> <span class="n">output_type</span><span class="o">=</span><span class="s2">&quot;numpy&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">load_model</span><span class="p">(</span><span class="s2">"NX-AI/TiRex-2"</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">"cpu"</span><span class="p">)</span>
+<span class="n">forecast</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">forecast</span><span class="p">([</span><span class="n">ts</span><span class="p">],</span> <span class="n">prediction_length</span><span class="o">=</span><span class="n">prediction_length</span><span class="p">,</span> <span class="n">output_type</span><span class="o">=</span><span class="s2">"numpy"</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
 </code></pre></div>
 <h2 id="future-known-covariates">Future-known covariates<a class="headerlink" href="#future-known-covariates" title="Permanent link">&para;</a></h2>
 <p><code>future_covariates</code> are known ahead of time for the whole forecast horizon — calendar
@@ -1352,8 +1352,8 @@ features, holidays, promotions, or scheduled interventions are typical examples.
 
 <span class="n">ts</span> <span class="o">=</span> <span class="n">TimeseriesType</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">target</span><span class="p">,</span> <span class="n">past_covariates</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">future_covariates</span><span class="o">=</span><span class="n">future_covariates</span><span class="p">)</span>
 
-<span class="n">model</span> <span class="o">=</span> <span class="n">load_model</span><span class="p">(</span><span class="s2">&quot;NX-AI/TiRex-2&quot;</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cpu&quot;</span><span class="p">)</span>
-<span class="n">forecast</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">forecast</span><span class="p">([</span><span class="n">ts</span><span class="p">],</span> <span class="n">prediction_length</span><span class="o">=</span><span class="mi">42</span><span class="p">,</span> <span class="n">output_type</span><span class="o">=</span><span class="s2">&quot;numpy&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">load_model</span><span class="p">(</span><span class="s2">"NX-AI/TiRex-2"</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">"cpu"</span><span class="p">)</span>
+<span class="n">forecast</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">forecast</span><span class="p">([</span><span class="n">ts</span><span class="p">],</span> <span class="n">prediction_length</span><span class="o">=</span><span class="mi">42</span><span class="p">,</span> <span class="n">output_type</span><span class="o">=</span><span class="s2">"numpy"</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
 </code></pre></div>
 <h2 id="combining-both">Combining both<a class="headerlink" href="#combining-both" title="Permanent link">&para;</a></h2>
 <p>Past and future covariates can be combined freely on the same series:</p>
@@ -1393,12 +1393,12 @@ baseline level, plus a binary future-known promotion flag that adds spikes:</p>
     <span class="n">future_covariates</span><span class="o">=</span><span class="n">future_covariates</span><span class="p">,</span>
 <span class="p">)</span>
 
-<span class="n">model</span> <span class="o">=</span> <span class="n">load_model</span><span class="p">(</span><span class="s2">&quot;NX-AI/TiRex-2&quot;</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cpu&quot;</span><span class="p">)</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">load_model</span><span class="p">(</span><span class="s2">"NX-AI/TiRex-2"</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">"cpu"</span><span class="p">)</span>
 
 <span class="n">forecast</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">forecast</span><span class="p">(</span>
     <span class="n">timeseries</span><span class="o">=</span><span class="p">[</span><span class="n">multivariate_nonstationary</span><span class="p">],</span>
     <span class="n">prediction_length</span><span class="o">=</span><span class="mi">42</span><span class="p">,</span>
-    <span class="n">output_type</span><span class="o">=</span><span class="s2">&quot;numpy&quot;</span><span class="p">,</span>
+    <span class="n">output_type</span><span class="o">=</span><span class="s2">"numpy"</span><span class="p">,</span>
 <span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
 
 <span class="c1"># forecast.shape == (1, 9, 42)  -&gt; (num_target_variates, num_quantiles, prediction_length)</span>

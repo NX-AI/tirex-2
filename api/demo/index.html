@@ -1359,16 +1359,16 @@ ready to pass to :meth:<code>~tirex2.api_adapter.forecast.ForecastModel.forecast
 <p><span class="doc-section-title">Examples:</span></p>
     <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">tirex2</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_model</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">tirex2.demo</span><span class="w"> </span><span class="kn">import</span> <span class="n">Demo</span><span class="p">,</span> <span class="n">plot_demo_forecast</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">model</span> <span class="o">=</span> <span class="n">load_model</span><span class="p">(</span><span class="s2">&quot;NX-AI/TiRex-2&quot;</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cpu&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">model</span> <span class="o">=</span> <span class="n">load_model</span><span class="p">(</span><span class="s2">"NX-AI/TiRex-2"</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">"cpu"</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">demo</span> <span class="o">=</span> <span class="n">Demo</span><span class="o">.</span><span class="n">create_nonstationary_demo</span><span class="p">()</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">ts_univariate</span> <span class="o">=</span> <span class="n">demo</span><span class="o">.</span><span class="n">to_timeseries_type</span><span class="p">(</span><span class="n">include_covariates</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">ts_multivariate</span> <span class="o">=</span> <span class="n">demo</span><span class="o">.</span><span class="n">to_timeseries_type</span><span class="p">(</span><span class="n">include_covariates</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">forecasts</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">forecast</span><span class="p">(</span>
 <span class="gp">... </span>    <span class="n">timeseries</span><span class="o">=</span><span class="p">[</span><span class="n">ts_univariate</span><span class="p">,</span> <span class="n">ts_multivariate</span><span class="p">],</span>
 <span class="gp">... </span>    <span class="n">prediction_length</span><span class="o">=</span><span class="n">demo</span><span class="o">.</span><span class="n">horizon</span><span class="p">,</span>
-<span class="gp">... </span>    <span class="n">output_type</span><span class="o">=</span><span class="s2">&quot;numpy&quot;</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">output_type</span><span class="o">=</span><span class="s2">"numpy"</span><span class="p">,</span>
 <span class="gp">... </span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">fig</span> <span class="o">=</span> <span class="n">plot_demo_forecast</span><span class="p">(</span><span class="n">demo</span><span class="p">,</span> <span class="o">*</span><span class="n">forecasts</span><span class="p">,</span> <span class="n">engine</span><span class="o">=</span><span class="s2">&quot;matplotlib&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">fig</span> <span class="o">=</span> <span class="n">plot_demo_forecast</span><span class="p">(</span><span class="n">demo</span><span class="p">,</span> <span class="o">*</span><span class="n">forecasts</span><span class="p">,</span> <span class="n">engine</span><span class="o">=</span><span class="s2">"matplotlib"</span><span class="p">)</span>
 </code></pre></div>
 
 
@@ -1380,9 +1380,7 @@ ready to pass to :meth:<code>~tirex2.api_adapter.forecast.ForecastModel.forecast
 
               <details class="mkdocstrings-source">
                 <summary>Source code in <code>src/tirex2/demo.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 29</span>
-<span class="normal"> 30</span>
-<span class="normal"> 31</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 31</span>
 <span class="normal"> 32</span>
 <span class="normal"> 33</span>
 <span class="normal"> 34</span>
@@ -1522,9 +1520,11 @@ ready to pass to :meth:<code>~tirex2.api_adapter.forecast.ForecastModel.forecast
 <span class="normal">168</span>
 <span class="normal">169</span>
 <span class="normal">170</span>
-<span class="normal">171</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="normal">171</span>
+<span class="normal">172</span>
+<span class="normal">173</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">Demo</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;A synthetic forecasting scenario for showcasing TiRex-2, built by</span>
+<span class="w">    </span><span class="sd">"""A synthetic forecasting scenario for showcasing TiRex-2, built by</span>
 <span class="sd">    :meth:`create_nonstationary_demo` or :meth:`create_holidays_demo`.</span>
 
 <span class="sd">    Bundles a target series (split into context and held-out future) with the</span>
@@ -1535,17 +1535,17 @@ ready to pass to :meth:<code>~tirex2.api_adapter.forecast.ForecastModel.forecast
 <span class="sd">    --------</span>
 <span class="sd">    &gt;&gt;&gt; from tirex2 import load_model</span>
 <span class="sd">    &gt;&gt;&gt; from tirex2.demo import Demo, plot_demo_forecast</span>
-<span class="sd">    &gt;&gt;&gt; model = load_model(&quot;NX-AI/TiRex-2&quot;, device=&quot;cpu&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; model = load_model("NX-AI/TiRex-2", device="cpu")</span>
 <span class="sd">    &gt;&gt;&gt; demo = Demo.create_nonstationary_demo()</span>
 <span class="sd">    &gt;&gt;&gt; ts_univariate = demo.to_timeseries_type(include_covariates=False)</span>
 <span class="sd">    &gt;&gt;&gt; ts_multivariate = demo.to_timeseries_type(include_covariates=True)</span>
 <span class="sd">    &gt;&gt;&gt; forecasts = model.forecast(</span>
 <span class="sd">    ...     timeseries=[ts_univariate, ts_multivariate],</span>
 <span class="sd">    ...     prediction_length=demo.horizon,</span>
-<span class="sd">    ...     output_type=&quot;numpy&quot;,</span>
+<span class="sd">    ...     output_type="numpy",</span>
 <span class="sd">    ... )</span>
-<span class="sd">    &gt;&gt;&gt; fig = plot_demo_forecast(demo, *forecasts, engine=&quot;matplotlib&quot;)</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    &gt;&gt;&gt; fig = plot_demo_forecast(demo, *forecasts, engine="matplotlib")</span>
+<span class="sd">    """</span>
 
     <span class="n">title</span><span class="p">:</span> <span class="nb">str</span>
     <span class="n">description</span><span class="p">:</span> <span class="nb">str</span>
@@ -1583,23 +1583,23 @@ ready to pass to :meth:<code>~tirex2.api_adapter.forecast.ForecastModel.forecast
         <span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">describe</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;-&#39;</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">70</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Demo Dataset&quot;</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;-&#39;</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">70</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Title:       </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">title</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Description: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">'-'</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">70</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"Demo Dataset"</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">'-'</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">70</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Title:       </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">title</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Description: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">create_nonstationary_demo</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">context_length</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">540</span><span class="p">,</span> <span class="n">horizon</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">42</span><span class="p">,</span> <span class="n">seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">7</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Demo</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Non-stationary demand: a CONTINUOUS future-known driver sets the wandering</span>
+<span class="w">        </span><span class="sd">"""Non-stationary demand: a CONTINUOUS future-known driver sets the wandering</span>
 <span class="sd">        baseline level, plus a BINARY promotion flag that adds spikes.</span>
 
 <span class="sd">        The baseline has no fixed mean (it follows a smoothed random walk + a slow</span>
-<span class="sd">        swing that turns over inside the horizon), so the target&#39;s own history cannot</span>
+<span class="sd">        swing that turns over inside the horizon), so the target's own history cannot</span>
 <span class="sd">        say where the level is heading - only the continuous covariate can. The</span>
 <span class="sd">        binary promotions add sharp spikes at irregular times. The model must use</span>
 <span class="sd">        BOTH covariates: the continuous one to track the level, the flag for spikes.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
         <span class="n">n_steps</span> <span class="o">=</span> <span class="n">context_length</span> <span class="o">+</span> <span class="n">horizon</span>
         <span class="n">time_steps</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n_steps</span><span class="p">)</span>
@@ -1621,29 +1621,29 @@ ready to pass to :meth:<code>~tirex2.api_adapter.forecast.ForecastModel.forecast
         <span class="n">series</span> <span class="o">=</span> <span class="n">level</span> <span class="o">+</span> <span class="n">weekly</span> <span class="o">+</span> <span class="n">spike_abs</span> <span class="o">*</span> <span class="n">promo</span> <span class="o">+</span> <span class="n">rng</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">2.5</span><span class="p">,</span> <span class="n">n_steps</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span>
-            <span class="n">title</span><span class="o">=</span><span class="s2">&quot;TiRex-2 on a non-stationary series (continuous driver + promotion flag)&quot;</span><span class="p">,</span>
-            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;A continuous covariate sets the wandering level, while a binary flag adds spikes. The model model needs both covariates for solid forecasts.&quot;</span><span class="p">,</span>
+            <span class="n">title</span><span class="o">=</span><span class="s2">"TiRex-2 on a non-stationary series (continuous driver + promotion flag)"</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">"A continuous covariate sets the wandering level, while a binary flag adds spikes. The model model needs both covariates for solid forecasts."</span><span class="p">,</span>
             <span class="n">target_context</span><span class="o">=</span><span class="n">series</span><span class="p">[:</span><span class="n">context_length</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span>
             <span class="n">target_future</span><span class="o">=</span><span class="n">series</span><span class="p">[</span><span class="n">context_length</span><span class="p">:]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span>
             <span class="n">covariates</span><span class="o">=</span><span class="p">[</span>
                 <span class="n">Covariate</span><span class="p">(</span>
-                    <span class="s2">&quot;demand driver (continuous, known ahead)&quot;</span><span class="p">,</span>
+                    <span class="s2">"demand driver (continuous, known ahead)"</span><span class="p">,</span>
                     <span class="n">level</span><span class="p">[:</span><span class="n">context_length</span><span class="p">],</span>
                     <span class="n">level</span><span class="p">[</span><span class="n">context_length</span><span class="p">:],</span>
-                    <span class="n">kind</span><span class="o">=</span><span class="s2">&quot;cont&quot;</span><span class="p">,</span>
+                    <span class="n">kind</span><span class="o">=</span><span class="s2">"cont"</span><span class="p">,</span>
                 <span class="p">),</span>
                 <span class="n">Covariate</span><span class="p">(</span>
-                    <span class="s2">&quot;promotion (0/1, known ahead)&quot;</span><span class="p">,</span>
+                    <span class="s2">"promotion (0/1, known ahead)"</span><span class="p">,</span>
                     <span class="n">promo</span><span class="p">[:</span><span class="n">context_length</span><span class="p">],</span>
                     <span class="n">promo</span><span class="p">[</span><span class="n">context_length</span><span class="p">:],</span>
-                    <span class="n">kind</span><span class="o">=</span><span class="s2">&quot;flag&quot;</span><span class="p">,</span>
+                    <span class="n">kind</span><span class="o">=</span><span class="s2">"flag"</span><span class="p">,</span>
                 <span class="p">),</span>
             <span class="p">],</span>
         <span class="p">)</span>
 
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">create_holidays_demo</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">context_length</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">540</span><span class="p">,</span> <span class="n">horizon</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">42</span><span class="p">,</span> <span class="n">seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">20</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Demo</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;ONE future-known holiday flag -&gt; consistent multiplicative spike.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""ONE future-known holiday flag -&gt; consistent multiplicative spike."""</span>
         <span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
         <span class="n">base</span> <span class="o">=</span> <span class="n">_weekly_base</span><span class="p">(</span><span class="n">context_length</span><span class="p">,</span> <span class="n">horizon</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="n">seed</span><span class="p">)</span>
         <span class="n">flag</span> <span class="o">=</span> <span class="n">_events</span><span class="p">(</span><span class="n">rng</span><span class="p">,</span> <span class="n">context_length</span> <span class="o">+</span> <span class="n">horizon</span><span class="p">,</span> <span class="n">gap_lo</span><span class="o">=</span><span class="mi">26</span><span class="p">,</span> <span class="n">gap_hi</span><span class="o">=</span><span class="mi">46</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">width_hi</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
@@ -1653,13 +1653,13 @@ ready to pass to :meth:<code>~tirex2.api_adapter.forecast.ForecastModel.forecast
         <span class="n">series</span> <span class="o">=</span> <span class="n">series</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">+</span> <span class="mf">0.012</span> <span class="o">*</span> <span class="n">rng</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="n">context_length</span> <span class="o">+</span> <span class="n">horizon</span><span class="p">))</span>  <span class="c1"># low noise</span>
 
         <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span>
-            <span class="n">title</span><span class="o">=</span><span class="s2">&quot;TiRex-2 with a future-known covariate (holiday calendar)&quot;</span><span class="p">,</span>
-            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Daily demand with known holidays. As they are irregular, they are unpredictable from history alone.&quot;</span><span class="p">,</span>
+            <span class="n">title</span><span class="o">=</span><span class="s2">"TiRex-2 with a future-known covariate (holiday calendar)"</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">"Daily demand with known holidays. As they are irregular, they are unpredictable from history alone."</span><span class="p">,</span>
             <span class="n">target_context</span><span class="o">=</span><span class="n">series</span><span class="p">[:</span><span class="n">context_length</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span>
             <span class="n">target_future</span><span class="o">=</span><span class="n">series</span><span class="p">[</span><span class="n">context_length</span><span class="p">:]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span>
             <span class="n">covariates</span><span class="o">=</span><span class="p">[</span>
                 <span class="n">Covariate</span><span class="p">(</span>
-                    <span class="s2">&quot;holiday flag (0/1, known ahead)&quot;</span><span class="p">,</span>
+                    <span class="s2">"holiday flag (0/1, known ahead)"</span><span class="p">,</span>
                     <span class="n">flag</span><span class="p">[:</span><span class="n">context_length</span><span class="p">],</span>
                     <span class="n">flag</span><span class="p">[</span><span class="n">context_length</span><span class="p">:],</span>
                 <span class="p">)</span>
@@ -1709,9 +1709,7 @@ BOTH covariates: the continuous one to track the level, the flag for spikes.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/tirex2/demo.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 96</span>
-<span class="normal"> 97</span>
-<span class="normal"> 98</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 98</span>
 <span class="normal"> 99</span>
 <span class="normal">100</span>
 <span class="normal">101</span>
@@ -1759,17 +1757,19 @@ BOTH covariates: the continuous one to track the level, the flag for spikes.</p>
 <span class="normal">143</span>
 <span class="normal">144</span>
 <span class="normal">145</span>
-<span class="normal">146</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
+<span class="normal">146</span>
+<span class="normal">147</span>
+<span class="normal">148</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">create_nonstationary_demo</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">context_length</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">540</span><span class="p">,</span> <span class="n">horizon</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">42</span><span class="p">,</span> <span class="n">seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">7</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Demo</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Non-stationary demand: a CONTINUOUS future-known driver sets the wandering</span>
+<span class="w">    </span><span class="sd">"""Non-stationary demand: a CONTINUOUS future-known driver sets the wandering</span>
 <span class="sd">    baseline level, plus a BINARY promotion flag that adds spikes.</span>
 
 <span class="sd">    The baseline has no fixed mean (it follows a smoothed random walk + a slow</span>
-<span class="sd">    swing that turns over inside the horizon), so the target&#39;s own history cannot</span>
+<span class="sd">    swing that turns over inside the horizon), so the target's own history cannot</span>
 <span class="sd">    say where the level is heading - only the continuous covariate can. The</span>
 <span class="sd">    binary promotions add sharp spikes at irregular times. The model must use</span>
 <span class="sd">    BOTH covariates: the continuous one to track the level, the flag for spikes.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
     <span class="n">n_steps</span> <span class="o">=</span> <span class="n">context_length</span> <span class="o">+</span> <span class="n">horizon</span>
     <span class="n">time_steps</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n_steps</span><span class="p">)</span>
@@ -1791,22 +1791,22 @@ BOTH covariates: the continuous one to track the level, the flag for spikes.</p>
     <span class="n">series</span> <span class="o">=</span> <span class="n">level</span> <span class="o">+</span> <span class="n">weekly</span> <span class="o">+</span> <span class="n">spike_abs</span> <span class="o">*</span> <span class="n">promo</span> <span class="o">+</span> <span class="n">rng</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">2.5</span><span class="p">,</span> <span class="n">n_steps</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span>
-        <span class="n">title</span><span class="o">=</span><span class="s2">&quot;TiRex-2 on a non-stationary series (continuous driver + promotion flag)&quot;</span><span class="p">,</span>
-        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;A continuous covariate sets the wandering level, while a binary flag adds spikes. The model model needs both covariates for solid forecasts.&quot;</span><span class="p">,</span>
+        <span class="n">title</span><span class="o">=</span><span class="s2">"TiRex-2 on a non-stationary series (continuous driver + promotion flag)"</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"A continuous covariate sets the wandering level, while a binary flag adds spikes. The model model needs both covariates for solid forecasts."</span><span class="p">,</span>
         <span class="n">target_context</span><span class="o">=</span><span class="n">series</span><span class="p">[:</span><span class="n">context_length</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span>
         <span class="n">target_future</span><span class="o">=</span><span class="n">series</span><span class="p">[</span><span class="n">context_length</span><span class="p">:]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span>
         <span class="n">covariates</span><span class="o">=</span><span class="p">[</span>
             <span class="n">Covariate</span><span class="p">(</span>
-                <span class="s2">&quot;demand driver (continuous, known ahead)&quot;</span><span class="p">,</span>
+                <span class="s2">"demand driver (continuous, known ahead)"</span><span class="p">,</span>
                 <span class="n">level</span><span class="p">[:</span><span class="n">context_length</span><span class="p">],</span>
                 <span class="n">level</span><span class="p">[</span><span class="n">context_length</span><span class="p">:],</span>
-                <span class="n">kind</span><span class="o">=</span><span class="s2">&quot;cont&quot;</span><span class="p">,</span>
+                <span class="n">kind</span><span class="o">=</span><span class="s2">"cont"</span><span class="p">,</span>
             <span class="p">),</span>
             <span class="n">Covariate</span><span class="p">(</span>
-                <span class="s2">&quot;promotion (0/1, known ahead)&quot;</span><span class="p">,</span>
+                <span class="s2">"promotion (0/1, known ahead)"</span><span class="p">,</span>
                 <span class="n">promo</span><span class="p">[:</span><span class="n">context_length</span><span class="p">],</span>
                 <span class="n">promo</span><span class="p">[</span><span class="n">context_length</span><span class="p">:],</span>
-                <span class="n">kind</span><span class="o">=</span><span class="s2">&quot;flag&quot;</span><span class="p">,</span>
+                <span class="n">kind</span><span class="o">=</span><span class="s2">"flag"</span><span class="p">,</span>
             <span class="p">),</span>
         <span class="p">],</span>
     <span class="p">)</span>
@@ -1838,9 +1838,7 @@ BOTH covariates: the continuous one to track the level, the flag for spikes.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/tirex2/demo.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">148</span>
-<span class="normal">149</span>
-<span class="normal">150</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">150</span>
 <span class="normal">151</span>
 <span class="normal">152</span>
 <span class="normal">153</span>
@@ -1861,9 +1859,11 @@ BOTH covariates: the continuous one to track the level, the flag for spikes.</p>
 <span class="normal">168</span>
 <span class="normal">169</span>
 <span class="normal">170</span>
-<span class="normal">171</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
+<span class="normal">171</span>
+<span class="normal">172</span>
+<span class="normal">173</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">create_holidays_demo</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">context_length</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">540</span><span class="p">,</span> <span class="n">horizon</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">42</span><span class="p">,</span> <span class="n">seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">20</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Demo</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;ONE future-known holiday flag -&gt; consistent multiplicative spike.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""ONE future-known holiday flag -&gt; consistent multiplicative spike."""</span>
     <span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
     <span class="n">base</span> <span class="o">=</span> <span class="n">_weekly_base</span><span class="p">(</span><span class="n">context_length</span><span class="p">,</span> <span class="n">horizon</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="n">seed</span><span class="p">)</span>
     <span class="n">flag</span> <span class="o">=</span> <span class="n">_events</span><span class="p">(</span><span class="n">rng</span><span class="p">,</span> <span class="n">context_length</span> <span class="o">+</span> <span class="n">horizon</span><span class="p">,</span> <span class="n">gap_lo</span><span class="o">=</span><span class="mi">26</span><span class="p">,</span> <span class="n">gap_hi</span><span class="o">=</span><span class="mi">46</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">width_hi</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
@@ -1873,13 +1873,13 @@ BOTH covariates: the continuous one to track the level, the flag for spikes.</p>
     <span class="n">series</span> <span class="o">=</span> <span class="n">series</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">+</span> <span class="mf">0.012</span> <span class="o">*</span> <span class="n">rng</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="n">context_length</span> <span class="o">+</span> <span class="n">horizon</span><span class="p">))</span>  <span class="c1"># low noise</span>
 
     <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span>
-        <span class="n">title</span><span class="o">=</span><span class="s2">&quot;TiRex-2 with a future-known covariate (holiday calendar)&quot;</span><span class="p">,</span>
-        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Daily demand with known holidays. As they are irregular, they are unpredictable from history alone.&quot;</span><span class="p">,</span>
+        <span class="n">title</span><span class="o">=</span><span class="s2">"TiRex-2 with a future-known covariate (holiday calendar)"</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Daily demand with known holidays. As they are irregular, they are unpredictable from history alone."</span><span class="p">,</span>
         <span class="n">target_context</span><span class="o">=</span><span class="n">series</span><span class="p">[:</span><span class="n">context_length</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span>
         <span class="n">target_future</span><span class="o">=</span><span class="n">series</span><span class="p">[</span><span class="n">context_length</span><span class="p">:]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span>
         <span class="n">covariates</span><span class="o">=</span><span class="p">[</span>
             <span class="n">Covariate</span><span class="p">(</span>
-                <span class="s2">&quot;holiday flag (0/1, known ahead)&quot;</span><span class="p">,</span>
+                <span class="s2">"holiday flag (0/1, known ahead)"</span><span class="p">,</span>
                 <span class="n">flag</span><span class="p">[:</span><span class="n">context_length</span><span class="p">],</span>
                 <span class="n">flag</span><span class="p">[</span><span class="n">context_length</span><span class="p">:],</span>
             <span class="p">)</span>
@@ -1907,7 +1907,7 @@ BOTH covariates: the continuous one to track the level, the flag for spikes.</p>
 
 
 <a href="#tirex2.demo.plot_demo_forecast" class="headerlink" title="Permanent link">&para;</a></h2>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">plot_demo_forecast</span><span class="p">(</span><span class="n">demo</span><span class="p">:</span> <span class="n">Demo</span><span class="p">,</span> <span class="n">univariate_forecast</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span> <span class="n">multivariate_forecast</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span> <span class="n">max_context_to_show</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">64</span><span class="p">,</span> <span class="n">engine</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;plotly&#39;</span><span class="p">)</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">plot_demo_forecast</span><span class="p">(</span><span class="n">demo</span><span class="p">:</span> <span class="n">Demo</span><span class="p">,</span> <span class="n">univariate_forecast</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span> <span class="n">multivariate_forecast</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span> <span class="n">max_context_to_show</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">64</span><span class="p">,</span> <span class="n">engine</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'plotly'</span><span class="p">)</span>
 </code></pre></div>
 
     <div class="doc doc-contents first">
@@ -1915,9 +1915,7 @@ BOTH covariates: the continuous one to track the level, the flag for spikes.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/tirex2/demo.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">360</span>
-<span class="normal">361</span>
-<span class="normal">362</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">362</span>
 <span class="normal">363</span>
 <span class="normal">364</span>
 <span class="normal">365</span>
@@ -1936,12 +1934,14 @@ BOTH covariates: the continuous one to track the level, the flag for spikes.</p>
 <span class="normal">378</span>
 <span class="normal">379</span>
 <span class="normal">380</span>
-<span class="normal">381</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">plot_demo_forecast</span><span class="p">(</span>
+<span class="normal">381</span>
+<span class="normal">382</span>
+<span class="normal">383</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">plot_demo_forecast</span><span class="p">(</span>
     <span class="n">demo</span><span class="p">:</span> <span class="n">Demo</span><span class="p">,</span>
     <span class="n">univariate_forecast</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
     <span class="n">multivariate_forecast</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
     <span class="n">max_context_to_show</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">64</span><span class="p">,</span>
-    <span class="n">engine</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;plotly&quot;</span><span class="p">,</span>
+    <span class="n">engine</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"plotly"</span><span class="p">,</span>
 <span class="p">):</span>
     <span class="n">plot_params</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
         <span class="n">demo</span><span class="o">=</span><span class="n">demo</span><span class="p">,</span>
@@ -1952,12 +1952,12 @@ BOTH covariates: the continuous one to track the level, the flag for spikes.</p>
 
     <span class="c1"># call appropriate plotting function based on the specified engine</span>
     <span class="k">match</span> <span class="n">engine</span><span class="p">:</span>
-        <span class="k">case</span> <span class="s2">&quot;matplotlib&quot;</span><span class="p">:</span>
+        <span class="k">case</span> <span class="s2">"matplotlib"</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">_plot_demo_forecast_matplotlib</span><span class="p">(</span><span class="o">**</span><span class="n">plot_params</span><span class="p">)</span>
-        <span class="k">case</span> <span class="s2">&quot;plotly&quot;</span><span class="p">:</span>
+        <span class="k">case</span> <span class="s2">"plotly"</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">_plot_demo_forecast_plotly</span><span class="p">(</span><span class="o">**</span><span class="n">plot_params</span><span class="p">)</span>
         <span class="k">case</span><span class="w"> </span><span class="k">_</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Drawing </span><span class="si">{</span><span class="n">engine</span><span class="si">=}</span><span class="s2"> not supported.&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Drawing </span><span class="si">{</span><span class="n">engine</span><span class="si">=}</span><span class="s2"> not supported."</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>

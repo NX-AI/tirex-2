@@ -1555,42 +1555,42 @@ more efficient but too-large batches can cause out-of-memory errors.</p>
 <p><code>POST /univariate/forecast/mean</code> and <code>POST /univariate/forecast/quantiles</code> take a batch of
 plain 1D series:</p>
 <div class="highlight"><pre><span></span><code><span class="c1"># Univariate series</span>
-curl<span class="w"> </span>-s<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span><span class="s2">&quot;http://localhost:8000/univariate/forecast/mean&quot;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>-H<span class="w"> </span><span class="s1">&#39;Content-Type: application/json&#39;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{</span>
-<span class="s1">        &quot;context&quot;: [[1, 2, 3, 4, 5, 6, 7, 8]],</span>
-<span class="s1">        &quot;prediction_length&quot;: 5</span>
-<span class="s1">      }&#39;</span>
+curl<span class="w"> </span>-s<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span><span class="s2">"http://localhost:8000/univariate/forecast/mean"</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s1">'Content-Type: application/json'</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-d<span class="w"> </span><span class="s1">'{</span>
+<span class="s1">        "context": [[1, 2, 3, 4, 5, 6, 7, 8]],</span>
+<span class="s1">        "prediction_length": 5</span>
+<span class="s1">      }'</span>
 
 <span class="c1"># Univariate batch (batch size 2): two independent series forecast in a single request</span>
-curl<span class="w"> </span>-s<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span><span class="s2">&quot;http://localhost:8000/univariate/forecast/mean&quot;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>-H<span class="w"> </span><span class="s1">&#39;Content-Type: application/json&#39;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{</span>
-<span class="s1">        &quot;context&quot;: [[1, 2, 3, 4, 5, 6, 7, 8], [8, 7, 6, 5, 4, 3, 2, 1]],</span>
-<span class="s1">        &quot;prediction_length&quot;: 5</span>
-<span class="s1">      }&#39;</span>
+curl<span class="w"> </span>-s<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span><span class="s2">"http://localhost:8000/univariate/forecast/mean"</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s1">'Content-Type: application/json'</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-d<span class="w"> </span><span class="s1">'{</span>
+<span class="s1">        "context": [[1, 2, 3, 4, 5, 6, 7, 8], [8, 7, 6, 5, 4, 3, 2, 1]],</span>
+<span class="s1">        "prediction_length": 5</span>
+<span class="s1">      }'</span>
 </code></pre></div>
 <h3 id="multivariate-endpoints">Multivariate endpoints<a class="headerlink" href="#multivariate-endpoints" title="Permanent link">&para;</a></h3>
 <p><code>POST /multivariate/forecast/mean</code> and <code>POST /multivariate/forecast/quantiles</code> take a batch
 of objects, each with a multi-row <code>target</code> and optional <code>future_covariates</code>:</p>
 <div class="highlight"><pre><span></span><code><span class="c1"># Multivariate (multi-target) series</span>
-curl<span class="w"> </span>-s<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span><span class="s2">&quot;http://localhost:8000/multivariate/forecast/mean&quot;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>-H<span class="w"> </span><span class="s1">&#39;Content-Type: application/json&#39;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{</span>
-<span class="s1">        &quot;context&quot;: [{&quot;target&quot;: [[1, 2, 3, 4, 5, 6, 7, 8], [10, 20, 30, 40, 50, 60, 70, 80]]}],</span>
-<span class="s1">        &quot;prediction_length&quot;: 5</span>
-<span class="s1">      }&#39;</span>
+curl<span class="w"> </span>-s<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span><span class="s2">"http://localhost:8000/multivariate/forecast/mean"</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s1">'Content-Type: application/json'</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-d<span class="w"> </span><span class="s1">'{</span>
+<span class="s1">        "context": [{"target": [[1, 2, 3, 4, 5, 6, 7, 8], [10, 20, 30, 40, 50, 60, 70, 80]]}],</span>
+<span class="s1">        "prediction_length": 5</span>
+<span class="s1">      }'</span>
 
 <span class="c1"># Multivariate with future covariates</span>
-curl<span class="w"> </span>-s<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span><span class="s2">&quot;http://localhost:8000/multivariate/forecast/mean&quot;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>-H<span class="w"> </span><span class="s1">&#39;Content-Type: application/json&#39;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{</span>
-<span class="s1">        &quot;context&quot;: [{</span>
-<span class="s1">          &quot;target&quot;: [[1, 2, 3, 4, 5, 6, 7, 8]],</span>
-<span class="s1">          &quot;future_covariates&quot;: [[0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0]]</span>
+curl<span class="w"> </span>-s<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span><span class="s2">"http://localhost:8000/multivariate/forecast/mean"</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s1">'Content-Type: application/json'</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-d<span class="w"> </span><span class="s1">'{</span>
+<span class="s1">        "context": [{</span>
+<span class="s1">          "target": [[1, 2, 3, 4, 5, 6, 7, 8]],</span>
+<span class="s1">          "future_covariates": [[0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0]]</span>
 <span class="s1">        }],</span>
-<span class="s1">        &quot;prediction_length&quot;: 5</span>
-<span class="s1">      }&#39;</span>
+<span class="s1">        "prediction_length": 5</span>
+<span class="s1">      }'</span>
 </code></pre></div>
 <p>Batching multiple multivariate series works the same way, as a list under <code>context</code>. See
 <a href="https://github.com/NX-AI/tirex-2/blob/main/inference/README.md">inference/README.md</a> for the
@@ -1602,8 +1602,8 @@ quantiles (10, 20, 30, 40, 50, 60, 70, 80, 90%) for the same inputs.</p>
 <div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">requests</span>
 
 <span class="n">resp</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
-    <span class="s2">&quot;http://localhost:8000/univariate/forecast/mean&quot;</span><span class="p">,</span>
-    <span class="n">json</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;context&quot;</span><span class="p">:</span> <span class="p">[[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">8</span><span class="p">]],</span> <span class="s2">&quot;prediction_length&quot;</span><span class="p">:</span> <span class="mi">5</span><span class="p">},</span>
+    <span class="s2">"http://localhost:8000/univariate/forecast/mean"</span><span class="p">,</span>
+    <span class="n">json</span><span class="o">=</span><span class="p">{</span><span class="s2">"context"</span><span class="p">:</span> <span class="p">[[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">8</span><span class="p">]],</span> <span class="s2">"prediction_length"</span><span class="p">:</span> <span class="mi">5</span><span class="p">},</span>
 <span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">())</span>
 </code></pre></div>
@@ -1625,15 +1625,15 @@ curl<span class="w"> </span>-sL<span class="w"> </span>https://github.com/emqx/M
 <div class="highlight"><pre><span></span><code>docker<span class="w"> </span>run<span class="w"> </span>-p<span class="w"> </span><span class="m">8000</span>:8000<span class="w"> </span>-it<span class="w"> </span>-e<span class="w"> </span><span class="nv">MQTT_ENABLED</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>-e<span class="w"> </span><span class="nv">MQTT_BROKER_HOST</span><span class="o">=</span>broker.emqx.io<span class="w"> </span>-e<span class="w"> </span><span class="nv">MQTT_BROKER_PORT</span><span class="o">=</span><span class="m">1883</span><span class="w"> </span>ghcr.io/nx-ai/tirex2-cpu
 </code></pre></div>
 <p>Subscribe to your own reply topic first, over MQTT v5:</p>
-<div class="highlight"><pre><span></span><code>mqttx<span class="w"> </span>sub<span class="w"> </span>-V<span class="w"> </span><span class="m">5</span><span class="w"> </span>-t<span class="w"> </span><span class="s1">&#39;tirex/my-client/result&#39;</span><span class="w"> </span>-h<span class="w"> </span><span class="s1">&#39;broker.emqx.io&#39;</span><span class="w"> </span>-p<span class="w"> </span><span class="m">1883</span>
+<div class="highlight"><pre><span></span><code>mqttx<span class="w"> </span>sub<span class="w"> </span>-V<span class="w"> </span><span class="m">5</span><span class="w"> </span>-t<span class="w"> </span><span class="s1">'tirex/my-client/result'</span><span class="w"> </span>-h<span class="w"> </span><span class="s1">'broker.emqx.io'</span><span class="w"> </span>-p<span class="w"> </span><span class="m">1883</span>
 </code></pre></div>
 <p>Then send a forecast request, pointing its Response Topic at that reply topic:</p>
 <div class="highlight"><pre><span></span><code>mqttx<span class="w"> </span>pub<span class="w"> </span>-V<span class="w"> </span><span class="m">5</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>-t<span class="w"> </span><span class="s1">&#39;tirex/univariate/forecast/request&#39;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--response-topic<span class="w"> </span><span class="s1">&#39;tirex/my-client/result&#39;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--correlation-data<span class="w"> </span><span class="s1">&#39;1234&#39;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>-h<span class="w"> </span><span class="s1">&#39;broker.emqx.io&#39;</span><span class="w"> </span>-p<span class="w"> </span><span class="m">1883</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>-m<span class="w"> </span><span class="s1">&#39;{&quot;id&quot;: &quot;1234&quot;, &quot;context&quot;: [[0, 1, 2, 3]], &quot;prediction_length&quot;: 4}&#39;</span>
+<span class="w">  </span>-t<span class="w"> </span><span class="s1">'tirex/univariate/forecast/request'</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--response-topic<span class="w"> </span><span class="s1">'tirex/my-client/result'</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--correlation-data<span class="w"> </span><span class="s1">'1234'</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-h<span class="w"> </span><span class="s1">'broker.emqx.io'</span><span class="w"> </span>-p<span class="w"> </span><span class="m">1883</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-m<span class="w"> </span><span class="s1">'{"id": "1234", "context": [[0, 1, 2, 3]], "prediction_length": 4}'</span>
 </code></pre></div>
 <p>The result is published to your Response Topic, with the Correlation Data echoed back.
 Successful results contain <code>mean</code> and <code>quantiles</code>; if an error occurs during processing, the
@@ -1644,8 +1644,8 @@ Desktop by following its
 <a href="https://modelcontextprotocol.io/docs/develop/connect-local-servers">guide for connecting local servers</a>.
 Add the following to <code>claude_desktop_config.json</code> under <code>mcpServers</code>:</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;mcpServers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;tirex&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;npx&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;args&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;-y&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;mcp-remote&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;http://127.0.0.1:8000/mcp&quot;</span><span class="p">]</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="nt">"mcpServers"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"tirex"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"command"</span><span class="p">:</span><span class="w"> </span><span class="s2">"npx"</span><span class="p">,</span><span class="w"> </span><span class="nt">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"-y"</span><span class="p">,</span><span class="w"> </span><span class="s2">"mcp-remote"</span><span class="p">,</span><span class="w"> </span><span class="s2">"http://127.0.0.1:8000/mcp"</span><span class="p">]</span><span class="w"> </span><span class="p">}</span>
 <span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div>

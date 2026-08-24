@@ -1393,8 +1393,7 @@ and a <code>quantiles</code> buffer holding the quantile levels it forecasts.</p
 
               <details class="mkdocstrings-source">
                 <summary>Source code in <code>src/tirex2/api_adapter/forecast.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">295</span>
-<span class="normal">296</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">296</span>
 <span class="normal">297</span>
 <span class="normal">298</span>
 <span class="normal">299</span>
@@ -1555,14 +1554,15 @@ and a <code>quantiles</code> buffer holding the quantile levels it forecasts.</p
 <span class="normal">454</span>
 <span class="normal">455</span>
 <span class="normal">456</span>
-<span class="normal">457</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ForecastModel</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;High-level, batched forecasting interface around a :class:`TiRex2` backbone.</span>
+<span class="normal">457</span>
+<span class="normal">458</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ForecastModel</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""High-level, batched forecasting interface around a :class:`TiRex2` backbone.</span>
 
 <span class="sd">    The wrapper takes ownership of the model only as a delegate: it batches the</span>
 <span class="sd">    :class:`~tirex.model.types.TimeseriesType` it is given (building them from a GluonTS</span>
 <span class="sd">    dataset in :meth:`forecast_gluon`), feeds them to :meth:`TiRex2.predict`, and formats the</span>
 <span class="sd">    per-series quantile forecasts into the requested output type. Attribute access falls</span>
-<span class="sd">    through to the wrapped model, so the backbone&#39;s own methods (e.g. ``predict``) remain</span>
+<span class="sd">    through to the wrapped model, so the backbone's own methods (e.g. ``predict``) remain</span>
 <span class="sd">    reachable on the wrapper.</span>
 
 <span class="sd">    Parameters</span>
@@ -1571,19 +1571,19 @@ and a <code>quantiles</code> buffer holding the quantile levels it forecasts.</p
 <span class="sd">        An instantiated, ready-for-inference backbone exposing</span>
 <span class="sd">        ``predict(timeseries: list[TimeseriesType], prediction_length: int) -&gt; list[Tensor]``</span>
 <span class="sd">        and a ``quantiles`` buffer holding the quantile levels it forecasts.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">model</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_quantile_levels</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the model&#39;s forecast quantile levels as clean Python floats (float32 noise rounded off).&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return the model's forecast quantile levels as clean Python floats (float32 noise rounded off)."""</span>
         <span class="k">return</span> <span class="p">[</span><span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">q</span><span class="p">),</span> <span class="mi">6</span><span class="p">)</span> <span class="k">for</span> <span class="n">q</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">quantiles</span><span class="p">]</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__getattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Delegate unknown attribute lookups to the wrapped model.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Delegate unknown attribute lookups to the wrapped model."""</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="n">model</span> <span class="o">=</span> <span class="nb">object</span><span class="o">.</span><span class="fm">__getattribute__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;model&quot;</span><span class="p">)</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="nb">object</span><span class="o">.</span><span class="fm">__getattribute__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">"model"</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
         <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
@@ -1592,30 +1592,30 @@ and a <code>quantiles</code> buffer holding the quantile levels it forecasts.</p
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">timeseries</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">TimeseriesType</span><span class="p">],</span>
         <span class="n">prediction_length</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-        <span class="n">output_type</span><span class="p">:</span> <span class="n">ForecastOutputType</span> <span class="o">=</span> <span class="s2">&quot;torch&quot;</span><span class="p">,</span>
+        <span class="n">output_type</span><span class="p">:</span> <span class="n">ForecastOutputType</span> <span class="o">=</span> <span class="s2">"torch"</span><span class="p">,</span>
         <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">512</span><span class="p">,</span>
         <span class="n">yield_per_batch</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="o">**</span><span class="n">predict_kwargs</span><span class="p">,</span>
     <span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Forecast a list of :class:`TimeseriesType`, each carrying a target and optional covariates.</span>
+<span class="w">        </span><span class="sd">"""Forecast a list of :class:`TimeseriesType`, each carrying a target and optional covariates.</span>
 
 <span class="sd">        Extra ``predict_kwargs`` are forwarded verbatim to :meth:`TiRex2.predict`.</span>
 <span class="sd">        In particular ``tta_sign_flip`` controls sign-flip test-time augmentation</span>
 <span class="sd">        (roughly doubles inference cost), and ``tta_diff`` controls postprocessor</span>
-<span class="sd">        differencing; when omitted, the checkpoint&#39;s configured defaults</span>
+<span class="sd">        differencing; when omitted, the checkpoint's configured defaults</span>
 <span class="sd">        (``model-config.yaml``) are used. Pass ``True``/``False`` to override.</span>
 
 <span class="sd">        Examples</span>
 <span class="sd">        --------</span>
 <span class="sd">        &gt;&gt;&gt; import torch</span>
 <span class="sd">        &gt;&gt;&gt; from tirex2 import TimeseriesType, load_model</span>
-<span class="sd">        &gt;&gt;&gt; model = load_model(&quot;NX-AI/TiRex-2&quot;, device=&quot;cpu&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; model = load_model("NX-AI/TiRex-2", device="cpu")</span>
 <span class="sd">        &gt;&gt;&gt; ts = TimeseriesType(target=torch.randn(1, 128), past_covariates=None, future_covariates=None)</span>
-<span class="sd">        &gt;&gt;&gt; forecasts = model.forecast([ts], prediction_length=32, output_type=&quot;numpy&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; forecasts = model.forecast([ts], prediction_length=32, output_type="numpy")</span>
 <span class="sd">        &gt;&gt;&gt; forecasts[0].shape</span>
 <span class="sd">        (1, 9, 32)</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">assert</span> <span class="n">batch_size</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;Batch size must be &gt;= 1&quot;</span>
+<span class="sd">        """</span>
+        <span class="k">assert</span> <span class="n">batch_size</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">"Batch size must be &gt;= 1"</span>
         <span class="k">return</span> <span class="n">_gen_forecast</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span>
             <span class="nb">list</span><span class="p">(</span><span class="n">timeseries</span><span class="p">),</span>
@@ -1632,31 +1632,31 @@ and a <code>quantiles</code> buffer holding the quantile levels it forecasts.</p
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">gluonDataset</span><span class="p">,</span>
         <span class="n">prediction_length</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-        <span class="n">output_type</span><span class="p">:</span> <span class="n">ForecastOutputType</span> <span class="o">=</span> <span class="s2">&quot;torch&quot;</span><span class="p">,</span>
+        <span class="n">output_type</span><span class="p">:</span> <span class="n">ForecastOutputType</span> <span class="o">=</span> <span class="s2">"torch"</span><span class="p">,</span>
         <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">512</span><span class="p">,</span>
         <span class="n">yield_per_batch</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="n">multivariate</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="n">data_kwargs</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{},</span>
         <span class="o">**</span><span class="n">predict_kwargs</span><span class="p">,</span>
     <span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Forecast every entry of a GluonTS dataset, carrying its covariates and metadata through.</span>
+<span class="w">        </span><span class="sd">"""Forecast every entry of a GluonTS dataset, carrying its covariates and metadata through.</span>
 
 <span class="sd">        With ``multivariate=False`` (default) each target variate is rendered as its own</span>
 <span class="sd">        univariate ``QuantileForecast``; with ``multivariate=True`` each series yields a single</span>
 <span class="sd">        forecast retaining the variate axis, so a multivariate dataset is scored jointly rather</span>
-<span class="sd">        than channel-by-channel. The flag only affects ``output_type=&quot;gluonts&quot;`` formatting.</span>
+<span class="sd">        than channel-by-channel. The flag only affects ``output_type="gluonts"`` formatting.</span>
 
 <span class="sd">        Extra ``predict_kwargs`` are forwarded verbatim to :meth:`TiRex2.predict`.</span>
 <span class="sd">        In particular ``tta_sign_flip`` controls sign-flip test-time augmentation</span>
 <span class="sd">        (roughly doubles inference cost), and ``tta_diff`` controls postprocessor</span>
-<span class="sd">        differencing; when omitted, the checkpoint&#39;s configured defaults</span>
+<span class="sd">        differencing; when omitted, the checkpoint's configured defaults</span>
 <span class="sd">        (``model-config.yaml``) are used. Pass ``True``/``False`` to override.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">assert</span> <span class="n">batch_size</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;Batch size must be &gt;= 1&quot;</span>
+<span class="sd">        """</span>
+        <span class="k">assert</span> <span class="n">batch_size</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">"Batch size must be &gt;= 1"</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="kn">from</span><span class="w"> </span><span class="nn">.gluon</span><span class="w"> </span><span class="kn">import</span> <span class="n">build_gluon_timeseries</span>
         <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;forecast_gluon needs GluonTS but GluonTS is not available (not installed)!&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"forecast_gluon needs GluonTS but GluonTS is not available (not installed)!"</span><span class="p">)</span>
 
         <span class="n">timeseries</span><span class="p">,</span> <span class="n">meta</span> <span class="o">=</span> <span class="n">build_gluon_timeseries</span><span class="p">(</span><span class="n">gluonDataset</span><span class="p">,</span> <span class="n">multivariate</span><span class="o">=</span><span class="n">multivariate</span><span class="p">,</span> <span class="o">**</span><span class="n">data_kwargs</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">_gen_forecast</span><span class="p">(</span>
@@ -1673,9 +1673,9 @@ and a <code>quantiles</code> buffer holding the quantile levels it forecasts.</p
 
     <span class="k">def</span><span class="w"> </span><span class="nf">forecast_fev</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">window</span><span class="p">:</span> <span class="s2">&quot;fev.EvaluationWindow&quot;</span><span class="p">,</span>
+        <span class="n">window</span><span class="p">:</span> <span class="s2">"fev.EvaluationWindow"</span><span class="p">,</span>
         <span class="n">prediction_length</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-        <span class="n">output_type</span><span class="p">:</span> <span class="n">ForecastOutputType</span> <span class="o">=</span> <span class="s2">&quot;torch&quot;</span><span class="p">,</span>
+        <span class="n">output_type</span><span class="p">:</span> <span class="n">ForecastOutputType</span> <span class="o">=</span> <span class="s2">"torch"</span><span class="p">,</span>
         <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">512</span><span class="p">,</span>
         <span class="n">yield_per_batch</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="n">data_kwargs</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -1683,28 +1683,28 @@ and a <code>quantiles</code> buffer holding the quantile levels it forecasts.</p
         <span class="n">return_inference_time</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="o">**</span><span class="n">predict_kwargs</span><span class="p">,</span>
     <span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Forecast a single FEV evaluation window.</span>
+<span class="w">        </span><span class="sd">"""Forecast a single FEV evaluation window.</span>
 
 <span class="sd">        The call mirrors :meth:`forecast_gluon`: convert the external dataset</span>
 <span class="sd">        representation into :class:`TimeseriesType`, then delegate batching,</span>
 <span class="sd">        prediction and output rendering to the common forecast path. Use</span>
-<span class="sd">        ``output_type=&quot;fev&quot;`` to return predictions in the format accepted by</span>
+<span class="sd">        ``output_type="fev"`` to return predictions in the format accepted by</span>
 <span class="sd">        ``fev.Task.evaluation_summary``. Pass ``return_inference_time=True`` to</span>
 <span class="sd">        also return the model-only prediction time, excluding FEV input</span>
 <span class="sd">        conversion and final ``DatasetDict`` construction.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">assert</span> <span class="n">batch_size</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;Batch size must be &gt;= 1&quot;</span>
+<span class="sd">        """</span>
+        <span class="k">assert</span> <span class="n">batch_size</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">"Batch size must be &gt;= 1"</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="kn">import</span><span class="w"> </span><span class="nn">fev</span>  <span class="c1"># noqa: F401</span>
         <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;forecast_fev needs fev but fev is not available (not installed)!&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"forecast_fev needs fev but fev is not available (not installed)!"</span><span class="p">)</span>
 
         <span class="n">data_kwargs</span> <span class="o">=</span> <span class="n">data_kwargs</span> <span class="ow">or</span> <span class="p">{}</span>
         <span class="n">timeseries</span><span class="p">,</span> <span class="n">meta</span> <span class="o">=</span> <span class="n">build_fev_timeseries</span><span class="p">(</span><span class="n">window</span><span class="p">,</span> <span class="o">**</span><span class="n">data_kwargs</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">output_type</span> <span class="o">==</span> <span class="s2">&quot;fev&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">output_type</span> <span class="o">==</span> <span class="s2">"fev"</span><span class="p">:</span>
             <span class="n">requested_quantiles</span> <span class="o">=</span> <span class="n">quantile_levels</span> <span class="k">if</span> <span class="n">quantile_levels</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_quantile_levels</span><span class="p">()</span>
             <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">meta</span><span class="p">:</span>
-                <span class="n">item</span><span class="p">[</span><span class="s2">&quot;quantile_levels&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">requested_quantiles</span>
+                <span class="n">item</span><span class="p">[</span><span class="s2">"quantile_levels"</span><span class="p">]</span> <span class="o">=</span> <span class="n">requested_quantiles</span>
 
         <span class="k">return</span> <span class="n">_gen_forecast</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span>
@@ -1742,7 +1742,7 @@ and a <code>quantiles</code> buffer holding the quantile levels it forecasts.</p
 
 
 <a href="#tirex2.ForecastModel.forecast" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">forecast</span><span class="p">(</span><span class="n">timeseries</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">TimeseriesType</span><span class="p">],</span> <span class="n">prediction_length</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">output_type</span><span class="p">:</span> <span class="n">ForecastOutputType</span> <span class="o">=</span> <span class="s1">&#39;torch&#39;</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">512</span><span class="p">,</span> <span class="n">yield_per_batch</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">predict_kwargs</span><span class="p">)</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">forecast</span><span class="p">(</span><span class="n">timeseries</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">TimeseriesType</span><span class="p">],</span> <span class="n">prediction_length</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">output_type</span><span class="p">:</span> <span class="n">ForecastOutputType</span> <span class="o">=</span> <span class="s1">'torch'</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">512</span><span class="p">,</span> <span class="n">yield_per_batch</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">predict_kwargs</span><span class="p">)</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
@@ -1758,9 +1758,9 @@ differencing; when omitted, the checkpoint's configured defaults
 <p><span class="doc-section-title">Examples:</span></p>
     <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">tirex2</span><span class="w"> </span><span class="kn">import</span> <span class="n">TimeseriesType</span><span class="p">,</span> <span class="n">load_model</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">model</span> <span class="o">=</span> <span class="n">load_model</span><span class="p">(</span><span class="s2">&quot;NX-AI/TiRex-2&quot;</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cpu&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">model</span> <span class="o">=</span> <span class="n">load_model</span><span class="p">(</span><span class="s2">"NX-AI/TiRex-2"</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">"cpu"</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">ts</span> <span class="o">=</span> <span class="n">TimeseriesType</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">128</span><span class="p">),</span> <span class="n">past_covariates</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">future_covariates</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">forecasts</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">forecast</span><span class="p">([</span><span class="n">ts</span><span class="p">],</span> <span class="n">prediction_length</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span> <span class="n">output_type</span><span class="o">=</span><span class="s2">&quot;numpy&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">forecasts</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">forecast</span><span class="p">([</span><span class="n">ts</span><span class="p">],</span> <span class="n">prediction_length</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span> <span class="n">output_type</span><span class="o">=</span><span class="s2">"numpy"</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">forecasts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span>
 <span class="go">(1, 9, 32)</span>
 </code></pre></div>
@@ -1768,8 +1768,7 @@ differencing; when omitted, the checkpoint's configured defaults
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/tirex2/api_adapter/forecast.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">328</span>
-<span class="normal">329</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">329</span>
 <span class="normal">330</span>
 <span class="normal">331</span>
 <span class="normal">332</span>
@@ -1806,34 +1805,35 @@ differencing; when omitted, the checkpoint's configured defaults
 <span class="normal">363</span>
 <span class="normal">364</span>
 <span class="normal">365</span>
-<span class="normal">366</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">forecast</span><span class="p">(</span>
+<span class="normal">366</span>
+<span class="normal">367</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">forecast</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">timeseries</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">TimeseriesType</span><span class="p">],</span>
     <span class="n">prediction_length</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-    <span class="n">output_type</span><span class="p">:</span> <span class="n">ForecastOutputType</span> <span class="o">=</span> <span class="s2">&quot;torch&quot;</span><span class="p">,</span>
+    <span class="n">output_type</span><span class="p">:</span> <span class="n">ForecastOutputType</span> <span class="o">=</span> <span class="s2">"torch"</span><span class="p">,</span>
     <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">512</span><span class="p">,</span>
     <span class="n">yield_per_batch</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="o">**</span><span class="n">predict_kwargs</span><span class="p">,</span>
 <span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Forecast a list of :class:`TimeseriesType`, each carrying a target and optional covariates.</span>
+<span class="w">    </span><span class="sd">"""Forecast a list of :class:`TimeseriesType`, each carrying a target and optional covariates.</span>
 
 <span class="sd">    Extra ``predict_kwargs`` are forwarded verbatim to :meth:`TiRex2.predict`.</span>
 <span class="sd">    In particular ``tta_sign_flip`` controls sign-flip test-time augmentation</span>
 <span class="sd">    (roughly doubles inference cost), and ``tta_diff`` controls postprocessor</span>
-<span class="sd">    differencing; when omitted, the checkpoint&#39;s configured defaults</span>
+<span class="sd">    differencing; when omitted, the checkpoint's configured defaults</span>
 <span class="sd">    (``model-config.yaml``) are used. Pass ``True``/``False`` to override.</span>
 
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
 <span class="sd">    &gt;&gt;&gt; import torch</span>
 <span class="sd">    &gt;&gt;&gt; from tirex2 import TimeseriesType, load_model</span>
-<span class="sd">    &gt;&gt;&gt; model = load_model(&quot;NX-AI/TiRex-2&quot;, device=&quot;cpu&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; model = load_model("NX-AI/TiRex-2", device="cpu")</span>
 <span class="sd">    &gt;&gt;&gt; ts = TimeseriesType(target=torch.randn(1, 128), past_covariates=None, future_covariates=None)</span>
-<span class="sd">    &gt;&gt;&gt; forecasts = model.forecast([ts], prediction_length=32, output_type=&quot;numpy&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; forecasts = model.forecast([ts], prediction_length=32, output_type="numpy")</span>
 <span class="sd">    &gt;&gt;&gt; forecasts[0].shape</span>
 <span class="sd">    (1, 9, 32)</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">assert</span> <span class="n">batch_size</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;Batch size must be &gt;= 1&quot;</span>
+<span class="sd">    """</span>
+    <span class="k">assert</span> <span class="n">batch_size</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">"Batch size must be &gt;= 1"</span>
     <span class="k">return</span> <span class="n">_gen_forecast</span><span class="p">(</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span>
         <span class="nb">list</span><span class="p">(</span><span class="n">timeseries</span><span class="p">),</span>
@@ -1859,7 +1859,7 @@ differencing; when omitted, the checkpoint's configured defaults
 
 
 <a href="#tirex2.ForecastModel.forecast_gluon" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">forecast_gluon</span><span class="p">(</span><span class="n">gluonDataset</span><span class="p">,</span> <span class="n">prediction_length</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">output_type</span><span class="p">:</span> <span class="n">ForecastOutputType</span> <span class="o">=</span> <span class="s1">&#39;torch&#39;</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">512</span><span class="p">,</span> <span class="n">yield_per_batch</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">multivariate</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">data_kwargs</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{},</span> <span class="o">**</span><span class="n">predict_kwargs</span><span class="p">)</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">forecast_gluon</span><span class="p">(</span><span class="n">gluonDataset</span><span class="p">,</span> <span class="n">prediction_length</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">output_type</span><span class="p">:</span> <span class="n">ForecastOutputType</span> <span class="o">=</span> <span class="s1">'torch'</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">512</span><span class="p">,</span> <span class="n">yield_per_batch</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">multivariate</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">data_kwargs</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{},</span> <span class="o">**</span><span class="n">predict_kwargs</span><span class="p">)</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
@@ -1878,8 +1878,7 @@ differencing; when omitted, the checkpoint's configured defaults
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/tirex2/api_adapter/forecast.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">368</span>
-<span class="normal">369</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">369</span>
 <span class="normal">370</span>
 <span class="normal">371</span>
 <span class="normal">372</span>
@@ -1919,35 +1918,36 @@ differencing; when omitted, the checkpoint's configured defaults
 <span class="normal">406</span>
 <span class="normal">407</span>
 <span class="normal">408</span>
-<span class="normal">409</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">forecast_gluon</span><span class="p">(</span>
+<span class="normal">409</span>
+<span class="normal">410</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">forecast_gluon</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">gluonDataset</span><span class="p">,</span>
     <span class="n">prediction_length</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-    <span class="n">output_type</span><span class="p">:</span> <span class="n">ForecastOutputType</span> <span class="o">=</span> <span class="s2">&quot;torch&quot;</span><span class="p">,</span>
+    <span class="n">output_type</span><span class="p">:</span> <span class="n">ForecastOutputType</span> <span class="o">=</span> <span class="s2">"torch"</span><span class="p">,</span>
     <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">512</span><span class="p">,</span>
     <span class="n">yield_per_batch</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="n">multivariate</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="n">data_kwargs</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{},</span>
     <span class="o">**</span><span class="n">predict_kwargs</span><span class="p">,</span>
 <span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Forecast every entry of a GluonTS dataset, carrying its covariates and metadata through.</span>
+<span class="w">    </span><span class="sd">"""Forecast every entry of a GluonTS dataset, carrying its covariates and metadata through.</span>
 
 <span class="sd">    With ``multivariate=False`` (default) each target variate is rendered as its own</span>
 <span class="sd">    univariate ``QuantileForecast``; with ``multivariate=True`` each series yields a single</span>
 <span class="sd">    forecast retaining the variate axis, so a multivariate dataset is scored jointly rather</span>
-<span class="sd">    than channel-by-channel. The flag only affects ``output_type=&quot;gluonts&quot;`` formatting.</span>
+<span class="sd">    than channel-by-channel. The flag only affects ``output_type="gluonts"`` formatting.</span>
 
 <span class="sd">    Extra ``predict_kwargs`` are forwarded verbatim to :meth:`TiRex2.predict`.</span>
 <span class="sd">    In particular ``tta_sign_flip`` controls sign-flip test-time augmentation</span>
 <span class="sd">    (roughly doubles inference cost), and ``tta_diff`` controls postprocessor</span>
-<span class="sd">    differencing; when omitted, the checkpoint&#39;s configured defaults</span>
+<span class="sd">    differencing; when omitted, the checkpoint's configured defaults</span>
 <span class="sd">    (``model-config.yaml``) are used. Pass ``True``/``False`` to override.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">assert</span> <span class="n">batch_size</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;Batch size must be &gt;= 1&quot;</span>
+<span class="sd">    """</span>
+    <span class="k">assert</span> <span class="n">batch_size</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">"Batch size must be &gt;= 1"</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">.gluon</span><span class="w"> </span><span class="kn">import</span> <span class="n">build_gluon_timeseries</span>
     <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;forecast_gluon needs GluonTS but GluonTS is not available (not installed)!&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"forecast_gluon needs GluonTS but GluonTS is not available (not installed)!"</span><span class="p">)</span>
 
     <span class="n">timeseries</span><span class="p">,</span> <span class="n">meta</span> <span class="o">=</span> <span class="n">build_gluon_timeseries</span><span class="p">(</span><span class="n">gluonDataset</span><span class="p">,</span> <span class="n">multivariate</span><span class="o">=</span><span class="n">multivariate</span><span class="p">,</span> <span class="o">**</span><span class="n">data_kwargs</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">_gen_forecast</span><span class="p">(</span>
@@ -1975,7 +1975,7 @@ differencing; when omitted, the checkpoint's configured defaults
 
 
 <a href="#tirex2.ForecastModel.forecast_fev" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">forecast_fev</span><span class="p">(</span><span class="n">window</span><span class="p">:</span> <span class="n">EvaluationWindow</span><span class="p">,</span> <span class="n">prediction_length</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">output_type</span><span class="p">:</span> <span class="n">ForecastOutputType</span> <span class="o">=</span> <span class="s1">&#39;torch&#39;</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">512</span><span class="p">,</span> <span class="n">yield_per_batch</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">data_kwargs</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">quantile_levels</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">return_inference_time</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">predict_kwargs</span><span class="p">)</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">forecast_fev</span><span class="p">(</span><span class="n">window</span><span class="p">:</span> <span class="n">EvaluationWindow</span><span class="p">,</span> <span class="n">prediction_length</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">output_type</span><span class="p">:</span> <span class="n">ForecastOutputType</span> <span class="o">=</span> <span class="s1">'torch'</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">512</span><span class="p">,</span> <span class="n">yield_per_batch</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">data_kwargs</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">quantile_levels</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">return_inference_time</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">predict_kwargs</span><span class="p">)</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
@@ -1992,8 +1992,7 @@ conversion and final <code>DatasetDict</code> construction.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/tirex2/api_adapter/forecast.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">411</span>
-<span class="normal">412</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">412</span>
 <span class="normal">413</span>
 <span class="normal">414</span>
 <span class="normal">415</span>
@@ -2038,11 +2037,12 @@ conversion and final <code>DatasetDict</code> construction.</p>
 <span class="normal">454</span>
 <span class="normal">455</span>
 <span class="normal">456</span>
-<span class="normal">457</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">forecast_fev</span><span class="p">(</span>
+<span class="normal">457</span>
+<span class="normal">458</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">forecast_fev</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
-    <span class="n">window</span><span class="p">:</span> <span class="s2">&quot;fev.EvaluationWindow&quot;</span><span class="p">,</span>
+    <span class="n">window</span><span class="p">:</span> <span class="s2">"fev.EvaluationWindow"</span><span class="p">,</span>
     <span class="n">prediction_length</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-    <span class="n">output_type</span><span class="p">:</span> <span class="n">ForecastOutputType</span> <span class="o">=</span> <span class="s2">&quot;torch&quot;</span><span class="p">,</span>
+    <span class="n">output_type</span><span class="p">:</span> <span class="n">ForecastOutputType</span> <span class="o">=</span> <span class="s2">"torch"</span><span class="p">,</span>
     <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">512</span><span class="p">,</span>
     <span class="n">yield_per_batch</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="n">data_kwargs</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -2050,28 +2050,28 @@ conversion and final <code>DatasetDict</code> construction.</p>
     <span class="n">return_inference_time</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="o">**</span><span class="n">predict_kwargs</span><span class="p">,</span>
 <span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Forecast a single FEV evaluation window.</span>
+<span class="w">    </span><span class="sd">"""Forecast a single FEV evaluation window.</span>
 
 <span class="sd">    The call mirrors :meth:`forecast_gluon`: convert the external dataset</span>
 <span class="sd">    representation into :class:`TimeseriesType`, then delegate batching,</span>
 <span class="sd">    prediction and output rendering to the common forecast path. Use</span>
-<span class="sd">    ``output_type=&quot;fev&quot;`` to return predictions in the format accepted by</span>
+<span class="sd">    ``output_type="fev"`` to return predictions in the format accepted by</span>
 <span class="sd">    ``fev.Task.evaluation_summary``. Pass ``return_inference_time=True`` to</span>
 <span class="sd">    also return the model-only prediction time, excluding FEV input</span>
 <span class="sd">    conversion and final ``DatasetDict`` construction.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">assert</span> <span class="n">batch_size</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;Batch size must be &gt;= 1&quot;</span>
+<span class="sd">    """</span>
+    <span class="k">assert</span> <span class="n">batch_size</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">"Batch size must be &gt;= 1"</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="kn">import</span><span class="w"> </span><span class="nn">fev</span>  <span class="c1"># noqa: F401</span>
     <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;forecast_fev needs fev but fev is not available (not installed)!&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"forecast_fev needs fev but fev is not available (not installed)!"</span><span class="p">)</span>
 
     <span class="n">data_kwargs</span> <span class="o">=</span> <span class="n">data_kwargs</span> <span class="ow">or</span> <span class="p">{}</span>
     <span class="n">timeseries</span><span class="p">,</span> <span class="n">meta</span> <span class="o">=</span> <span class="n">build_fev_timeseries</span><span class="p">(</span><span class="n">window</span><span class="p">,</span> <span class="o">**</span><span class="n">data_kwargs</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">output_type</span> <span class="o">==</span> <span class="s2">&quot;fev&quot;</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">output_type</span> <span class="o">==</span> <span class="s2">"fev"</span><span class="p">:</span>
         <span class="n">requested_quantiles</span> <span class="o">=</span> <span class="n">quantile_levels</span> <span class="k">if</span> <span class="n">quantile_levels</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_quantile_levels</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">meta</span><span class="p">:</span>
-            <span class="n">item</span><span class="p">[</span><span class="s2">&quot;quantile_levels&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">requested_quantiles</span>
+            <span class="n">item</span><span class="p">[</span><span class="s2">"quantile_levels"</span><span class="p">]</span> <span class="o">=</span> <span class="n">requested_quantiles</span>
 
     <span class="k">return</span> <span class="n">_gen_forecast</span><span class="p">(</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span>

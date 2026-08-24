@@ -1289,7 +1289,7 @@ API surface exported from the top-level <code>tirex2</code> package.</p>
 
 
 <a href="#tirex2.load_model" class="headerlink" title="Permanent link">&para;</a></h2>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">load_model</span><span class="p">(</span><span class="n">ckpt_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">=</span> <span class="s1">&#39;NX-AI/TiRex-2&#39;</span><span class="p">,</span> <span class="n">device</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;cuda&#39;</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">hf_kwargs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">use_flex_attention</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ForecastModel</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">load_model</span><span class="p">(</span><span class="n">ckpt_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">=</span> <span class="s1">'NX-AI/TiRex-2'</span><span class="p">,</span> <span class="n">device</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'cuda'</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">hf_kwargs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">use_flex_attention</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ForecastModel</span>
 </code></pre></div>
 
     <div class="doc doc-contents first">
@@ -1413,9 +1413,9 @@ high-level <code>forecast</code> / <code>forecast_gluon</code> API.</p>
 <p><span class="doc-section-title">Examples:</span></p>
     <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">tirex2</span><span class="w"> </span><span class="kn">import</span> <span class="n">TimeseriesType</span><span class="p">,</span> <span class="n">load_model</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">model</span> <span class="o">=</span> <span class="n">load_model</span><span class="p">(</span><span class="s2">&quot;NX-AI/TiRex-2&quot;</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cpu&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">model</span> <span class="o">=</span> <span class="n">load_model</span><span class="p">(</span><span class="s2">"NX-AI/TiRex-2"</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">"cpu"</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">ts</span> <span class="o">=</span> <span class="n">TimeseriesType</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">128</span><span class="p">),</span> <span class="n">past_covariates</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">future_covariates</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">forecast</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">forecast</span><span class="p">([</span><span class="n">ts</span><span class="p">],</span> <span class="n">prediction_length</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span> <span class="n">output_type</span><span class="o">=</span><span class="s2">&quot;numpy&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">forecast</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">forecast</span><span class="p">([</span><span class="n">ts</span><span class="p">],</span> <span class="n">prediction_length</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span> <span class="n">output_type</span><span class="o">=</span><span class="s2">"numpy"</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">forecast</span><span class="o">.</span><span class="n">shape</span>
 <span class="go">(1, 9, 32)</span>
 </code></pre></div>
@@ -1423,10 +1423,7 @@ high-level <code>forecast</code> / <code>forecast_gluon</code> API.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/tirex2/base.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 49</span>
-<span class="normal"> 50</span>
-<span class="normal"> 51</span>
-<span class="normal"> 52</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 52</span>
 <span class="normal"> 53</span>
 <span class="normal"> 54</span>
 <span class="normal"> 55</span>
@@ -1495,14 +1492,17 @@ high-level <code>forecast</code> / <code>forecast_gluon</code> API.</p>
 <span class="normal">118</span>
 <span class="normal">119</span>
 <span class="normal">120</span>
-<span class="normal">121</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">load_model</span><span class="p">(</span>
-    <span class="n">ckpt_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">=</span> <span class="s2">&quot;NX-AI/TiRex-2&quot;</span><span class="p">,</span>
-    <span class="n">device</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;cuda&quot;</span><span class="p">,</span>
+<span class="normal">121</span>
+<span class="normal">122</span>
+<span class="normal">123</span>
+<span class="normal">124</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">load_model</span><span class="p">(</span>
+    <span class="n">ckpt_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">=</span> <span class="s2">"NX-AI/TiRex-2"</span><span class="p">,</span>
+    <span class="n">device</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"cuda"</span><span class="p">,</span>
     <span class="o">*</span><span class="p">,</span>
     <span class="n">hf_kwargs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">use_flex_attention</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ForecastModel</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Load an inference-ready :class:`TiRex2` from a checkpoint directory or HF repo.</span>
+<span class="w">    </span><span class="sd">"""Load an inference-ready :class:`TiRex2` from a checkpoint directory or HF repo.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -1510,15 +1510,15 @@ high-level <code>forecast</code> / <code>forecast_gluon</code> API.</p>
 <span class="sd">        Local directory holding ``model-config.yaml`` and ``model.ckpt``. Values</span>
 <span class="sd">        of the form ``hf://org/repo`` or ``org/repo`` are treated as Hugging Face</span>
 <span class="sd">        model repo ids and downloaded with :func:`huggingface_hub.snapshot_download`.</span>
-<span class="sd">    device : {&quot;cpu&quot;, &quot;cuda&quot;, &quot;mps&quot;}</span>
+<span class="sd">    device : {"cpu", "cuda", "mps"}</span>
 <span class="sd">        Runtime device and recurrent-kernel family to use. This overrides any</span>
-<span class="sd">        device/backend stored in the checkpoint config. ``&quot;mps&quot;`` runs on Apple</span>
-<span class="sd">        Metal using the same pure-PyTorch (native) kernels as ``&quot;cpu&quot;``.</span>
+<span class="sd">        device/backend stored in the checkpoint config. ``"mps"`` runs on Apple</span>
+<span class="sd">        Metal using the same pure-PyTorch (native) kernels as ``"cpu"``.</span>
 <span class="sd">    hf_kwargs : dict, optional</span>
 <span class="sd">        Extra keyword arguments forwarded to ``snapshot_download`` for Hugging</span>
-<span class="sd">        Face paths, e.g. ``{&quot;revision&quot;: &quot;main&quot;, &quot;local_files_only&quot;: True}``.</span>
+<span class="sd">        Face paths, e.g. ``{"revision": "main", "local_files_only": True}``.</span>
 <span class="sd">    use_flex_attention : bool, optional</span>
-<span class="sd">        Override every variate mixer&#39;s checkpoint setting. ``True`` enables</span>
+<span class="sd">        Override every variate mixer's checkpoint setting. ``True`` enables</span>
 <span class="sd">        block-sparse FlexAttention, which can reduce the cost of large grouped</span>
 <span class="sd">        multivariate batches on CUDA but adds first-call compilation overhead.</span>
 <span class="sd">        ``False`` forces dense attention. Leave as ``None`` to preserve the</span>
@@ -1535,36 +1535,36 @@ high-level <code>forecast</code> / <code>forecast_gluon</code> API.</p>
 <span class="sd">    --------</span>
 <span class="sd">    &gt;&gt;&gt; import torch</span>
 <span class="sd">    &gt;&gt;&gt; from tirex2 import TimeseriesType, load_model</span>
-<span class="sd">    &gt;&gt;&gt; model = load_model(&quot;NX-AI/TiRex-2&quot;, device=&quot;cpu&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; model = load_model("NX-AI/TiRex-2", device="cpu")</span>
 <span class="sd">    &gt;&gt;&gt; ts = TimeseriesType(target=torch.randn(1, 128), past_covariates=None, future_covariates=None)</span>
-<span class="sd">    &gt;&gt;&gt; forecast = model.forecast([ts], prediction_length=32, output_type=&quot;numpy&quot;)[0]</span>
+<span class="sd">    &gt;&gt;&gt; forecast = model.forecast([ts], prediction_length=32, output_type="numpy")[0]</span>
 <span class="sd">    &gt;&gt;&gt; forecast.shape</span>
 <span class="sd">    (1, 9, 32)</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">device</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;cuda&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">():</span>
-        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;Execution on CUDA was requested but is not available.&quot;</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">device</span> <span class="o">==</span> <span class="s2">&quot;mps&quot;</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">backends</span><span class="o">.</span><span class="n">mps</span><span class="o">.</span><span class="n">is_available</span><span class="p">():</span>
-        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;Execution on MPS was requested but is not available.&quot;</span><span class="p">)</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">device</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"cuda"</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">"Execution on CUDA was requested but is not available."</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">device</span> <span class="o">==</span> <span class="s2">"mps"</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">backends</span><span class="o">.</span><span class="n">mps</span><span class="o">.</span><span class="n">is_available</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">"Execution on MPS was requested but is not available."</span><span class="p">)</span>
 
     <span class="n">ckpt_dir</span> <span class="o">=</span> <span class="n">_resolve_ckpt_dir</span><span class="p">(</span><span class="n">ckpt_path</span><span class="p">,</span> <span class="n">hf_kwargs</span><span class="o">=</span><span class="n">hf_kwargs</span><span class="p">)</span>
     <span class="n">config_file</span> <span class="o">=</span> <span class="n">ckpt_dir</span> <span class="o">/</span> <span class="n">CONFIG_FILENAME</span>
     <span class="n">weights_file</span> <span class="o">=</span> <span class="n">ckpt_dir</span> <span class="o">/</span> <span class="n">CKPT_FILENAME</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">config_file</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
-        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Expected model config at </span><span class="si">{</span><span class="n">config_file</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Expected model config at </span><span class="si">{</span><span class="n">config_file</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">weights_file</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
-        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Expected model checkpoint at </span><span class="si">{</span><span class="n">weights_file</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Expected model checkpoint at </span><span class="si">{</span><span class="n">weights_file</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
     <span class="k">with</span> <span class="n">config_file</span><span class="o">.</span><span class="n">open</span><span class="p">()</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
         <span class="n">config</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
 
-    <span class="n">config</span><span class="p">[</span><span class="s2">&quot;device&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">device</span>
+    <span class="n">config</span><span class="p">[</span><span class="s2">"device"</span><span class="p">]</span> <span class="o">=</span> <span class="n">device</span>
     <span class="k">if</span> <span class="n">use_flex_attention</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">for</span> <span class="n">template</span> <span class="ow">in</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;stack_config&quot;</span><span class="p">][</span><span class="s2">&quot;templates&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
-            <span class="n">template</span><span class="p">[</span><span class="s2">&quot;variate_mixer&quot;</span><span class="p">][</span><span class="s2">&quot;use_flex_attention&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">use_flex_attention</span>
+        <span class="k">for</span> <span class="n">template</span> <span class="ow">in</span> <span class="n">config</span><span class="p">[</span><span class="s2">"stack_config"</span><span class="p">][</span><span class="s2">"templates"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+            <span class="n">template</span><span class="p">[</span><span class="s2">"variate_mixer"</span><span class="p">][</span><span class="s2">"use_flex_attention"</span><span class="p">]</span> <span class="o">=</span> <span class="n">use_flex_attention</span>
     <span class="n">model</span> <span class="o">=</span> <span class="n">TiRex2</span><span class="p">(</span><span class="o">**</span><span class="n">config</span><span class="p">)</span>
 
-    <span class="n">checkpoint</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">weights_file</span><span class="p">,</span> <span class="n">map_location</span><span class="o">=</span><span class="s2">&quot;cpu&quot;</span><span class="p">,</span> <span class="n">weights_only</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-    <span class="n">state_dict</span> <span class="o">=</span> <span class="n">checkpoint</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;state_dict&quot;</span><span class="p">,</span> <span class="n">checkpoint</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">checkpoint</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="k">else</span> <span class="n">checkpoint</span>
+    <span class="n">checkpoint</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">weights_file</span><span class="p">,</span> <span class="n">map_location</span><span class="o">=</span><span class="s2">"cpu"</span><span class="p">,</span> <span class="n">weights_only</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">state_dict</span> <span class="o">=</span> <span class="n">checkpoint</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"state_dict"</span><span class="p">,</span> <span class="n">checkpoint</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">checkpoint</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="k">else</span> <span class="n">checkpoint</span>
     <span class="n">model</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">state_dict</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">ForecastModel</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">eval</span><span class="p">())</span>
@@ -1685,10 +1685,7 @@ steps beyond <code>T+H</code> are ignored. <code>None</code> if there are no fut
 
               <details class="mkdocstrings-source">
                 <summary>Source code in <code>src/tirex2/model/types.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 9</span>
 <span class="normal">10</span>
 <span class="normal">11</span>
 <span class="normal">12</span>
@@ -1734,9 +1731,12 @@ steps beyond <code>T+H</code> are ignored. <code>None</code> if there are no fut
 <span class="normal">52</span>
 <span class="normal">53</span>
 <span class="normal">54</span>
-<span class="normal">55</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="normal">55</span>
+<span class="normal">56</span>
+<span class="normal">57</span>
+<span class="normal">58</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">TimeseriesType</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;A single (possibly multivariate) series with optional covariates, as passed to</span>
+<span class="w">    </span><span class="sd">"""A single (possibly multivariate) series with optional covariates, as passed to</span>
 <span class="sd">    :meth:`~tirex2.api_adapter.forecast.ForecastModel.forecast`.</span>
 
 <span class="sd">    Parameters</span>
@@ -1746,7 +1746,7 @@ steps beyond <code>T+H</code> are ignored. <code>None</code> if there are no fut
 <span class="sd">        A univariate series is still 2D, with ``V_t == 1``.</span>
 <span class="sd">    past_covariates : torch.Tensor or None</span>
 <span class="sd">        Covariates known only up to the current time, shape ``[V_p, T]``, matching the</span>
-<span class="sd">        target&#39;s context length. ``None`` if there are no past covariates.</span>
+<span class="sd">        target's context length. ``None`` if there are no past covariates.</span>
 <span class="sd">    future_covariates : torch.Tensor or None</span>
 <span class="sd">        Covariates known ahead of time for the whole forecast horizon, shape</span>
 <span class="sd">        ``[V_f, &gt;=T+H]`` (``H`` is the requested ``prediction_length``); extra trailing</span>
@@ -1763,7 +1763,7 @@ steps beyond <code>T+H</code> are ignored. <code>None</code> if there are no fut
 <span class="sd">    ... )</span>
 <span class="sd">    &gt;&gt;&gt; ts.past_length</span>
 <span class="sd">    128</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="n">target</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>  <span class="c1"># [V_t, T]</span>
     <span class="n">past_covariates</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="o">|</span> <span class="kc">None</span>  <span class="c1"># [V_p, T]</span>
