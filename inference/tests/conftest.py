@@ -21,7 +21,7 @@ mqtt_host = os.getenv("TEST_MQTT_BROKER_HOST", "broker.emqx.io")
 mqtt_port = int(os.getenv("TEST_MQTT_BROKER_PORT", "1883"))
 
 
-def wait_for_api(healthcheck_url, timeout=30, process=None):
+def wait_for_api(healthcheck_url, timeout=60, process=None):
     print("Start for model load")
     for i in range(timeout):
         if process is not None and process.poll() is not None:
@@ -63,7 +63,7 @@ def api_server():
                 stdout=log_file,
                 stderr=subprocess.STDOUT,
             )
-        wait_for_api(f"{base_url}/health", timeout=30, process=process)
+        wait_for_api(f"{base_url}/health", timeout=60, process=process)
 
         yield base_url
     finally:

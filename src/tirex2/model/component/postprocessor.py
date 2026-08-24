@@ -1,3 +1,6 @@
+# Copyright (c) NXAI GmbH.
+# Licensed under the Apache License, Version 2.0; see LICENSE for details.
+
 """Single-pass, native-multivariate postprocessor with per-target differencing."""
 
 import logging

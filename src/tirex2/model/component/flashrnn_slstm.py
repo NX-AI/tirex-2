@@ -1,3 +1,6 @@
+# Copyright (c) NXAI GmbH.
+# Licensed under the Apache License, Version 2.0; see LICENSE for details.
+
 """FlashRNN-backed sLSTM layers and configuration helpers."""
 
 from abc import ABC, abstractmethod
@@ -135,7 +138,7 @@ class _FlashRNNLayer(nn.Module, ABC):
         conv_state: torch.Tensor | None = None,
         slstm_state: torch.Tensor | None = None,
     ):
-        """Single-step recurrent update used for streaming evaluation."""
+        """Perform a single recurrent update."""
         batch_size, _, _ = x.shape
 
         if self.config.conv1d_kernel_size > 0:
@@ -198,18 +201,13 @@ class _FlashRNNLayer(nn.Module, ABC):
 
         Wx = torch.stack(gates, dim=2)
         Wx = einops.rearrange(Wx, "... (h hd) -> ... h hd", h=self.config.num_heads)
-        # logging.warning(f"Wx: {Wx.shape}")
-        # logging.warning(f"R: {self.get_R().shape}")
-        # logging.warning(f"b: {self.get_bias().shape}")
         y, _ = flashrnn(
             Wx=Wx,
             R=self.get_R(),
             b=self.get_bias(),
             config=self.config,
         )
-        # TODO What is the return of flashrnn?
         y = y[0]
-        # logging.warning(f"Output: {y.shape}")
 
         y = self.dropout(y)
 

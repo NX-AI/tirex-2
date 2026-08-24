@@ -1,3 +1,6 @@
+# Copyright (c) NXAI GmbH.
+# Licensed under the Apache License, Version 2.0; see LICENSE for details.
+
 import importlib
 import logging
 from dataclasses import dataclass, replace
@@ -146,9 +149,6 @@ class TiRex2(nn.Module):
         if matmul_precision is not None:
             torch.set_float32_matmul_precision(matmul_precision)
 
-        # Older checkpoint configs may still carry a serialized postprocessor
-        # parameter block; differencing/calibration now uses code defaults and is
-        # toggled exclusively via ``tta_diff``.
         kwargs.pop("postprocessor_cfg", None)
         super().__init__(*args, **kwargs)
         act_func = _resolve_act_func(act_func)
