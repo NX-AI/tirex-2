@@ -12,11 +12,11 @@ from ..model.types import TimeseriesType
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    import pandas as pd
+    from .dataframe_adapter import IntoDataFrame
 
 logger = logging.getLogger(__file__)
 
-ForecastOutputType = Literal["torch", "numpy", "gluonts", "fev", "pandas"]
+ForecastOutputType = Literal["torch", "numpy", "gluonts", "fev", "dataframe", "pandas"]
 
 
 def _is_oom_error(exc: BaseException) -> bool:
@@ -46,12 +46,13 @@ def _format_output(forecasts, meta, output_type, quantile_levels):
         return [f.cpu() for f in forecasts]
     elif output_type == "numpy":
         return [f.cpu().numpy() for f in forecasts]
-    elif output_type == "pandas":
+    elif output_type in ("dataframe", "pandas"):
         try:
-            from .pandas_adapter import format_pandas_output
+            from .dataframe_adapter import format_df_output
         except ImportError:
-            raise ValueError("output_type pandas needs pandas but pandas is not available (not installed)!")
-        return format_pandas_output(forecasts, meta, quantile_levels)
+            raise ValueError(f"output_type {output_type} needs narwhals but narwhals is not available (not installed)!")
+        # "dataframe" keeps the library the input came from; "pandas" always returns a pandas frame
+        return format_df_output(forecasts, meta, quantile_levels, backend="pandas" if output_type == "pandas" else None)
     elif output_type == "gluonts":
         try:
             from .gluon import format_gluonts_output
@@ -266,7 +267,7 @@ def _gen_forecast(
     if meta is None:
         meta = [{} for _ in timeseries]
 
-    if output_type not in ["numpy", "torch", "gluonts", "fev", "pandas"]:
+    if output_type not in ["numpy", "torch", "gluonts", "fev", "dataframe", "pandas"]:
         raise ValueError("Invalid output type")
 
     if output_type == "fev" and yield_per_batch:
@@ -274,9 +275,9 @@ def _gen_forecast(
     if return_inference_time and yield_per_batch:
         raise ValueError("return_inference_time=True is not supported with yield_per_batch=True.")
 
-    # 'fev' and 'pandas' render the whole dataset into a single object, so they must be formatted
-    # once at the end rather than per batch; with yield_per_batch, 'pandas' streams one frame per batch.
-    deferred_format = output_type == "fev" or (output_type == "pandas" and not yield_per_batch)
+    # 'fev' and the dataframe outputs render the whole dataset into a single object, so they must be
+    # formatted once at the end rather than per batch; with yield_per_batch they stream one frame per batch.
+    deferred_format = output_type == "fev" or (output_type in ("dataframe", "pandas") and not yield_per_batch)
     adaptive_output_type = "torch" if deferred_format else output_type
     batch_outputs = _predict_adaptive(
         model,
@@ -414,24 +415,28 @@ class ForecastModel:
 
     def forecast_df(
         self,
-        df: "pd.DataFrame",
+        df: "IntoDataFrame",
         prediction_length: int,
         target: "str | Sequence[str] | None" = None,
         id_column: str | None = None,
         timestamp_column: str | None = None,
         past_covariates: "str | Sequence[str] | None" = None,
         future_covariates: "str | Sequence[str] | None" = None,
-        future_df: "pd.DataFrame | None" = None,
+        future_df: "IntoDataFrame | None" = None,
         multivariate: bool = False,
-        output_type: ForecastOutputType = "pandas",
+        output_type: ForecastOutputType = "dataframe",
         batch_size: int = 512,
         yield_per_batch: bool = False,
         **predict_kwargs,
     ):
-        """Forecast the series held in a pandas ``DataFrame``.
+        """Forecast the series held in a ``DataFrame``.
+
+        ``df`` may be any eager dataframe `narwhals <https://narwhals-dev.github.io/narwhals/>`_
+        supports - pandas, polars, PyArrow, Modin, cuDF, ... - and no conversion to pandas happens
+        on the way in or out.
 
         The frame may be long-format - many series stacked, identified by ``id_column`` - or a
-        single series, and its time axis may come from ``timestamp_column`` or from a
+        single series, and its time axis may come from ``timestamp_column`` or from a pandas
         ``DatetimeIndex``. Target columns default to every numeric column that is not the id
         column, the timestamp column or a covariate column. With ``multivariate=False`` (default)
         each target column is forecast as an independent univariate series; with
@@ -440,20 +445,21 @@ class ForecastModel:
         Known-future covariates need their horizon values, supplied via ``future_df`` in the same
         layout as ``df``.
 
-        The default ``output_type="pandas"`` returns one long-format ``DataFrame``: a row per
-        series, target column and forecast step, with a ``prediction`` column (the median) and one
-        column per quantile level. Timestamps continue the input's inferred frequency; when no
-        usable time axis exists they are integer positions relative to the series start. The other
-        output types behave as in :meth:`forecast`.
+        The default ``output_type="dataframe"`` returns one long-format frame *in the same
+        dataframe library as* ``df``: a row per series, target column and forecast step, with a
+        ``prediction`` column (the median) and one column per quantile level. Timestamps continue
+        the input's inferred frequency; when no usable time axis exists they are integer positions
+        relative to the series start. ``output_type="pandas"`` returns the same frame but always as
+        pandas; the other output types behave as in :meth:`forecast`.
 
         Extra ``predict_kwargs`` are forwarded verbatim to :meth:`TiRex2.predict` (see
         :meth:`forecast`).
         """
         assert batch_size >= 1, "Batch size must be >= 1"
         try:
-            from .pandas_adapter import build_df_timeseries
+            from .dataframe_adapter import build_df_timeseries
         except ImportError:
-            raise ValueError("forecast_df needs pandas but pandas is not available (not installed)!")
+            raise ValueError("forecast_df needs narwhals but narwhals is not available (not installed)!")
 
         timeseries, meta = build_df_timeseries(
             df,
