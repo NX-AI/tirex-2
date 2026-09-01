@@ -1,3 +1,6 @@
+# Copyright (c) NXAI GmbH.
+# Licensed under the Apache License, Version 2.0; see LICENSE for details.
+
 """Backend-agnostic ``DataFrame`` data extraction and forecast formatting.
 
 Frames are handled through `narwhals <https://narwhals-dev.github.io/narwhals/>`_, so any eager
