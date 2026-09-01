@@ -49,6 +49,7 @@ nav:
       - Forecasting: how-to/forecasting.md
       - Covariates: how-to/covariates.md
       - Streaming: how-to/streaming.md
+  - FAQ: faq.md
   - Benchmarks: benchmarks.md
   - Deployment: deployment.md
   - TiRex-2 Pro: pro.md
