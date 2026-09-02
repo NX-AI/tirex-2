@@ -18,6 +18,7 @@ dependencies = [
 	"xlstm~=2.0.3",
 	"PyYAML>=6",
 	"huggingface-hub>=0.35.3",
+	"narwhals>=2.0",
 ]
 
 [project.optional-dependencies]
@@ -36,6 +37,18 @@ fev = [
 gluonts = [
 	"gluonts>=0.16.2",
 	"pandas~=2.3.3",
+]
+
+pandas = [
+	"pandas~=2.2.3",
+]
+
+polars = [
+	"polars>=1.0",
+]
+
+pyarrow = [
+	"pyarrow>=15.0",
 ]
 
 [build-system]
@@ -78,7 +91,7 @@ tirex-2 = { path = ".", editable = true }
 
 [tool.pixi.feature.test.pypi-dependencies]
 pytest = "*"
-tirex-2 = { path = ".", editable = true, extras = ["gluonts", "fev"] }
+tirex-2 = { path = ".", editable = true, extras = ["gluonts", "fev", "polars", "pyarrow"] }
 
 [tool.pixi.feature.example.pypi-dependencies]
 tirex-2 = { path = ".", editable = true, extras = ["examples", "gluonts", "fev"] }
