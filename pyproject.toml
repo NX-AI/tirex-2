@@ -44,11 +44,13 @@ build-backend = "setuptools.build_meta"
 
 # Pixi
 [tool.pixi.workspace]
-channels = ["conda-forge", "pytorch", "nvidia"]
+channels = ["conda-forge", "pytorch"]
 platforms = [
   # cuda platforms are listed first, so they win platform selection on a machine with a CUDA driver.
   { name = "linux-64-cuda", platform = "linux-64", cuda = "13.0" },
   { name = "win-64-cuda", platform = "win-64", cuda = "13.0" },
+  { name = "linux-64-cuda-132", platform = "linux-64", cuda = "13.2" },
+  { name = "win-64-cuda-132", platform = "win-64", cuda = "13.2" },
   { name = "linux-64-cuda-126", platform = "linux-64", cuda = "12.6" },
   { name = "win-64-cuda-126", platform = "win-64", cuda = "12.6" },
   { name = "linux-64-cpu", platform = "linux-64" },
@@ -60,6 +62,14 @@ platforms = [
 tirex-2 = { path = ".", editable = true }
 # resolve torch (cuda) for cuda platforms
 torch = { version = "*", index = "https://download.pytorch.org/whl/cu130" }
+
+[tool.pixi.target."*-cuda-132".pypi-dependencies]
+# resolve torch (cuda) for cuda platforms
+torch = { version = "*", index = "https://download.pytorch.org/whl/cu132" }
+
+[tool.pixi.target."*-cuda-126".pypi-dependencies]
+# resolve torch (cuda) for cuda platforms
+torch = { version = "*", index = "https://download.pytorch.org/whl/cu126" }
 
 [tool.pixi.target.osx.pypi-dependencies]
 # resolve torch (cpu) for macOS platforms
