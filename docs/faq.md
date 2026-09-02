@@ -33,3 +33,5 @@
     ```
 
     Launch VS Code or Jupyter from the same prompt so it inherits the compiler environment.
+    See [#15](https://github.com/NX-AI/tirex-2/issues/15) and
+    [#17](https://github.com/NX-AI/tirex-2/issues/17) for related reports.

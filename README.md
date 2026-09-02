@@ -71,12 +71,11 @@ curl -fsSL https://pixi.sh/install.sh | sh
 <details>
 <summary><strong>How do I run TiRex-2 on CUDA?</strong></summary>
 
-With `device="cuda"`, TiRex-2 builds its fused sLSTM kernel (FlashRNN) with `nvcc` on the first forecast. In order to run Tirex-2 on CUDA you need:
+With `device="cuda"`, TiRex-2 builds its fused sLSTM kernel (FlashRNN) with `nvcc` on the first forecast. In order to run TiRex-2 on CUDA you need:
 
 1. **A CUDA Toolkit installed and discoverable** — `nvcc` must be on `PATH` or reachable via `CUDA_HOME`.
-2. **A CUDA toolkit whose major version matches your PyTorch build** — any 12.x toolkit for a `cu12x` torch wheel, any 13.x toolkit for a `cu13x` one. Check with `python -c "import torch; print(torch.version.cuda)"`.
-
-3. **A CUDA toolkit no newer than your driver supports.**
+2. **A CUDA Toolkit whose major version matches your PyTorch build** — any 12.x toolkit for a `cu12x` torch wheel, any 13.x toolkit for a `cu13x` one. Check with `python -c "import torch; print(torch.version.cuda)"`.
+3. **A CUDA Toolkit no newer than your driver supports.**
 
 </details>
 
@@ -84,7 +83,6 @@ With `device="cuda"`, TiRex-2 builds its fused sLSTM kernel (FlashRNN) with `nvc
 <summary><strong>Which NVIDIA GPU architectures does TiRex-2 support?</strong></summary>
 
 - TiRex-2 runs on NVIDIA GPUs with compute capability 8.0 (Ampere) or newer.
-
 - Older cards — Turing (7.5), Volta (7.0) and earlier — cannot run `device="cuda"`; use `device="cpu"` instead.
 
 </details>
