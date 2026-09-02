@@ -1,4 +1,4 @@
-mkdocs>=1.6
+mkdocs>=1.6,<2
 mkdocs-material>=9.5
 mkdocstrings[python]>=0.26
 mkdocs-material-extensions>=1.3

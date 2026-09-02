@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://nx-ai.github.io/tirex-2/contributing/">
+        <link rel="canonical" href="https://nx-ai.github.io/tirex-2/faq/">
       
       
-        <link rel="prev" href="../pro/">
+        <link rel="prev" href="../how-to/streaming/">
       
       
-        <link rel="next" href="../about/">
+        <link rel="next" href="../benchmarks/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Contributing - TiRex-2</title>
+        <title>FAQ - TiRex-2</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#contributing" class="md-skip">
+        <a href="#faq" class="md-skip">
           Skip to content
         </a>
       
@@ -115,7 +115,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Contributing
+              FAQ
             
           </span>
         </div>
@@ -298,9 +298,11 @@
   
   
   
+    
   
-    <li class="md-tabs__item">
-      <a href="../faq/" class="md-tabs__link">
+  
+    <li class="md-tabs__item md-tabs__item--active">
+      <a href="./" class="md-tabs__link">
         
   
   
@@ -374,11 +376,9 @@
   
   
   
-    
   
-  
-    <li class="md-tabs__item md-tabs__item--active">
-      <a href="./" class="md-tabs__link">
+    <li class="md-tabs__item">
+      <a href="../contributing/" class="md-tabs__link">
         
   
   
@@ -796,10 +796,19 @@
       
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../faq/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -815,6 +824,7 @@
   
 
       </a>
+      
     </li>
   
 
@@ -904,19 +914,10 @@
       
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../contributing/" class="md-nav__link">
         
   
   
@@ -932,7 +933,6 @@
   
 
       </a>
-      
     </li>
   
 
@@ -1181,12 +1181,42 @@
   
 
 
-<h1 id="contributing">Contributing<a class="headerlink" href="#contributing" title="Permanent link">&para;</a></h1>
-<p>Development and documentation contribution guidelines live in
-<a href="https://github.com/NX-AI/tirex-2/blob/main/CONTRIBUTING.md"><code>CONTRIBUTING.md</code></a> at the
-repository root — covering environment setup (Pixi/pip), pre-commit and testing, how to
-preview and build this documentation site, commit/review etiquette, and the NXAI Contributor
-License Agreement.</p>
+<h1 id="faq">FAQ<a class="headerlink" href="#faq" title="Permanent link">&para;</a></h1>
+<details class="question">
+<summary>How do I run TiRex-2 on CUDA?</summary>
+<p>With <code>device="cuda"</code>, TiRex-2 builds its fused sLSTM kernel (FlashRNN) with <code>nvcc</code> on the
+first forecast. In order to run TiRex-2 on CUDA you need:</p>
+<ol>
+<li><strong>A CUDA Toolkit installed and discoverable</strong> — <code>nvcc</code> must be on <code>PATH</code> or reachable
+   via <code>CUDA_HOME</code>.</li>
+<li><strong>A CUDA Toolkit whose major version matches your PyTorch build</strong> — any 12.x toolkit
+   for a <code>cu12x</code> torch wheel, any 13.x toolkit for a <code>cu13x</code> one. Check with
+   <code>python -c "import torch; print(torch.version.cuda)"</code>.</li>
+<li><strong>A CUDA Toolkit no newer than your driver supports.</strong></li>
+</ol>
+</details>
+<details class="question">
+<summary>Which NVIDIA GPU architectures does TiRex-2 support?</summary>
+<ul>
+<li>TiRex-2 runs on NVIDIA GPUs with compute capability 8.0 (Ampere) or newer.</li>
+<li>Older cards — Turing (7.5), Volta (7.0) and earlier — cannot run <code>device="cuda"</code>; use
+  <code>device="cpu"</code> instead.</li>
+</ul>
+</details>
+<details class="question">
+<summary>Why does TiRex-2 fail with <code>where cl</code> on Windows?</summary>
+<p>PyTorch may compile model components at runtime, so the Python process needs access to
+the MSVC C++ compiler, even when using <code>device="cpu"</code>.</p>
+<p>Install Visual Studio Build Tools with <strong>Desktop development with C++</strong>, then run
+TiRex-2 from an <strong>x64 Native Tools Command Prompt for Visual Studio</strong>. Confirm the
+compiler is available before starting your script:</p>
+<div class="highlight"><pre><span></span><code>where cl
+python your_script.py
+</code></pre></div>
+<p>Launch VS Code or Jupyter from the same prompt so it inherits the compiler environment.
+See <a href="https://github.com/NX-AI/tirex-2/issues/15">#15</a> and
+<a href="https://github.com/NX-AI/tirex-2/issues/17">#17</a> for related reports.</p>
+</details>
 
 
 
