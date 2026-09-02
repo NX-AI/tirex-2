@@ -66,6 +66,18 @@ tirex-2 = { path = ".", editable = true }
 # resolve torch (cuda) for cuda platforms
 torch = { version = "*", index = "https://download.pytorch.org/whl/cu130" }
 
+[tool.pixi.target."*-cuda".dependencies]
+cuda-nvcc = "13.0.*"
+cuda-libraries-dev = "13.0.*"
+
+[tool.pixi.target."*-cuda-132".dependencies]
+cuda-nvcc = "13.2.*"
+cuda-libraries-dev = "13.2.*"
+
+[tool.pixi.target."*-cuda-126".dependencies]
+cuda-nvcc = "12.6.*"
+cuda-libraries-dev = "12.6.*"
+
 [tool.pixi.target."*-cuda-132".pypi-dependencies]
 # resolve torch (cuda) for cuda platforms
 torch = { version = "*", index = "https://download.pytorch.org/whl/cu132" }
@@ -176,5 +188,5 @@ where = ["src"]
 # pytest
 [tool.pytest.ini_options]
 testpaths = [
-    "tests",
+    "test",
 ]
