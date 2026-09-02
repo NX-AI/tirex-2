@@ -58,6 +58,9 @@ platforms = [
   { name = "osx-arm64", platform = "osx-arm64" },
 ]
 
+[tool.pixi.dependencies]
+python = ">=3.11,<3.14"
+
 [tool.pixi.pypi-dependencies]
 tirex-2 = { path = ".", editable = true }
 # resolve torch (cuda) for cuda platforms
