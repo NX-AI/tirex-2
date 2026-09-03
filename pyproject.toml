@@ -16,6 +16,7 @@ dependencies = [
 	"einops~=0.8.1",
 	"flashrnn>=1.0.5",
 	"xlstm~=2.0.3",
+    "antlr4-python3-runtime>=4.13.2", #temp fix: https://github.com/NX-AI/xlstm/pull/133
 	"PyYAML>=6",
 	"huggingface-hub>=0.35.3",
 ]
@@ -59,12 +60,13 @@ platforms = [
 ]
 
 [tool.pixi.dependencies]
-python = ">=3.11,<3.14"
+python = ">=3.11"
 
 [tool.pixi.pypi-dependencies]
 tirex-2 = { path = ".", editable = true }
-# resolve torch (cuda) for cuda platforms
-torch = { version = "*", index = "https://download.pytorch.org/whl/cu130" }
+# resolve torch (cuda/cpu) for cuda/macOS platforms
+# as of Sep 2026, default cuda version for PyTorch on PyPI is 13.0
+torch = { version = "*" }
 
 [tool.pixi.target."*-cuda".dependencies]
 cuda-nvcc = "13.0.*"
@@ -77,6 +79,10 @@ cuda-libraries-dev = "13.2.*"
 [tool.pixi.target."*-cuda-126".dependencies]
 cuda-nvcc = "12.6.*"
 cuda-libraries-dev = "12.6.*"
+
+[tool.pixi.target."*-cpu".pypi-dependencies]
+# resolve torch (cpu) for cpu platforms
+torch = { version = "*", index = "https://download.pytorch.org/whl/cpu" }
 
 [tool.pixi.target."*-cuda-132".pypi-dependencies]
 # resolve torch (cuda) for cuda platforms
@@ -121,29 +127,6 @@ build = "*"
 
 [tool.pixi.feature.examples.activation.env]
 PYTHONPATH = "$PIXI_PROJECT_ROOT/examples/gifteval:$PYTHONPATH"
-
-# [tool.pixi.feature.cuda128.dependencies]
-# python = ">=3.11,<3.14"
-# gxx_linux-64 = "13.2.0.*"
-# gcc_impl_linux-64 = "13.2.0.*"
-# compilers = "*"
-# cmake = "*"
-# ninja = "*"
-# cuda-toolkit = "12.8.*"
-# cuda = "12.8.*"
-# cuda-nvcc = "12.8.*"
-
-# [tool.pixi.feature.cuda126.dependencies]
-# python = ">=3.11,<3.14"
-# cuda = "12.6.*"
-# cuda-nvcc = "12.6.*"
-# gxx_linux-64 = "13.2.0.*"
-# gcc_impl_linux-64 = "13.2.0.*"
-# compilers = "*"
-# cmake = "*"
-# ninja = "*"
-# cuda-toolkit = "12.6.*"
-# cuda-cccl = "12.6.*"
 
 # ruff
 [tool.ruff]
