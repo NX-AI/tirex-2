@@ -61,10 +61,15 @@ pip install "tirex-2[examples,fev,gluonts]"
 The Python package installation is currently only tested on Linux and macOS. Docker usage is documented separately and includes Linux, macOS, and Windows Docker Desktop instructions.
 
 ### Via Pixi
-We use [Pixi](https://pixi.prefix.dev/latest/) for our development and benchmarking environment to ensure that it is set up correctly. Run the following command to install it on your machine:
+We use [Pixi](https://pixi.prefix.dev/latest/) for our development and benchmarking environment to ensure that it is set up correctly. Run the following command to install it on your machine (Linux/macOS):
 ```bash
+# install Pixi
 curl -fsSL https://pixi.sh/install.sh | sh
+# install dependencies for TiRex-2
+pixi install
 ```
+Pixi selects a compatible platform automatically (PyTorch w/ CUDA 13.0 for Linux/Windows, PyTorch w/ default for macOS), or you can choose one explicitly, for example `-p linux-64-cuda-126`. Both environments and platforms are defined in
+[`pyproject.toml`](pyproject.toml).
 
 ## Getting started
 
@@ -72,7 +77,6 @@ The most easy way for you to get started is by checking out our ["Getting Starte
 ```bash
 pixi run notebook
 ```
-Note that for `pixi`, depending on your CUDA version and use-case, you may need to use another environment, e.g., `-e example-cu128`, that are defined in [pyproject.toml](pyproject.toml) under section `tool.pixi.environments`.
 
 ### Minimal usage predicting a simple sine wave
 ```python

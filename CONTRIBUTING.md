@@ -5,11 +5,14 @@ Development and documentation contribution guidelines.
 ## Environment Setup
 
 - **Pixi** (recommended): install [Pixi](https://pixi.prefix.dev/latest/), then run `pixi install`.
-  Environments are defined in [`pyproject.toml`](pyproject.toml) under `tool.pixi.environments`
-  (e.g. `cuda128`, `cuda126`, `test-cu128`, `test-cu126`, `example`, `example-cu128`, `example-cu126`).
+  Environments select a use case (`default`, `test`, `examples`, or `pypi-build`), while named
+  platforms select the operating system and accelerator (e.g. `linux-64-cuda`,
+  `linux-64-cuda-126`, or `linux-64-cpu`). Both are defined in
+  [`pyproject.toml`](pyproject.toml). Select a platform with `--platform`, for example
+  `pixi run --platform linux-64-cuda test`.
 - **pip**: create a virtual environment and install the package in editable mode:
   `python -m venv .venv && source .venv/bin/activate && pip install -e ".[examples,fev,gluonts]"`
-- **Tooling**: run `pre-commit install` once, then `pre-commit run --all-files` and `pixi run test`
+- **Tooling**: run `pre-commit install` once, then `pre-commit run --all-files` and `pixi run --platform linux-64-cuda test`
   (or `pytest test/` in a pip environment) before opening a PR.
 
 ## Workflow Overview
