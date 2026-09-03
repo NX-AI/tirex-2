@@ -17,7 +17,7 @@ jobs:
           frozen: true
 
       - name: Run tests on CPU
-        run: pixi run -e test-cpu test
+        run: pixi run test
 
   core-tests-pip:
     name: core-tests (py${{ matrix.python-version }}, ${{ matrix.os }})
