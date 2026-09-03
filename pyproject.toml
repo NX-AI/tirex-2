@@ -16,6 +16,7 @@ dependencies = [
 	"einops~=0.8.1",
 	"flashrnn>=1.0.5",
 	"xlstm~=2.0.3",
+    "antlr4-python3-runtime>=4.13.2", #temp fix: https://github.com/NX-AI/xlstm/pull/133
 	"PyYAML>=6",
 	"huggingface-hub>=0.35.3",
 ]
@@ -44,28 +45,79 @@ build-backend = "setuptools.build_meta"
 
 # Pixi
 [tool.pixi.workspace]
-channels = ["conda-forge", "pytorch", "nvidia"]
-platforms = ["linux-64"]
+channels = ["conda-forge", "pytorch"]
+platforms = [
+  # cuda platforms are listed first, so they win platform selection on a machine with a CUDA driver.
+  { name = "linux-64-cuda", platform = "linux-64", cuda = "13.0" },
+  { name = "win-64-cuda", platform = "win-64", cuda = "13.0" },
+  { name = "linux-64-cuda-132", platform = "linux-64", cuda = "13.2" },
+  { name = "win-64-cuda-132", platform = "win-64", cuda = "13.2" },
+  { name = "linux-64-cuda-126", platform = "linux-64", cuda = "12.6" },
+  { name = "win-64-cuda-126", platform = "win-64", cuda = "12.6" },
+  { name = "linux-64-cpu", platform = "linux-64" },
+  { name = "win-64-cpu", platform = "win-64" },
+  { name = "osx-arm64", platform = "osx-arm64" },
+]
 
-[tool.pixi.tasks]
-test = { cmd = "pytest test/", default-environment = "test-cu128" }
-# requires the path to the gifteval storage and a model type; examples/gifteval is added to PYTHONPATH for its local helper modules
-gifteval = { cmd = "python examples/gifteval/run_gifteval.py", default-environment = "example-cu128" }
-# requires the path to the fev-bench storage
-fevbench = { cmd = "python examples/fevbench/run_fevbench.py", default-environment = "example-cu128" }
-notebook = { cmd = "jupyter lab examples/getting_started.ipynb", default-environment = "example-cu128" }
+[tool.pixi.dependencies]
+python = ">=3.11"
+
+[tool.pixi.pypi-dependencies]
+tirex-2 = { path = ".", editable = true }
+# resolve torch (cuda/cpu) for cuda/macOS platforms
+# as of Sep 2026, default cuda version for PyTorch on PyPI is 13.0
+torch = { version = "*" }
+
+[tool.pixi.target."*-cuda".dependencies]
+cuda-nvcc = "13.0.*"
+cuda-libraries-dev = "13.0.*"
+
+[tool.pixi.target."*-cuda-132".dependencies]
+cuda-nvcc = "13.2.*"
+cuda-libraries-dev = "13.2.*"
+
+[tool.pixi.target."*-cuda-126".dependencies]
+cuda-nvcc = "12.6.*"
+cuda-libraries-dev = "12.6.*"
+
+[tool.pixi.target."*-cpu".pypi-dependencies]
+# resolve torch (cpu) for cpu platforms
+torch = { version = "*", index = "https://download.pytorch.org/whl/cpu" }
+
+[tool.pixi.target."*-cuda-132".pypi-dependencies]
+# resolve torch (cuda) for cuda platforms
+torch = { version = "*", index = "https://download.pytorch.org/whl/cu132" }
+
+[tool.pixi.target."*-cuda-126".pypi-dependencies]
+# resolve torch (cuda) for cuda platforms
+torch = { version = "*", index = "https://download.pytorch.org/whl/cu126" }
+
+[tool.pixi.target.osx.pypi-dependencies]
+# resolve torch (cpu) for macOS platforms
+torch = { version = "*", index = "https://download.pytorch.org/whl/cpu" }
 
 [tool.pixi.environments]
-default = ["cuda128", "runtime"]
-cuda128 = ["cuda128", "runtime"]
-cuda126 = ["cuda126", "runtime"]
-example = ["cpu", "example"]
-example-cu128 = ["cuda128", "example"]
-example-cu126 = ["cuda126", "example"]
-test-cu128 = ["cuda128", "test"]
-test-cu126 = ["cuda126", "test"]
-test-cpu = ["cpu", "test"]
+default = []
+test = ["test"]
+examples = ["examples"]
 pypi-build = ["pypi-build"]
+
+[tool.pixi.feature.test.pypi-dependencies]
+tirex-2 = { path = ".", editable = true, extras = ["gluonts", "fev"] }
+pytest = "*"
+
+[tool.pixi.feature.examples.pypi-dependencies]
+tirex-2 = { path = ".", editable = true, extras = ["examples", "gluonts", "fev"] }
+toolz = ">=0.12.1"
+
+[tool.pixi.tasks]
+test = { cmd = "pytest test/", default-environment = "test" }
+notebook = { cmd = "jupyter lab examples/getting_started.ipynb", default-environment = "examples" }
+# benchmarking tasks:
+# requires the path to the gifteval storage and a model type; examples/gifteval is added to PYTHONPATH for its local helper modules
+gifteval = { cmd = "python examples/gifteval/run_gifteval.py", default-environment = "examples" }
+# requires the path to the fev-bench storage
+fevbench = { cmd = "python examples/fevbench/run_fevbench.py", default-environment = "examples" }
 
 [tool.pixi.feature.pypi-build.dependencies]
 python = ">=3.11,<3.14"
@@ -73,54 +125,8 @@ python = ">=3.11,<3.14"
 [tool.pixi.feature.pypi-build.pypi-dependencies]
 build = "*"
 
-[tool.pixi.feature.runtime.pypi-dependencies]
-tirex-2 = { path = ".", editable = true }
-
-[tool.pixi.feature.test.pypi-dependencies]
-pytest = "*"
-tirex-2 = { path = ".", editable = true, extras = ["gluonts", "fev"] }
-
-[tool.pixi.feature.example.pypi-dependencies]
-tirex-2 = { path = ".", editable = true, extras = ["examples", "gluonts", "fev"] }
-toolz = ">=0.12.1"
-
-[tool.pixi.feature.example.activation.env]
+[tool.pixi.feature.examples.activation.env]
 PYTHONPATH = "$PIXI_PROJECT_ROOT/examples/gifteval:$PYTHONPATH"
-
-[tool.pixi.feature.cpu.pypi-dependencies]
-torch = { version = "==2.9.1+cpu", index = "https://download.pytorch.org/whl/cpu" }
-
-[tool.pixi.feature.cpu.dependencies]
-python = ">=3.11,<3.14"
-
-[tool.pixi.feature.cuda128.pypi-dependencies]
-torch = { version = "==2.9.1+cu128", index = "https://download.pytorch.org/whl/cu128" }
-
-[tool.pixi.feature.cuda126.pypi-dependencies]
-torch = { version = "==2.8.0+cu126", index = "https://download.pytorch.org/whl/cu126" }
-
-[tool.pixi.feature.cuda128.dependencies]
-python = ">=3.11,<3.14"
-gxx_linux-64 = "13.2.0.*"
-gcc_impl_linux-64 = "13.2.0.*"
-compilers = "*"
-cmake = "*"
-ninja = "*"
-cuda-toolkit = "12.8.*"
-cuda = "12.8.*"
-cuda-nvcc = "12.8.*"
-
-[tool.pixi.feature.cuda126.dependencies]
-python = ">=3.11,<3.14"
-cuda = "12.6.*"
-cuda-nvcc = "12.6.*"
-gxx_linux-64 = "13.2.0.*"
-gcc_impl_linux-64 = "13.2.0.*"
-compilers = "*"
-cmake = "*"
-ninja = "*"
-cuda-toolkit = "12.6.*"
-cuda-cccl = "12.6.*"
 
 # ruff
 [tool.ruff]
@@ -165,5 +171,5 @@ where = ["src"]
 # pytest
 [tool.pytest.ini_options]
 testpaths = [
-    "tests",
+    "test",
 ]
