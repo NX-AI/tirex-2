@@ -21,7 +21,41 @@ Two container images are published:
 
 Both images run a warmup forecast on startup so the model is `torch.compile`d (C++ kernels on
 CPU, Triton on GPU) before the first real request; this download-and-warmup step can take up
-to ~10-20 seconds.
+to ~10-20 seconds. The startup warmup only covers the univariate path — the first
+**multivariate** request still pays its own one-time compile cost, after startup has finished
+and while univariate requests are already being served normally (verified on both an amd64 NAS
+and an arm64 Mac).
+
+Once compiled, neither context length nor prediction horizon triggers recompilation — you don't
+need to pin or pad request shapes to avoid extra latency.
+
+### Caching model weights
+
+The weights are not baked into the image — the container downloads them from Hugging Face on
+first use. The cache path differs by image:
+
+- **CPU image**: runs as `appuser` (uid 1000), home `/home/appuser`.
+- **GPU image**: runs as `ubuntu`, home `/home/ubuntu`.
+
+Neither sets `HF_HOME` or `HF_HUB_CACHE`, so the cache lands at the default location under
+that user's home, e.g. `/home/appuser/.cache/huggingface` for the CPU image. Mount a volume
+there to avoid re-downloading:
+
+```bash
+docker run -it -p 8000:8000 \
+  -v tirex2-cache:/home/appuser/.cache/huggingface \
+  ghcr.io/nx-ai/tirex2-cpu
+```
+
+(use `/home/ubuntu/.cache/huggingface` for the GPU image instead).
+
+Without this volume, a stopped-and-restarted container keeps the weights (the writable layer
+persists), but a **recreated** container re-downloads them — this includes every
+`docker compose up` after an edit and every image update.
+
+If you point the cache at your own mount instead, make sure it's writable by the container's
+user (uid 1000 for the CPU image); a root-owned mount produces an unhandled `PermissionError`
+inside the container.
 
 ### Run the CPU image
 
@@ -47,8 +81,10 @@ PowerShell:
 docker run -it --gpus 1 -p 8000:8000 ghcr.io/nx-ai/tirex2-gpu
 ```
 
-Once running, the HTTP API is at `http://localhost:8000/`, with Swagger docs at
-[http://localhost:8000/docs](http://localhost:8000/docs).
+Once running, the HTTP API is at `http://localhost:8000/` (there's no route at the bare `/`
+path, so a plain `curl http://localhost:8000/` returns a 404 — that's expected), with Swagger
+docs at [http://localhost:8000/docs](http://localhost:8000/docs) and a liveness probe at
+`GET /health` (also used internally by the Docker `HEALTHCHECK`).
 
 ## HTTP API
 
@@ -56,10 +92,16 @@ Every request is batched — pass a list of series even for a single forecast. T
 internal batching, so choose a batch size appropriate for your hardware; larger batches are
 more efficient but too-large batches can cause out-of-memory errors.
 
+The HTTP API has no authentication. Only expose it on trusted networks — don't port-forward it
+directly to the internet.
+
 ### Univariate endpoints
 
 `POST /univariate/forecast/mean` and `POST /univariate/forecast/quantiles` take a batch of
-plain 1D series:
+plain 1D series. This endpoint shape has no covariate fields — any `past_covariates` /
+`future_covariates` in the request body are silently ignored (not an error). To condition on
+covariates, even for a single-variate series, use the multivariate endpoints below with a
+one-row `target`.
 
 ```bash
 # Univariate series
@@ -82,7 +124,7 @@ curl -s -X POST "http://localhost:8000/univariate/forecast/mean" \
 ### Multivariate endpoints
 
 `POST /multivariate/forecast/mean` and `POST /multivariate/forecast/quantiles` take a batch
-of objects, each with a multi-row `target` and optional `future_covariates`:
+of objects, each with a multi-row `target` and optional `past_covariates` / `future_covariates`:
 
 ```bash
 # Multivariate (multi-target) series
@@ -93,17 +135,23 @@ curl -s -X POST "http://localhost:8000/multivariate/forecast/mean" \
         "prediction_length": 5
       }'
 
-# Multivariate with future covariates
+# Multivariate with past and future covariates
 curl -s -X POST "http://localhost:8000/multivariate/forecast/mean" \
   -H 'Content-Type: application/json' \
   -d '{
         "context": [{
           "target": [[1, 2, 3, 4, 5, 6, 7, 8]],
+          "past_covariates": [[1, 0, 0, 1, 0, 0, 1, 0]],
           "future_covariates": [[0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0]]
         }],
         "prediction_length": 5
       }'
 ```
+
+`past_covariates` must have the same length as `target` (the context length). `future_covariates`
+must span at least the context plus the prediction horizon (`context_length + prediction_length`);
+extra trailing steps beyond that are ignored. A wrong length is rejected with a `500` error
+naming the expected and actual lengths, rather than silently producing a misaligned forecast.
 
 Batching multiple multivariate series works the same way, as a list under `context`. See
 [inference/README.md](https://github.com/NX-AI/tirex-2/blob/main/inference/README.md) for the
