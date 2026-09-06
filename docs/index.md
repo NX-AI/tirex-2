@@ -45,18 +45,20 @@ for background and the [paper](https://arxiv.org/pdf/2607.01204) for details.
 - [Deployment](deployment.md) — the Docker-based HTTP/MQTT/MCP inference server.
 - [API reference](api/index.md) — generated reference for the public `tirex2` API.
 
-## TiRex-2 Pro
+## TiRex-2 PRO
 
-This repository is NXAI's open-source release. A Pro version extends TiRex-2 with:
+This repository is NXAI's open-source release. TiRex-2 PRO extends it with dedicated support
+and:
 
 - **Streaming**: incremental forecast updates as new observations arrive, without recomputing
   over the full history.
 - **Speed**: performance-optimized inference, including optimization for dedicated hardware
   such as edge, embedded, and industrial PC deployments.
-- **Finetuning**: models fine-tuned on your data or with different pretraining.
+- **Fine-tuning**: models adapted to your data or with different pretraining.
 - **Classification & Regression**: TiRex-2 adapted for classification and regression tasks.
 
-See [TiRex-2 Pro](pro.md) for details, or contact [contact@nx-ai.com](mailto:contact@nx-ai.com).
+See [TiRex-2 PRO](pro.md) for the full feature comparison, or contact
+[contact@nx-ai.com](mailto:contact@nx-ai.com).
 
 ## Cite Our Work
 

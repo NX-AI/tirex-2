@@ -1,19 +1,31 @@
-# TiRex-2 Pro
+# TiRex-2 PRO
 
-TiRex-2 already provides state-of-the-art performance for zero-shot prediction, so this
-open-source release can be used as-is without training on your own data.
+TiRex-2 already provides state-of-the-art zero-shot forecasting, and this open-source release
+is ready to use as-is. TiRex-2 PRO builds on top of it with dedicated support, production
+hardware optimization, adaptation to your data, and a broader set of forecasting and machine
+learning capabilities.
 
-A Pro version extends TiRex-2 with additional capabilities, including:
+## Feature comparison
 
-- **Streaming**: incremental forecast updates as new observations arrive, without recomputing
-  over the full history. (This open-source release recomputes over the full context on every
-  call — see [How-to: Streaming](how-to/streaming.md) for the exact distinction.)
-- **Speed**: performance-optimized inference, including optimization for dedicated hardware
-  such as edge, embedded, and industrial PC deployments.
-- **Finetuning**: models fine-tuned on your data or with different pretraining.
-- **Classification & Regression**: TiRex-2 adapted for classification and regression tasks.
+| Feature | TiRex-2 (Open Source) | TiRex-2 PRO |
+| :--- | :---: | :---: |
+| Zero-shot in-context forecasting | ✅ | ✅ |
+| State tracking | ✅ | ✅ |
+| Multivariate forecasting incl. past and future-known covariates | ✅ | ✅ |
+| Quantile forecasting (9 exposed quantiles, 10-90%) | ✅ | ✅ |
+| Self-hostable inference server (HTTP, MQTT, MCP) | ✅ | ✅ |
+| Incremental streaming updates without full-history recompute | ❌ | ✅ |
+| Fine-grained quantile forecasting (more than 10 quantiles) | ❌ | ✅ |
+| Embedding generation | ❌ | ✅ |
+| Classification (embeddings + classical ML head: XGBoost, Random Forest, LightGBM, CatBoost, etc.) | ❌ | ✅ |
+| Regression (embeddings + classical ML head: XGBoost, Random Forest, LightGBM, CatBoost, etc.) | ❌ | ✅ |
+| Anomaly detection | ❌ | ✅ |
+| Fine-tuning / adaptation on customer data or custom pretraining (incl. LoRA-based adapters) | ❌ | ✅ |
+| Hardware-specific speed optimization (edge, embedded, industrial PC) | ❌ | ✅ |
+| NXAI support and engagement | ❌ | ✅ |
 
-These are Pro-exclusive additions — this documentation does not cover them as usable APIs of
-the open-source package, since they aren't part of it.
+## Get in touch
 
-If you are interested in any of these, contact [contact@nx-ai.com](mailto:contact@nx-ai.com).
+To bring TiRex-2 PRO into your organization — dedicated support, fine-tuning on your data,
+hardware-optimized deployment, or early access to upcoming capabilities — contact
+[contact@nx-ai.com](mailto:contact@nx-ai.com).

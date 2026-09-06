@@ -32,7 +32,7 @@ forecast_t2 = model.forecast([ts_up_to_t2], prediction_length=32, output_type="n
 ## What's Pro-only
 
 **Streaming** — incremental forecast updates as new observations arrive, without recomputing
-over the full history — is listed explicitly as a [TiRex-2 Pro](../pro.md) capability. The
+over the full history — is listed explicitly as a [TiRex-2 PRO](../pro.md) capability. The
 recurrent architecture used in this open-source release is what makes that incremental mode
 possible in principle, but the incremental, no-recompute code path itself is not part of this
-release. If you need it, see [TiRex-2 Pro](../pro.md).
+release. If you need it, see [TiRex-2 PRO](../pro.md).

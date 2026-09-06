@@ -20,7 +20,7 @@
 
 This repository provides the pre-trained multivariate forecasting model TiRex-2 introduced in the paper [TiRex-2: Generalizing TiRex to Multivariate Data and Streaming](https://arxiv.org/pdf/2607.01204).
 
-> **TiRex-2 Pro:** This repository is our open-source release. Our pro version extends TiRex-2 with streaming, hardware-optimized inference (edge, embedded, and industrial PCs, among others), finetuning, and classification & regression support — see [TiRex-2 Pro](#tirex-2-pro) below or contact us at [contact@nx-ai.com](mailto:contact@nx-ai.com).
+> **TiRex-2 PRO:** This repository is our open-source release. TiRex-2 PRO extends it with dedicated support, streaming, hardware-optimized inference (edge, embedded, and industrial PCs, among others), fine-tuning, and classification & regression support — see [TiRex-2 PRO](#tirex-2-pro) below or contact us at [contact@nx-ai.com](mailto:contact@nx-ai.com).
 
 ## TiRex-2
 
@@ -170,17 +170,18 @@ To reproduce our results for the [GIFT-Eval](https://huggingface.co/spaces/Sales
 
 For detailed instructions on building and running TiRex-2 in a Docker container, see the [Docker README](./inference/README.md).
 
-## TiRex-2 Pro
+## TiRex-2 PRO
 TiRex-2 already provides state-of-the-art performance for zero-shot prediction, so you can use this open-source release without training on your own data.
 
-Our pro version extends TiRex-2 with additional capabilities, including:
+TiRex-2 PRO extends it with dedicated support and additional capabilities, including:
 
+- **Support**: dedicated NXAI support and engagement.
 - **Streaming**: incremental forecast updates as new observations arrive, without recomputing over the full history.
 - **Speed**: performance-optimized inference, including optimization for dedicated hardware such as edge, embedded, and industrial PC deployments.
-- **Finetuning**: models fine-tuned on your data or with different pretraining.
+- **Fine-tuning**: models adapted to your data or with different pretraining.
 - **Classification & Regression**: TiRex-2 adapted for classification and regression tasks.
 
-If you are interested in any of these, please contact us at [contact@nx-ai.com](mailto:contact@nx-ai.com).
+See the full feature comparison in the [docs](https://nx-ai.github.io/tirex-2/pro/), or contact us at [contact@nx-ai.com](mailto:contact@nx-ai.com).
 
 ## Cite
 
