@@ -15,13 +15,13 @@ instructions live in the repository next to the benchmark code:
 Download the dataset once:
 
 ```bash
-pixi run -e example-cu128 huggingface-cli download Salesforce/GiftEval --repo-type=dataset --local-dir PATH_TO_SAVE
+pixi run -e examples --platform linux-64-cuda huggingface-cli download Salesforce/GiftEval --repo-type=dataset --local-dir PATH_TO_SAVE
 ```
 
 Run the benchmark, choosing a model type:
 
 ```bash
-pixi run -e example-cu128 python examples/gifteval/run_gifteval.py </path/to/gifteval_storage> pretrained
+pixi run -e examples --platform linux-64-cuda python examples/gifteval/run_gifteval.py </path/to/gifteval_storage> pretrained
 ```
 
 - `pretrained` loads `NX-AI/TiRex-2-gifteval-pretrain`.
@@ -34,11 +34,11 @@ multivariate dataset into independent univariate channels, matching the official
 protocol:
 
 ```bash
-pixi run -e example-cu126 python examples/gifteval/run_gifteval.py \
+pixi run -e examples --platform linux-64-cuda-126 python examples/gifteval/run_gifteval.py \
     </path/to/gifteval_storage> <ckpt_dir> --eval-mode univariate
 ```
 
-An interactive notebook is also available: start `pixi run notebook` and open
+An interactive notebook is also available: start `pixi run --platform linux-64-cuda notebook` and open
 `examples/gifteval/gifteval.ipynb`.
 
 ## fev-bench
@@ -46,13 +46,13 @@ An interactive notebook is also available: start `pixi run notebook` and open
 Optionally pre-download the data:
 
 ```bash
-pixi run -e example-cu128 huggingface-cli download autogluon/fev_datasets --repo-type=dataset --local-dir </path/to/fevbench/store>
+pixi run -e examples --platform linux-64-cuda huggingface-cli download autogluon/fev_datasets --repo-type=dataset --local-dir </path/to/fevbench/store>
 ```
 
 Run the benchmark — this always loads `NX-AI/TiRex-2-fevbench` from Hugging Face:
 
 ```bash
-pixi run fevbench [/path/to/fevbench_storage] [--tasks examples/fevbench/tasks.yaml]
+pixi run --platform linux-64-cuda fevbench [/path/to/fevbench_storage] [--tasks examples/fevbench/tasks.yaml]
 ```
 
 If the storage path is omitted, the dataset is downloaded at runtime and cached under
