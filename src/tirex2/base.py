@@ -1,3 +1,6 @@
+# Copyright (c) NXAI GmbH.
+# Licensed under the Apache License, Version 2.0; see LICENSE for details.
+
 """Loading utilities for inference-ready :class:`TiRex2` checkpoints."""
 
 from pathlib import Path
@@ -51,6 +54,7 @@ def load_model(
     device: str = "cuda",
     *,
     hf_kwargs: dict[str, Any] | None = None,
+    use_flex_attention: bool | None = None,
 ) -> ForecastModel:
     """Load an inference-ready :class:`TiRex2` from a checkpoint directory or HF repo.
 
@@ -67,6 +71,12 @@ def load_model(
     hf_kwargs : dict, optional
         Extra keyword arguments forwarded to ``snapshot_download`` for Hugging
         Face paths, e.g. ``{"revision": "main", "local_files_only": True}``.
+    use_flex_attention : bool, optional
+        Override every variate mixer's checkpoint setting. ``True`` enables
+        block-sparse FlexAttention, which can reduce the cost of large grouped
+        multivariate batches on CUDA but adds first-call compilation overhead.
+        ``False`` forces dense attention. Leave as ``None`` to preserve the
+        checkpoint configuration and package defaults.
 
     Returns
     -------
@@ -74,6 +84,16 @@ def load_model(
         The instantiated backbone (with the checkpoint weights loaded, set to
         evaluation mode) wrapped in a :class:`ForecastModel` that exposes the
         high-level ``forecast`` / ``forecast_gluon`` API.
+
+    Examples
+    --------
+    >>> import torch
+    >>> from tirex2 import TimeseriesType, load_model
+    >>> model = load_model("NX-AI/TiRex-2", device="cpu")
+    >>> ts = TimeseriesType(target=torch.randn(1, 128), past_covariates=None, future_covariates=None)
+    >>> forecast = model.forecast([ts], prediction_length=32, output_type="numpy")[0]
+    >>> forecast.shape
+    (1, 9, 32)
     """
     if device.startswith("cuda") and not torch.cuda.is_available():
         raise RuntimeError("Execution on CUDA was requested but is not available.")
@@ -92,6 +112,9 @@ def load_model(
         config: dict[str, Any] = yaml.safe_load(f)
 
     config["device"] = device
+    if use_flex_attention is not None:
+        for template in config["stack_config"]["templates"].values():
+            template["variate_mixer"]["use_flex_attention"] = use_flex_attention
     model = TiRex2(**config)
 
     checkpoint = torch.load(weights_file, map_location="cpu", weights_only=True)

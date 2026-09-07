@@ -1,5 +1,5 @@
 # Copyright (c) NXAI GmbH.
-# This software may be used and distributed according to the terms of the NXAI Community License Agreement.
+# Licensed under the Apache License, Version 2.0; see LICENSE for details.
 
 import torch
 from fastapi import FastAPI, Request
@@ -123,8 +123,8 @@ mcp = FastMCP("TiRex MCP")
 
 disclaimer = (
     "Disclaimer: NXAI is not responsible for any incorrect interpretations of the "
-    "forecasted values by LLMs. Check the TiRex license for more details: "
-    "https://github.com/NX-AI/tirex\n\n"
+    "forecasted values by LLMs. Check the TiRex-2 license for more details: "
+    "https://github.com/NX-AI/tirex-2\n\n"
 )
 
 

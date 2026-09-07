@@ -1,3 +1,6 @@
+# Copyright (c) NXAI GmbH.
+# Licensed under the Apache License, Version 2.0; see LICENSE for details.
+
 """High-level forecasting API wrapping a :class:`TiRex2` backbone."""
 
 import logging
@@ -161,8 +164,6 @@ def build_fev_timeseries(
     merged_ds = datasets.concatenate_datasets([past_data, future_data_renamed], axis=1).with_format("torch")
 
     def map_sample(sample):
-        # ``.map`` does not apply the dataset's ``with_format("torch")`` transform, so the
-        # callback receives plain Python lists; convert them to tensors explicitly.
         covariates = []
         for col in known_dynamic_columns:
             try:
@@ -356,6 +357,16 @@ class ForecastModel:
         (roughly doubles inference cost), and ``tta_diff`` controls postprocessor
         differencing; when omitted, the checkpoint's configured defaults
         (``model-config.yaml``) are used. Pass ``True``/``False`` to override.
+
+        Examples
+        --------
+        >>> import torch
+        >>> from tirex2 import TimeseriesType, load_model
+        >>> model = load_model("NX-AI/TiRex-2", device="cpu")
+        >>> ts = TimeseriesType(target=torch.randn(1, 128), past_covariates=None, future_covariates=None)
+        >>> forecasts = model.forecast([ts], prediction_length=32, output_type="numpy")
+        >>> forecasts[0].shape
+        (1, 9, 32)
         """
         assert batch_size >= 1, "Batch size must be >= 1"
         return _gen_forecast(

@@ -1,3 +1,6 @@
+# Copyright (c) NXAI GmbH.
+# Licensed under the Apache License, Version 2.0; see LICENSE for details.
+
 """Random past-window standardization for stochastic normalization."""
 
 import torch
@@ -6,10 +9,14 @@ import torch
 class Scaler:
     """Normalizes using mean/variance computed over the full sequence.
 
-    Args:
-        eps: Small constant added to avoid division by zero.
-        use_arcsinh: If ``True``, apply an arcsinh squashing after standardizing.
-        binaryaware: If ``True``, detect binary variates and bypass scaling for them.
+    Parameters
+    ----------
+    eps : float
+        Small constant added to avoid division by zero.
+    use_arcsinh : bool
+        If ``True``, apply an arcsinh squashing after standardizing.
+    binaryaware : bool
+        If ``True``, detect binary variates and bypass scaling for them.
     """
 
     def __init__(self, eps: float = 1e-8, use_arcsinh: bool = False, binaryaware: bool = False, **kwargs) -> None:

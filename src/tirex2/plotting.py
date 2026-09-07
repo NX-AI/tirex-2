@@ -1,3 +1,6 @@
+# Copyright (c) NXAI GmbH.
+# Licensed under the Apache License, Version 2.0; see LICENSE for details.
+
 from collections.abc import Sequence
 from itertools import chain
 
@@ -397,13 +400,20 @@ def _plot_covariates_plotly(
     """
     Plots multivariate covariates into a specified Plotly figure/subplot.
 
-    Args:
-        covariates (dict): Format -> {'covariate_name': {'x': x_array, 'y': y_array}}
-        fig (go.Figure): Plotly figure object.
-        row (int): Row index for the subplot.
-        col (int): Column index for the subplot.
-        cutoff_x (float/datetime): The x-axis value where the forecast starts.
-        color_cutoff_line (str): Color of the vertical cutoff line.
+    Parameters
+    ----------
+    covariates : dict
+        Format -> ``{'covariate_name': {'x': x_array, 'y': y_array}}``
+    fig : go.Figure
+        Plotly figure object.
+    row : int
+        Row index for the subplot.
+    col : int
+        Column index for the subplot.
+    cutoff_x : float or datetime
+        The x-axis value where the forecast starts.
+    color_cutoff_line : str
+        Color of the vertical cutoff line.
     """
     try:
         import plotly.express as px
@@ -718,7 +728,6 @@ def plot_multivariate(
 
     if x is None:
         x = np.arange(full_size)
-        # x = np.arange(-input.past_length, max_future_length) + 1
     elif len(x) < full_size:
         raise ValueError(
             "Not enough 'x' values provided to have one for every timestep in context, forecast, and ground truth window."

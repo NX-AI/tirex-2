@@ -1,3 +1,6 @@
+# Copyright (c) NXAI GmbH.
+# Licensed under the Apache License, Version 2.0; see LICENSE for details.
+
 import importlib
 import logging
 from dataclasses import dataclass, replace
@@ -146,9 +149,6 @@ class TiRex2(nn.Module):
         if matmul_precision is not None:
             torch.set_float32_matmul_precision(matmul_precision)
 
-        # Older checkpoint configs may still carry a serialized postprocessor
-        # parameter block; differencing/calibration now uses code defaults and is
-        # toggled exclusively via ``tta_diff``.
         kwargs.pop("postprocessor_cfg", None)
         super().__init__(*args, **kwargs)
         act_func = _resolve_act_func(act_func)
@@ -285,26 +285,31 @@ class TiRex2(nn.Module):
     ):
         """Return quantile forecasts aligned with the input sequence length.
 
-        Args:
-            timeseries: A batch of multivariate timeseries. Each
-                :class:`TimeseriesType` holds the target and optional covariate
-                tensors; the target has shape ``(num_variates, sequence_length)``.
-            prediction_length: The forecast horizon
-            tta_sign_flip: Opt-in sign-flip test-time augmentation. Leave as
-                ``None`` (the default) to use the checkpoint's configured setting
-                (``self.tta_sign_flip``, from ``model-config.yaml``); pass an
-                explicit ``True``/``False`` to override it for this call. When
-                enabled, the model is run a second time on the sign-flipped input
-                (target *and* every covariate negated); the flipped forecast is
-                mapped back to level space (values negated and the quantile axis
-                reversed via the ``q -> 1-q`` complement map) and the two passes
-                are averaged in level space. Requires a symmetric quantile set
-                and roughly doubles inference cost. When it resolves to disabled,
-                the output is byte-identical to a single pass.
-            tta_diff: Opt-in differencing path inside the postprocessor. Leave as
-                ``None`` (the default) to use the checkpoint's configured setting
-                (``self.tta_diff``, from ``model-config.yaml``); pass an explicit
-                ``True``/``False`` to override trend differencing for this call.
+        Parameters
+        ----------
+        timeseries : list[TimeseriesType]
+            A batch of multivariate timeseries. Each :class:`TimeseriesType` holds
+            the target and optional covariate tensors; the target has shape
+            ``(num_variates, sequence_length)``.
+        prediction_length : int
+            The forecast horizon.
+        tta_sign_flip : bool, optional
+            Opt-in sign-flip test-time augmentation. Leave as ``None`` (the
+            default) to use the checkpoint's configured setting
+            (``self.tta_sign_flip``, from ``model-config.yaml``); pass an
+            explicit ``True``/``False`` to override it for this call. When
+            enabled, the model is run a second time on the sign-flipped input
+            (target *and* every covariate negated); the flipped forecast is
+            mapped back to level space (values negated and the quantile axis
+            reversed via the ``q -> 1-q`` complement map) and the two passes
+            are averaged in level space. Requires a symmetric quantile set
+            and roughly doubles inference cost. When it resolves to disabled,
+            the output is byte-identical to a single pass.
+        tta_diff : bool, optional
+            Opt-in differencing path inside the postprocessor. Leave as ``None``
+            (the default) to use the checkpoint's configured setting
+            (``self.tta_diff``, from ``model-config.yaml``); pass an explicit
+            ``True``/``False`` to override trend differencing for this call.
         """
         if tta_sign_flip is None:
             tta_sign_flip = self.tta_sign_flip

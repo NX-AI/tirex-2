@@ -8,10 +8,13 @@
 [![Hugging Face](https://img.shields.io/badge/HuggingFace-TiRex--2-yellow?logo=huggingface)](https://huggingface.co/NX-AI/TiRex-2)
 [![PyPI](https://img.shields.io/pypi/v/tirex-2?color=blue)](https://pypi.org/project/tirex-2/)
 [![PyPI Downloads](https://static.pepy.tech/personalized-badge/tirex-2?period=total&units=INTERNATIONAL_SYSTEM&left_color=GREY&right_color=BLUE&left_text=downloads)](https://pepy.tech/projects/tirex-2)
+[![Docker](https://img.shields.io/badge/GHCR-tirex2--cpu%20%2F%20tirex2--gpu-2496ED?logo=docker&logoColor=white)](https://github.com/NX-AI/tirex-2/pkgs/container/tirex2-cpu)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
+[![docs](https://img.shields.io/website?url=https%3A%2F%2Fnx-ai.github.io%2Ftirex-2%2F&label=docs&up_message=online&up_color=green&down_message=offline&down_color=red)](https://nx-ai.github.io/tirex-2/)
 [![Tests](https://github.com/NX-AI/tirex-2/actions/workflows/test.yaml/badge.svg)](https://github.com/NX-AI/tirex-2/actions/workflows/test.yaml)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit)
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/NX-AI/tirex-2/blob/main/examples/getting_started.ipynb)
+[![TiRex-2 Demo](https://img.shields.io/badge/HuggingFace-TiRex--2%20Demo-yellow?logo=huggingface)](https://huggingface.co/spaces/NX-AI/TiRex-2-demo)
 
 </div>
 
@@ -62,6 +65,43 @@ We use [Pixi](https://pixi.prefix.dev/latest/) for our development and benchmark
 ```bash
 curl -fsSL https://pixi.sh/install.sh | sh
 ```
+
+## FAQ
+
+<details>
+<summary><strong>How do I run TiRex-2 on CUDA?</strong></summary>
+
+With `device="cuda"`, TiRex-2 builds its fused sLSTM kernel (FlashRNN) with `nvcc` on the first forecast. In order to run TiRex-2 on CUDA you need:
+
+1. **A CUDA Toolkit installed and discoverable** — `nvcc` must be on `PATH` or reachable via `CUDA_HOME`.
+2. **A CUDA Toolkit whose major version matches your PyTorch build** — any 12.x toolkit for a `cu12x` torch wheel, any 13.x toolkit for a `cu13x` one. Check with `python -c "import torch; print(torch.version.cuda)"`.
+3. **A CUDA Toolkit no newer than your driver supports.**
+
+</details>
+
+<details>
+<summary><strong>Which NVIDIA GPU architectures does TiRex-2 support?</strong></summary>
+
+- TiRex-2 runs on NVIDIA GPUs with compute capability 8.0 (Ampere) or newer.
+- Older cards — Turing (7.5), Volta (7.0) and earlier — cannot run `device="cuda"`; use `device="cpu"` instead.
+
+</details>
+
+<details>
+<summary><strong>Why does TiRex-2 fail with <code>where cl</code> on Windows?</strong></summary>
+
+PyTorch may compile model components at runtime, so the Python process needs access to the MSVC C++ compiler, even when using `device="cpu"`.
+
+Install Visual Studio Build Tools with **Desktop development with C++**, then run TiRex-2 from an **x64 Native Tools Command Prompt for Visual Studio**. Confirm the compiler is available before starting your script:
+
+```bat
+where cl
+python your_script.py
+```
+
+Launch VS Code or Jupyter from the same prompt so it inherits the compiler environment. See [#15](https://github.com/NX-AI/tirex-2/issues/15) and [#17](https://github.com/NX-AI/tirex-2/issues/17) for related reports.
+
+</details>
 
 ## Getting started
 

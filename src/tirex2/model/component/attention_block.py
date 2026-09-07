@@ -1,3 +1,6 @@
+# Copyright (c) NXAI GmbH.
+# Licensed under the Apache License, Version 2.0; see LICENSE for details.
+
 import math
 import warnings
 from typing import Any
@@ -89,7 +92,7 @@ class AttentionLayer(torch.nn.Module):
         computing attention scores (default: True).
     use_flex_attention: bool
         Whether to use FlexAttention instead of scaled dot product attention
-        when attention weights are not requested (default: False).
+        (default: False).
     """
 
     def __init__(
@@ -99,7 +102,6 @@ class AttentionLayer(torch.nn.Module):
         n_heads: int = 4,
         dropout: float = 0,
         disable_singleton_attention: bool = False,
-        return_attention_scores: bool = False,
         use_rope: bool = False,
         no_qk_scale: bool = False,
         use_qk_norm: bool = True,
@@ -111,7 +113,6 @@ class AttentionLayer(torch.nn.Module):
         self.n_heads: int = n_heads
         self.dropout: float = dropout
         self.disable_singleton_attention: bool = disable_singleton_attention
-        self.return_attention_scores: bool = return_attention_scores
         self.use_rope: bool = use_rope
         self.use_qk_norm: bool = use_qk_norm
         self.use_flex_attention: bool = use_flex_attention
@@ -187,9 +188,8 @@ class AttentionLayer(torch.nn.Module):
 
         Returns
         -------
-        tuple[torch.Tensor, None]
-            The attention-transformed tokens of shape `[B, L, D]` and a placeholder for attention weights
-            (currently `None`).
+        torch.Tensor
+            The attention-transformed tokens of shape `[B, L, D]`.
         """
         _, L, _ = x.shape
 
@@ -282,54 +282,10 @@ class AttentionLayer(torch.nn.Module):
 
 
 class AttentionBlock(torch.nn.Module):
-    """Transformer attention block with configurable pre/post normalization.
+    """Transformer attention block with RMS-normalized attention and FFN residuals.
 
-    Combines multi-head attention with a feed-forward network and residual
-    connections. By default the block uses pre-normalization (RMSNorm), while
-    post-normalization can optionally be enabled in addition to or instead of
-    pre-normalization. Supports optional RoPE positional encoding and
-    group-wise attention masking.
-
-    Parameters
-    ----------
-    input_dim : int
-        Dimension of input features
-    n_heads : int
-        Number of attention heads
-    dropout : float
-        Dropout probability for attention and FFN layers
-    act_fn : torch.nn.Module
-        Activation function for the FFN
-    use_group_attention : bool
-        Whether to use group-wise attention masking
-    use_rope : bool, optional
-        Whether to use Rotary Position Embedding (default: False)
-    rope_max_seq_len : int, optional
-        Maximum sequence length for RoPE precomputation (default: 2048)
-    rope_base : float, optional
-        Base for RoPE frequency computation (default: 10000.0)
-    disable_singleton_attention : bool, optional
-        Zero out the attention output for singleton group tokens so only their
-        residual is propagated. Has no effect when ``disable_singleton_block``
-        is True (default: False).
-    disable_singleton_block : bool, optional
-        Pass singleton group tokens through the entire block unchanged, skipping
-        both the attention layer and the FFN. When True, ``disable_singleton_attention``
-        has no effect (default: False).
-    normalize_attn_by_group_size : bool, optional
-        Scale the attention residual by ``1 / sqrt(group_size)`` per token so
-        that the magnitude of the attention contribution stays comparable
-        regardless of whether the group has 3 or 100 variates (default: False).
-    use_pre_norm : bool, optional
-        Apply RMSNorm before each sublayer input (default: True).
-    use_post_norm : bool, optional
-        Apply RMSNorm after each residual addition (default: False).
-    use_qk_norm : bool, optional
-        Whether to apply RMS normalization to the query and key vectors in the
-        attention layer before computing attention scores (default: True).
-    use_flex_attention : bool, optional
-        Whether the attention layer should use FlexAttention by default
-        (default: False).
+    The block combines multi-head attention with a feed-forward network. Optional
+    group-wise attention masks are applied when group IDs are supplied at forward time.
     """
 
     def __init__(
@@ -347,7 +303,6 @@ class AttentionBlock(torch.nn.Module):
         self.dropout = dropout
         self.use_qk_norm = use_qk_norm
         self.use_flex_attention = use_flex_attention
-        # disable_singleton_attention has no effect when disable_singleton_block is set
         self._collect_group_stats_this_step = False
         self.use_post_norm = False
 
@@ -367,7 +322,6 @@ class AttentionBlock(torch.nn.Module):
         )
 
         self.norm_ffn = torch.nn.RMSNorm(self.input_dim, eps=1e-6)
-        # FFN with expansion factor of 4 (plain MLP) or 8/3 (GatedMLP/SwiGLU)
         self.ffn_hidden_dim = 4 * self.input_dim
         self.ffn = MLP(
             d_model=self.input_dim,
@@ -383,7 +337,7 @@ class AttentionBlock(torch.nn.Module):
         group_vector: torch.Tensor | None = None,
         target_mask: torch.Tensor | None = None,
         **kwargs,
-    ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
+    ) -> torch.Tensor:
         """Forward pass through attention and FFN with residual connections.
 
         Parameters
@@ -399,10 +353,8 @@ class AttentionBlock(torch.nn.Module):
 
         Returns
         -------
-        torch.Tensor or tuple[torch.Tensor, torch.Tensor]
-            If return_attention_scores is False, returns output tensor of shape [B, L, D].
-            If return_attention_scores is True, returns tuple of (output [B, L, D],
-            attention_scores [B, H, L, L])
+        torch.Tensor
+            Output tensor of shape [B, L, D].
         """
         x_in = x
 
@@ -426,14 +378,11 @@ class AttentionBlock(torch.nn.Module):
                     f"target_mask not sliced consistently: tm={target_mask.shape[0]}, x={x.shape[1]}"
                 )
 
-        # --- Block-Body (with L_sub if use_gather, else L) ---
         x_attn = self.attn(self.norm_attn(x), group_vector=group_vector, target_mask=target_mask)
         x = x + x_attn
 
         x_ffn = self.ffn(self.norm_ffn(x))
         x = x + x_ffn
-        # --- End Block-Body ---
-
         # Scatter non-singleton outputs back into the full-L tensor
         if group_vector is not None:
             out = x_in.clone()
