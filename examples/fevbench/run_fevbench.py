@@ -4,7 +4,7 @@ Usage
 -----
 ::
 
-    pixi run fevbench [--tasks tasks.yaml] [--out RESULTS.csv]
+    pixi run --platform linux-64-cuda fevbench [--tasks tasks.yaml] [--out RESULTS.csv]
 
 Tasks are loaded from their configured paths in the YAML, typically the
 HuggingFace Hub (``autogluon/fev_datasets``). The model is always loaded from
@@ -14,7 +14,7 @@ To run against a local dataset snapshot (offline), point HuggingFace's datasets
 cache at it rather than passing a path here. The snapshot must use the standard
 cache layout (``<cache>/autogluon___fev_datasets/<config>/...``)::
 
-    HF_DATASETS_CACHE=/path/to/snapshot HF_HUB_OFFLINE=1 pixi run fevbench
+    HF_DATASETS_CACHE=/path/to/snapshot HF_HUB_OFFLINE=1 pixi run --platform linux-64-cuda fevbench
 
 The benchmark itself is described by a YAML file (``--tasks``, default
 ``tasks.yaml`` next to this script) listing the fev tasks to run. Each evaluation
