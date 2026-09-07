@@ -1,6 +1,6 @@
 ## Checklist
 <!-- You should replace `[ ]` with `[x]` on each item you have completed. -->
-- [ ] Mentioned issue(s) related to this PRunder **Issues**.
+- [ ] Mentioned issue(s) related to this PR under **Issues**.
 - [ ] Provided a summary of this PR under **Summary**.
 - [ ] Added or updated unit tests ([/test](/test)) affected by this PR and passed all tests.
 - [ ] Maintained or improved code coverage as per "Codedev" report.
