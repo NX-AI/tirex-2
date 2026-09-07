@@ -59,6 +59,7 @@ platforms = [
 ]
 # security: exclude packages newer than 7 days
 exclude-newer = "7 days"
+requires-pixi = ">=0.67.0"
 
 [tool.pixi.pypi-exclude-newer]
 xlstm = "0 day"
