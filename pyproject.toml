@@ -15,8 +15,7 @@ dependencies = [
 	"numpy>=2.3.3; python_version >= '3.14'",
 	"einops~=0.8.1",
 	"flashrnn>=1.0.5",
-	"xlstm~=2.0.3",
-    "antlr4-python3-runtime>=4.13.2", #temp fix: https://github.com/NX-AI/xlstm/pull/133
+	"xlstm>=2.0.3",
 	"PyYAML>=6",
 	"huggingface-hub>=0.35.3",
 ]
@@ -58,6 +57,16 @@ platforms = [
   { name = "win-64-cpu", platform = "win-64" },
   { name = "osx-arm64", platform = "osx-arm64" },
 ]
+# security: exclude packages newer than 7 days
+exclude-newer = "7 days"
+
+[tool.pixi.pypi-exclude-newer]
+xlstm = "0 day"
+mlstm_kernels = "0 day"
+
+[tool.pixi.pypi-options]
+# security: disable building wheels for dependencies
+no-build = true
 
 [tool.pixi.dependencies]
 python = ">=3.11"
