@@ -10357,7 +10357,7 @@ packages:
   - numpy>=2.3.3 ; python_full_version >= '3.14'
   - einops~=0.8.1
   - flashrnn>=1.0.5
-  - xlstm>=2.0.3
+  - xlstm~=2.0.3
   - pyyaml>=6
   - huggingface-hub>=0.35.3
   - matplotlib>=3.10.0 ; extra == 'examples'
