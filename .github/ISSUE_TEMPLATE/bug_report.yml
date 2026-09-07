@@ -45,8 +45,7 @@ body:
         - 3.11 (Minimum supported)
         - 3.12
         - 3.13
-        - 3.14 (Latest stable)
-        - 3.15 (Preview)
+        - 3.14 (Latest tested)
       default: 0
     validations:
       required: true
