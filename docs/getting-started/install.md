@@ -33,4 +33,5 @@ compatible platform automatically, or you can choose one explicitly, for example
 
 ## Next steps
 
-Continue with the [Quickstart](quickstart.md) for a first forecast.
+Continue with the [Quickstart](quickstart.md) for a first forecast. If you plan to run on a
+GPU, see the [FAQ](../faq.md) for the CUDA Toolkit and GPU architecture requirements.
