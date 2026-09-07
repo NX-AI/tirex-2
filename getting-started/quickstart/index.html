@@ -1345,10 +1345,10 @@ which you can also run directly in Google Colab:</p>
 <p>If you have cloned the repository, start it locally via Pixi:</p>
 <div class="highlight"><pre><span></span><code>pixi<span class="w"> </span>run<span class="w"> </span>notebook
 </code></pre></div>
-<p>Depending on your CUDA version and use case you may need a different environment, e.g.
-<code>-e example-cu128</code>, as defined in
-<a href="https://github.com/NX-AI/tirex-2/blob/main/pyproject.toml"><code>pyproject.toml</code></a> under
-<code>tool.pixi.environments</code>.</p>
+<p>The <code>notebook</code> task uses the <code>examples</code> environment. Select a different named platform when
+needed, such as <code>--platform linux-64-cpu</code> for CPU-only Linux or
+<code>--platform linux-64-cuda-126</code> for CUDA 12.6. Platforms and environments are defined in
+<a href="https://github.com/NX-AI/tirex-2/blob/main/pyproject.toml"><code>pyproject.toml</code></a>.</p>
 <h2 id="minimal-usage-predicting-a-simple-sine-wave">Minimal usage: predicting a simple sine wave<a class="headerlink" href="#minimal-usage-predicting-a-simple-sine-wave" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">tirex2</span><span class="w"> </span><span class="kn">import</span> <span class="n">TimeseriesType</span><span class="p">,</span> <span class="n">load_model</span>

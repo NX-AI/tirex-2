@@ -1283,10 +1283,10 @@ instructions live in the repository next to the benchmark code:</p>
 </ul>
 <h2 id="gift-eval">GIFT-Eval<a class="headerlink" href="#gift-eval" title="Permanent link">&para;</a></h2>
 <p>Download the dataset once:</p>
-<div class="highlight"><pre><span></span><code>pixi<span class="w"> </span>run<span class="w"> </span>-e<span class="w"> </span>example-cu128<span class="w"> </span>huggingface-cli<span class="w"> </span>download<span class="w"> </span>Salesforce/GiftEval<span class="w"> </span>--repo-type<span class="o">=</span>dataset<span class="w"> </span>--local-dir<span class="w"> </span>PATH_TO_SAVE
+<div class="highlight"><pre><span></span><code>pixi<span class="w"> </span>run<span class="w"> </span>-e<span class="w"> </span>examples<span class="w"> </span>--platform<span class="w"> </span>linux-64-cuda<span class="w"> </span>huggingface-cli<span class="w"> </span>download<span class="w"> </span>Salesforce/GiftEval<span class="w"> </span>--repo-type<span class="o">=</span>dataset<span class="w"> </span>--local-dir<span class="w"> </span>PATH_TO_SAVE
 </code></pre></div>
 <p>Run the benchmark, choosing a model type:</p>
-<div class="highlight"><pre><span></span><code>pixi<span class="w"> </span>run<span class="w"> </span>-e<span class="w"> </span>example-cu128<span class="w"> </span>python<span class="w"> </span>examples/gifteval/run_gifteval.py<span class="w"> </span>&lt;/path/to/gifteval_storage&gt;<span class="w"> </span>pretrained
+<div class="highlight"><pre><span></span><code>pixi<span class="w"> </span>run<span class="w"> </span>-e<span class="w"> </span>examples<span class="w"> </span>--platform<span class="w"> </span>linux-64-cuda<span class="w"> </span>python<span class="w"> </span>examples/gifteval/run_gifteval.py<span class="w"> </span>&lt;/path/to/gifteval_storage&gt;<span class="w"> </span>pretrained
 </code></pre></div>
 <ul>
 <li><code>pretrained</code> loads <code>NX-AI/TiRex-2-gifteval-pretrain</code>.</li>
@@ -1297,17 +1297,17 @@ scored jointly, which exercises TiRex-2's cross-variate path but is <strong>not<
 comparable to the public GIFT-Eval leaderboard. Pass <code>--eval-mode univariate</code> to split every
 multivariate dataset into independent univariate channels, matching the official leaderboard
 protocol:</p>
-<div class="highlight"><pre><span></span><code>pixi<span class="w"> </span>run<span class="w"> </span>-e<span class="w"> </span>example-cu126<span class="w"> </span>python<span class="w"> </span>examples/gifteval/run_gifteval.py<span class="w"> </span><span class="se">\</span>
+<div class="highlight"><pre><span></span><code>pixi<span class="w"> </span>run<span class="w"> </span>-e<span class="w"> </span>examples<span class="w"> </span>--platform<span class="w"> </span>linux-64-cuda-126<span class="w"> </span>python<span class="w"> </span>examples/gifteval/run_gifteval.py<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>&lt;/path/to/gifteval_storage&gt;<span class="w"> </span>&lt;ckpt_dir&gt;<span class="w"> </span>--eval-mode<span class="w"> </span>univariate
 </code></pre></div>
-<p>An interactive notebook is also available: start <code>pixi run notebook</code> and open
+<p>An interactive notebook is also available: start <code>pixi run --platform linux-64-cuda notebook</code> and open
 <code>examples/gifteval/gifteval.ipynb</code>.</p>
 <h2 id="fev-bench">fev-bench<a class="headerlink" href="#fev-bench" title="Permanent link">&para;</a></h2>
 <p>Optionally pre-download the data:</p>
-<div class="highlight"><pre><span></span><code>pixi<span class="w"> </span>run<span class="w"> </span>-e<span class="w"> </span>example-cu128<span class="w"> </span>huggingface-cli<span class="w"> </span>download<span class="w"> </span>autogluon/fev_datasets<span class="w"> </span>--repo-type<span class="o">=</span>dataset<span class="w"> </span>--local-dir<span class="w"> </span>&lt;/path/to/fevbench/store&gt;
+<div class="highlight"><pre><span></span><code>pixi<span class="w"> </span>run<span class="w"> </span>-e<span class="w"> </span>examples<span class="w"> </span>--platform<span class="w"> </span>linux-64-cuda<span class="w"> </span>huggingface-cli<span class="w"> </span>download<span class="w"> </span>autogluon/fev_datasets<span class="w"> </span>--repo-type<span class="o">=</span>dataset<span class="w"> </span>--local-dir<span class="w"> </span>&lt;/path/to/fevbench/store&gt;
 </code></pre></div>
 <p>Run the benchmark — this always loads <code>NX-AI/TiRex-2-fevbench</code> from Hugging Face:</p>
-<div class="highlight"><pre><span></span><code>pixi<span class="w"> </span>run<span class="w"> </span>fevbench<span class="w"> </span><span class="o">[</span>/path/to/fevbench_storage<span class="o">]</span><span class="w"> </span><span class="o">[</span>--tasks<span class="w"> </span>examples/fevbench/tasks.yaml<span class="o">]</span>
+<div class="highlight"><pre><span></span><code>pixi<span class="w"> </span>run<span class="w"> </span>--platform<span class="w"> </span>linux-64-cuda<span class="w"> </span>fevbench<span class="w"> </span><span class="o">[</span>/path/to/fevbench_storage<span class="o">]</span><span class="w"> </span><span class="o">[</span>--tasks<span class="w"> </span>examples/fevbench/tasks.yaml<span class="o">]</span>
 </code></pre></div>
 <p>If the storage path is omitted, the dataset is downloaded at runtime and cached under
 <code>$HOME/.cache</code>.</p>

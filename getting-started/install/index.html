@@ -1351,9 +1351,12 @@
 environment, to ensure it is set up correctly. Install it with:</p>
 <div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-fsSL<span class="w"> </span>https://pixi.sh/install.sh<span class="w"> </span><span class="p">|</span><span class="w"> </span>sh
 </code></pre></div>
-<p>Environments (e.g. <code>example-cu128</code>) are defined in
-<a href="https://github.com/NX-AI/tirex-2/blob/main/pyproject.toml"><code>pyproject.toml</code></a> under
-<code>tool.pixi.environments</code>; pick the one matching your CUDA version and use case.</p>
+<p>Environments select a use case (<code>default</code>, <code>test</code>, <code>examples</code>, or <code>pypi-build</code>), while named
+platforms select the operating system and accelerator. Both are defined in
+<a href="https://github.com/NX-AI/tirex-2/blob/main/pyproject.toml"><code>pyproject.toml</code></a>. Pixi selects a
+compatible platform automatically, or you can choose one explicitly, for example
+<code>--platform linux-64-cuda</code>, <code>--platform linux-64-cuda-126</code>, or
+<code>--platform linux-64-cpu</code>.</p>
 <h2 id="next-steps">Next steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
 <p>Continue with the <a href="../quickstart/">Quickstart</a> for a first forecast. If you plan to run on a
 GPU, see the <a href="../../faq/">FAQ</a> for the CUDA Toolkit and GPU architecture requirements.</p>
