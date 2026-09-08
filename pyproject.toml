@@ -64,6 +64,7 @@ requires-pixi = ">=0.67.0"
 [tool.pixi.pypi-exclude-newer]
 xlstm = "0 day"
 mlstm_kernels = "0 day"
+flashrnn = "0 day"
 
 [tool.pixi.pypi-options]
 # security: disable building wheels for dependencies
