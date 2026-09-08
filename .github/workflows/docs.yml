@@ -8,6 +8,8 @@ on:
       - "docs/**"
       - "src/tirex2/**"
       - "mkdocs.yml"
+      - "pyproject.toml"
+      - "pixi.lock"
       - ".github/workflows/docs.yml"
   workflow_dispatch:
 
