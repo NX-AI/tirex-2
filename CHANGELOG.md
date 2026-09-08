@@ -4,7 +4,10 @@ All notable changes to TiRex-2 are documented here.
 
 ## [Unreleased]
 
-No changes yet.
+### Security and CI
+
+- Pinned GitHub Actions to commit SHAs and updated action versions in [#27](https://github.com/NX-AI/tirex-2/pull/27), contributed by [Copilot](https://github.com/apps/copilot-swe-agent), [daidahao](https://github.com/daidahao), and [Zhihao Dai](https://github.com/daidahao).
+- Added Visual Studio developer-shell initialization for Windows builds in [#27](https://github.com/NX-AI/tirex-2/pull/27), contributed by [Copilot](https://github.com/apps/copilot-swe-agent), [daidahao](https://github.com/daidahao), and [Zhihao Dai](https://github.com/daidahao).
 
 ## [0.2.1] - 2026-08-05
 
