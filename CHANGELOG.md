@@ -4,10 +4,19 @@ All notable changes to TiRex-2 are documented here.
 
 ## [Unreleased]
 
+### Documentation and development
+
+- Added named Pixi platforms for Linux and Windows CPU builds and CUDA 12.6, 13.0, and 13.2 builds, with matching CUDA toolchains and updated development and benchmark commands in [#20](https://github.com/NX-AI/tirex-2/pull/20), contributed by [Zhihao Dai](https://github.com/daidahao).
+- Added FAQs covering CUDA setup, supported NVIDIA GPU architectures, and Windows MSVC compiler setup in [#19](https://github.com/NX-AI/tirex-2/pull/19), contributed by [Yipeng Sun](https://github.com/sypsyp97) and [Daniil Yefimov](https://github.com/DaniilYefimov).
+- Added GitHub issue and pull request templates in [#25](https://github.com/NX-AI/tirex-2/pull/25), contributed by [Zhihao Dai](https://github.com/daidahao).
+
 ### Security and CI
 
-- Pinned GitHub Actions to commit SHAs and updated action versions in [#27](https://github.com/NX-AI/tirex-2/pull/27), contributed by [Copilot](https://github.com/apps/copilot-swe-agent), [daidahao](https://github.com/daidahao), and [Zhihao Dai](https://github.com/daidahao).
-- Added Visual Studio developer-shell initialization for Windows builds in [#27](https://github.com/NX-AI/tirex-2/pull/27), contributed by [Copilot](https://github.com/apps/copilot-swe-agent), [daidahao](https://github.com/daidahao), and [Zhihao Dai](https://github.com/daidahao).
+- Hardened Pixi dependency resolution with a seven-day package release cooldown (except for `xlstm`, `mlstm_kernels`, and `flashrnn`), disabled dependency wheel builds, and required Pixi 0.67.0 or newer in [#24](https://github.com/NX-AI/tirex-2/pull/24), contributed by [Zhihao Dai](https://github.com/daidahao) and [Copilot Autofix](https://github.com/apps/copilot-pull-request-reviewer).
+- Enabled weekly Dependabot version updates for the root Python dependencies in [#28](https://github.com/NX-AI/tirex-2/pull/28), contributed by [Zhihao Dai](https://github.com/daidahao).
+- Added a security policy documenting supported versions and private vulnerability reporting in [#23](https://github.com/NX-AI/tirex-2/pull/23), contributed by [Copilot](https://github.com/apps/copilot-swe-agent) and [Zhihao Dai](https://github.com/daidahao).
+- Pinned GitHub Actions to commit SHAs and updated action versions in [#27](https://github.com/NX-AI/tirex-2/pull/27), contributed by [Copilot](https://github.com/apps/copilot-swe-agent) and [Zhihao Dai](https://github.com/daidahao).
+- Added Visual Studio developer-shell initialization for Windows builds in [#27](https://github.com/NX-AI/tirex-2/pull/27), contributed by [Copilot](https://github.com/apps/copilot-swe-agent) and [Zhihao Dai](https://github.com/daidahao).
 
 ## [0.2.1] - 2026-08-05
 
