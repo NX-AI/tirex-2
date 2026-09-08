@@ -177,7 +177,7 @@ For detailed instructions on building and running TiRex-2 in a Docker container,
 ## TiRex-2 PRO
 TiRex-2 already provides state-of-the-art performance for zero-shot prediction, so you can use this open-source release without training on your own data.
 
-TiRex-2 PRO extends it with dedicated support and additional capabilities, including:
+TiRex-2 PRO extends this open-source release with:
 
 - **Support**: dedicated support and engagement from NXAI.
 - **Streaming**: incremental forecast updates as new observations arrive, without recomputing forecasts over the full history.
