@@ -47,14 +47,15 @@ for background and the [paper](https://arxiv.org/pdf/2607.01204) for details.
 
 ## TiRex-2 PRO
 
-This repository is NXAI's open-source release. TiRex-2 PRO extends it with dedicated support
-and:
+This repository contains NXAI's open-source release of TiRex-2. TiRex-2 PRO extends it with:
 
+- **Support**: dedicated support and engagement from NXAI.
 - **Streaming**: incremental forecast updates as new observations arrive, without recomputing
-  over the full history.
-- **Speed**: performance-optimized inference, including optimization for dedicated hardware
-  such as edge, embedded, and industrial PC deployments.
-- **Fine-tuning**: models adapted to your data or with different pretraining.
+  forecasts over the full history.
+- **Speed**: optimized inference, including hardware-specific optimizations for edge,
+  embedded, and industrial PC deployments.
+- **Fine-tuning**: models adapted to your data or pretrained on different datasets for
+  improved performance.
 - **Classification & Regression**: TiRex-2 adapted for classification and regression tasks.
 
 See [TiRex-2 PRO](pro.md) for the full feature comparison, or contact

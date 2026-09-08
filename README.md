@@ -175,10 +175,10 @@ TiRex-2 already provides state-of-the-art performance for zero-shot prediction, 
 
 TiRex-2 PRO extends it with dedicated support and additional capabilities, including:
 
-- **Support**: dedicated NXAI support and engagement.
-- **Streaming**: incremental forecast updates as new observations arrive, without recomputing over the full history.
-- **Speed**: performance-optimized inference, including optimization for dedicated hardware such as edge, embedded, and industrial PC deployments.
-- **Fine-tuning**: models adapted to your data or with different pretraining.
+- **Support**: dedicated support and engagement from NXAI.
+- **Streaming**: incremental forecast updates as new observations arrive, without recomputing forecasts over the full history.
+- **Speed**: optimized inference, including hardware-specific optimizations for edge, embedded, and industrial PC deployments.
+- **Fine-tuning**: models adapted to your data or pretrained on different datasets for improved performance.
 - **Classification & Regression**: TiRex-2 adapted for classification and regression tasks.
 
 See the full feature comparison in the [docs](https://nx-ai.github.io/tirex-2/pro/), or contact us at [contact@nx-ai.com](mailto:contact@nx-ai.com).
