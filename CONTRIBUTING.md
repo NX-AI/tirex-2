@@ -5,7 +5,7 @@ Development and documentation contribution guidelines.
 ## Environment Setup
 
 - **Pixi** (recommended): install [Pixi](https://pixi.prefix.dev/latest/), then run `pixi install`.
-  Environments select a use case (`default`, `test`, `examples`, or `pypi-build`), while named
+  Environments select a use case (`default`, `test`, `examples`, `docs`, or `pypi-build`), while named
   platforms select the operating system and accelerator (e.g. `linux-64-cuda`,
   `linux-64-cuda-126`, or `linux-64-cpu`). Both are defined in
   [`pyproject.toml`](pyproject.toml). Select a platform with `--platform`, for example
@@ -32,9 +32,11 @@ The documentation site lives under [`docs/`](docs/) and is built with
 [MkDocs](https://www.mkdocs.org/) + [Material for MkDocs](https://squidfunk.github.io/mkdocs-material/)
 + [mkdocstrings](https://mkdocstrings.github.io/).
 
-- Install docs dependencies: `pip install -r docs/requirements.txt`
-- Preview locally: `mkdocs serve`
-- Build (as CI does): `mkdocs build --strict`
+- **Pixi** (recommended): preview locally with `pixi run docs`. This automatically installs
+  the `docs` environment and runs `mkdocs serve`. Build with
+  `pixi run -e docs mkdocs build --strict`.
+- **pip** (used by CI): install dependencies with `pip install -r docs/requirements.txt`,
+  preview with `mkdocs serve`, and build with `mkdocs build --strict`.
 - The [API reference](docs/api/) is generated automatically from docstrings in
   `src/tirex2/` via mkdocstrings — update the docstring, not the generated page, and add a
   runnable usage example to any public function or class that doesn't already have one.
