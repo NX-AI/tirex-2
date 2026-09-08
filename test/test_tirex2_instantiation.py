@@ -493,7 +493,7 @@ def test_flex_attention_warm_execution_is_faster_than_dense_attention_on_sparse_
 ):
     torch.manual_seed(3)
     device = "cuda"
-    batch_size = 1
+    batch_size = 4
     seq_len = 8192
     input_dim = 256
     n_heads = 4

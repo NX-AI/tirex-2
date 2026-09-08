@@ -1,0 +1,67 @@
+name: Feature Request
+description: Suggest an idea for this project
+title: "[Feature]: "
+labels: ["feature", "triage"]
+assignees:
+  - daidahao
+body:
+
+  - type: dropdown
+    id: urgency
+    attributes:
+      label: Urgency
+      description: How urgent is this feature request?
+      options:
+        - Low
+        - Medium
+        - High
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      placeholder: Describe the feature you want in one or two sentences.
+    validations:
+      required: true
+
+  - type: textarea
+    id: implementation
+    attributes:
+      label: Implementation
+      placeholder: If you have ideas about how to implement this feature, please share them here.
+    validations:
+      required: false
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      placeholder: If this feature is not implemented, what are the alternatives?
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: Additional Context
+      placeholder: Add any other context or code snippets about the feature request here.
+    validations:
+      required: false
+
+  - type: textarea
+    id: checklist
+    attributes:
+      label: Checklist
+      value: |
+        - [ ] I have searched the existing issues to ensure this has not been reported yet.
+        - [ ] I have checked the documentation to ensure this feature does not already exist.
+        - [ ] I have provided a clear and concise description of the feature.
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting a new feature! We will review your request and get back to you soon.

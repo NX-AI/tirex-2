@@ -7,19 +7,20 @@ This repo contains TiRex-2 inference code. Packaging, dependencies, tasks, and P
 Use Pixi unless the user explicitly asks for conda/mamba.
 
 - Install/update environments: `pixi install`
-- Default CUDA 12.8 runtime env: `cuda128`
-- CUDA 12.6 runtime env: `cuda126`
-- Test envs: `test-cu128`, `test-cu126`
-- CPU example env: `example` (no CUDA packages)
-- CUDA example/benchmark envs: `example-cu128`, `example-cu126`
+- Environments select use cases: `default`, `test`, `examples`, and `pypi-build`.
+- The default Linux and Windows CUDA 13.0 platforms are `linux-64-cuda` and `win-64-cuda`.
+- CUDA 13.2 platforms end in `-cuda-132`; CUDA 12.6 platforms end in `-cuda-126`.
+- CPU-only platforms are `linux-64-cpu` and `win-64-cpu`.
+- The macOS platform is `osx-arm64`.
+- Select a named platform with `--platform` (or `-p`) and an environment with `--environment` (or `-e`).
 
 Common commands:
 
 ```bash
-pixi run test                         # runs pytest in test-cu128
-pixi run -e test-cu126 test           # run tests with CUDA 12.6 env
-pixi run minimal                      # sine-wave smoke example, uses ./model
-pixi run comparison                   # covariate demo, writes figures to output/
+pixi run --platform linux-64-cuda test      # test environment on CUDA 13.0
+pixi run --platform linux-64-cuda-126 test  # test environment on CUDA 12.6
+pixi run -e examples -p linux-64-cpu python examples/sine_wave.py
+pixi run -e examples -p linux-64-cpu python examples/covariate_forecasts.py
 ```
 
 `model` is expected to be a local checkpoint directory or symlink containing `model-config.yaml` and `model.ckpt`. It is gitignored, as are `output/` and `*.csv` benchmark outputs.
@@ -50,17 +51,17 @@ Supported output types: `"torch"`, `"numpy"`, `"gluonts"`, and `"fev"` where the
 Sine-wave smoke test:
 
 ```bash
-pixi run minimal
+pixi run -e examples --platform linux-64-cpu python examples/sine_wave.py
 # or explicitly:
-pixi run -e example python examples/sine_wave.py
+pixi run -e examples --platform linux-64-cuda python examples/sine_wave.py
 ```
 
 Future-known covariate demo:
 
 ```bash
-pixi run comparison
+pixi run -e examples --platform linux-64-cpu python examples/covariate_forecasts.py
 # custom checkpoint/output/scenarios:
-pixi run -e example python examples/covariate_forecasts.py \
+pixi run -e examples --platform linux-64-cuda python examples/covariate_forecasts.py \
   --ckpt ./model \
   --device cpu \
   --scenarios holidays nonstationary \
@@ -85,7 +86,7 @@ export HF_HUB_OFFLINE=1
 Run a quick/small benchmark first:
 
 ```bash
-pixi run fevbench \
+pixi run --platform linux-64-cuda fevbench \
   --tasks examples/fevbench/tasks-mini.yaml \
   --out output/fevbench-mini.csv \
   --device cuda:0 \
@@ -95,7 +96,7 @@ pixi run fevbench \
 Full configured task list:
 
 ```bash
-pixi run fevbench \
+pixi run --platform linux-64-cuda fevbench \
   --tasks examples/fevbench/tasks.yaml \
   --out output/fevbench.csv \
   --device cuda:0 \
@@ -112,7 +113,7 @@ Useful options:
 Use CUDA 12.6 if required by the machine/cluster:
 
 ```bash
-pixi run -e example-cu126 fevbench --tasks examples/fevbench/tasks-mini.yaml
+pixi run --platform linux-64-cuda-126 fevbench --tasks examples/fevbench/tasks-mini.yaml
 ```
 
 ## GiftEval
@@ -122,7 +123,7 @@ Script: `examples/gifteval/run_gifteval.py`
 Download the GiftEval data once:
 
 ```bash
-pixi run -e example-cu128 huggingface-cli download Salesforce/GiftEval \
+pixi run -e examples --platform linux-64-cuda huggingface-cli download Salesforce/GiftEval \
   --repo-type=dataset \
   --local-dir /path/to/gifteval_storage
 ```
@@ -130,7 +131,7 @@ pixi run -e example-cu128 huggingface-cli download Salesforce/GiftEval \
 Run the benchmark:
 
 ```bash
-pixi run gifteval /path/to/gifteval_storage pretrained \
+pixi run --platform linux-64-cuda gifteval /path/to/gifteval_storage pretrained \
   --out output/gifteval.csv \
   --device cuda
 ```
@@ -142,7 +143,7 @@ The script sets `GIFT_EVAL=/path/to/gifteval_storage` before importing the local
 Interactive notebook:
 
 ```bash
-pixi run notebook
+pixi run --platform linux-64-cuda notebook
 # open examples/gifteval/gifteval.ipynb
 ```
 
@@ -151,13 +152,13 @@ pixi run notebook
 Before handing off changes, run at least:
 
 ```bash
-pixi run test
+pixi run --platform linux-64-cuda test
 ```
 
 For packaging sanity:
 
 ```bash
-pixi run -e test-cu128 python -m pip wheel . --no-deps -w /tmp/tirex2-wheel-test
+pixi run -e test --platform linux-64-cuda python -m pip wheel . --no-deps -w /tmp/tirex2-wheel-test
 ```
 
 Do not commit generated files/directories such as `.pixi/`, `__pycache__/`, `output/`, `model`, `*.csv`, or `*.egg-info`.

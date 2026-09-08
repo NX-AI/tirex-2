@@ -1,0 +1,64 @@
+name: Bug Report
+description: File a bug report.
+title: "[Bug]: "
+labels: ["bug", "triage"]
+assignees:
+  - daidahao
+body:
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      placeholder: Describe the bug in one sentence.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps_to_reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: Please provide steps and code snippets to help us reproduce the bug.
+      value: |
+        1. ...
+        2. ...
+
+        Code snippet:
+
+        ```python
+        # Your code here
+        ```
+  - type: textarea
+    id: log_output
+    attributes:
+      label: Log Output
+      placeholder: Paste any relevant log output here.
+      render: shell
+    validations:
+      required: false
+
+  - type: dropdown
+    id: python
+    attributes:
+      label: Python Version
+      options:
+        - 3.11 (Minimum supported)
+        - 3.12
+        - 3.13
+        - 3.14 (Latest tested)
+      default: 0
+    validations:
+      required: true
+
+  - type: textarea
+    id: system_info
+    attributes:
+      label: System Information
+      placeholder: Please provide relevant system information (e.g., OS, hardware specs).
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for filling out this bug report! We will look into the issue as soon as possible.

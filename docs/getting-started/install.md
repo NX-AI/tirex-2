@@ -24,9 +24,12 @@ environment, to ensure it is set up correctly. Install it with:
 curl -fsSL https://pixi.sh/install.sh | sh
 ```
 
-Environments (e.g. `example-cu128`) are defined in
-[`pyproject.toml`](https://github.com/NX-AI/tirex-2/blob/main/pyproject.toml) under
-`tool.pixi.environments`; pick the one matching your CUDA version and use case.
+Environments select a use case (`default`, `test`, `examples`, or `pypi-build`), while named
+platforms select the operating system and accelerator. Both are defined in
+[`pyproject.toml`](https://github.com/NX-AI/tirex-2/blob/main/pyproject.toml). Pixi selects a
+compatible platform automatically, or you can choose one explicitly, for example
+`--platform linux-64-cuda`, `--platform linux-64-cuda-126`, or
+`--platform linux-64-cpu`.
 
 ## Next steps
 
