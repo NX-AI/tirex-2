@@ -4,7 +4,7 @@
 - [ ] Provided a summary of this PR under **Summary**.
 - [ ] Added or updated unit tests ([/test](/test)) affected by this PR and passed all tests.
 - [ ] Maintained or improved code coverage as per "Codedev" report.
-<!-- - [ ] Updated [/CHANGELOG.md](/CHANGELOG.md) to reflect major changes. -->
+- [ ] Updated [/CHANGELOG.md](/CHANGELOG.md) to reflect major changes.
 
 ## Issues
 <!-- Please mention any issues this PR will fix or close. -->
