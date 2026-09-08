@@ -139,8 +139,11 @@ notebook = { cmd = "jupyter lab examples/getting_started.ipynb", default-environ
 gifteval = { cmd = "python examples/gifteval/run_gifteval.py", default-environment = "examples" }
 # requires the path to the fev-bench storage
 fevbench = { cmd = "python examples/fevbench/run_fevbench.py", default-environment = "examples" }
-# build and serve the docs site locally
+# docs tasks:
+# preview the docs site locally
 docs = { cmd = "mkdocs serve", default-environment = "docs" }
+# build the docs site for deployment
+docs-build = { cmd = "mkdocs build --strict", default-environment = "docs" }
 
 [tool.pixi.feature.pypi-build.dependencies]
 python = ">=3.11,<3.14"

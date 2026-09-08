@@ -35,8 +35,9 @@ The documentation site lives under [`docs/`](docs/) and is built with
 - **Pixi** (recommended): preview locally with `pixi run docs`. This automatically installs
   the `docs` environment and runs `mkdocs serve`. Build with
   `pixi run -e docs mkdocs build --strict`.
-- **pip** (used by CI): install dependencies with `pip install -r docs/requirements.txt`,
-  preview with `mkdocs serve`, and build with `mkdocs build --strict`.
+- CI installs the `docs` environment from `pixi.lock` and builds with
+  `pixi run --frozen -e docs mkdocs build --strict`. Documentation dependencies are defined
+  in [`pyproject.toml`](pyproject.toml).
 - The [API reference](docs/api/) is generated automatically from docstrings in
   `src/tirex2/` via mkdocstrings — update the docstring, not the generated page, and add a
   runnable usage example to any public function or class that doesn't already have one.

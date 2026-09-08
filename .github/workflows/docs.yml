@@ -20,15 +20,13 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
         with:
-          python-version: "3.12"
-
-      - name: Install documentation dependencies
-        run: pip install -r docs/requirements.txt
+          environments: docs
+          frozen: true
 
       - name: Build documentation
-        run: mkdocs build --strict
+        run: pixi run --frozen docs-build
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453 # v4.1.0
