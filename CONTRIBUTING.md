@@ -28,20 +28,12 @@ follow `type(scope): summary` with one of `chore`, `ci`, `docs`, `feat`, `fix`, 
 
 ## Documentation Specifics
 
-The documentation site lives under [`docs/`](docs/) and is built with
-[MkDocs](https://www.mkdocs.org/) + [Material for MkDocs](https://squidfunk.github.io/mkdocs-material/)
-+ [mkdocstrings](https://mkdocstrings.github.io/).
+The MkDocs site lives in [`docs/`](docs/) and publishes to [GitHub Pages](https://nx-ai.github.io/tirex-2/) via [`.github/workflows/docs.yml`](.github/workflows/docs.yml). To contribute:
 
-- **Pixi** (recommended): preview locally with `pixi run docs`. This automatically installs
-  the `docs` environment and runs `mkdocs serve`. Build with
-  `pixi run -e docs mkdocs build --strict`.
-- CI installs the `docs` environment from `pixi.lock` and builds with
-  `pixi run --frozen -e docs mkdocs build --strict`. Documentation dependencies are defined
-  in [`pyproject.toml`](pyproject.toml).
-- The [API reference](docs/api/) is generated automatically from docstrings in
-  `src/tirex2/` via mkdocstrings — update the docstring, not the generated page, and add a
-  runnable usage example to any public function or class that doesn't already have one.
-- Add new guides under `docs/` and register them in the `nav` section of [`mkdocs.yml`](mkdocs.yml).
+- Add guides under `docs/` and register them in [`mkdocs.yml`](mkdocs.yml) under `nav`.
+- Update [API reference](docs/api/) content through docstrings in `src/tirex2/`, including runnable examples for public functions and classes.
+- Preview locally: `pixi run docs`.
+- Build with warnings treated as errors (as CI does): `pixi run --frozen docs-build`.
 
 ## Commit & Review Etiquette
 
