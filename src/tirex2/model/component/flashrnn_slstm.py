@@ -8,7 +8,6 @@ from dataclasses import dataclass
 from math import sqrt
 from typing import Literal
 
-import einops
 import torch
 from flashrnn import FlashRNNConfig, flashrnn
 from torch import nn
@@ -158,7 +157,7 @@ class _FlashRNNLayer(nn.Module, ABC):
             ogate,
         )
         Wx = torch.stack(gates, dim=2)
-        Wx = einops.rearrange(Wx, "... (h d)->... h d", h=self.config.num_heads)
+        Wx = Wx.reshape(*Wx.shape[:-1], self.config.num_heads, -1)
 
         y, slstm_state = flashrnn(
             Wx=Wx,
@@ -200,7 +199,7 @@ class _FlashRNNLayer(nn.Module, ABC):
         )
 
         Wx = torch.stack(gates, dim=2)
-        Wx = einops.rearrange(Wx, "... (h hd) -> ... h hd", h=self.config.num_heads)
+        Wx = Wx.reshape(*Wx.shape[:-1], self.config.num_heads, -1)
         y, _ = flashrnn(
             Wx=Wx,
             R=self.get_R(),
