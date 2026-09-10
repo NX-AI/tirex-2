@@ -12,17 +12,16 @@ learning capabilities.
 | Zero-shot in-context forecasting | ✅ | ✅ |
 | State tracking | ✅ | ✅ |
 | Multivariate forecasting incl. past and future-known covariates | ✅ | ✅ |
-| Quantile forecasting (9 exposed quantiles, 10-90%) | ✅ | ✅ |
-| Self-hostable inference server (HTTP, MQTT, MCP) | ✅ | ✅ |
+| Quantile forecasting | ✅ | ✅ |
+| Self-hostable inference server | ✅ | ✅ |
 | Incremental streaming updates without full-history recompute | ❌ | ✅ |
-| Fine-grained quantile forecasting (more than 10 quantiles) | ❌ | ✅ |
-| Embedding generation | ❌ | ✅ |
-| Classification (embeddings + classical ML head: XGBoost, Random Forest, LightGBM, CatBoost, etc.) | ❌ | ✅ |
-| Regression (embeddings + classical ML head: XGBoost, Random Forest, LightGBM, CatBoost, etc.) | ❌ | ✅ |
+| Fine-grained quantile forecasting | ❌ | ✅ |
+| Classification | ❌ | ✅ |
+| Regression | ❌ | ✅ |
 | Anomaly detection | ❌ | ✅ |
-| Fine-tuning / adaptation on customer data or custom pretraining (incl. LoRA-based adapters) | ❌ | ✅ |
-| Hardware-specific speed optimization (edge, embedded, industrial PC) | ❌ | ✅ |
-| NXAI support and engagement | ❌ | ✅ |
+| Fine-tuning / adaptation on customer data or custom pretraining | ❌ | ✅ |
+| Hardware-specific speed optimization | ❌ | ✅ |
+| NXAI support | ❌ | ✅ |
 
 ## Get in touch
 
