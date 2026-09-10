@@ -65,6 +65,8 @@ jobs:
           # PyTorch 2.8 imports setuptools from torch.utils.cpp_extension.
           pixi add --feature test "python=3.11.*" "setuptools>=68" --no-install
           pixi add --feature test --platform linux-64-cpu --pypi "torch==2.8.0" --index https://download.pytorch.org/whl/cpu --no-install
+          # Match PyTorch 2.8's Triton version; flashrnn otherwise pulls an unconstrained version.
+          pixi add --feature test --platform linux-64-cpu --pypi "triton==3.4.0" --no-install
 
       - name: Run tests on CPU
         run: pixi run test
