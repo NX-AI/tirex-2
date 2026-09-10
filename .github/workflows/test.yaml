@@ -59,7 +59,8 @@ jobs:
 
       - name: Select lowest supported Python and CPU torch versions
         run: |
-          pixi add --feature test "python=3.11.*" --no-install
+          # PyTorch 2.8 imports setuptools from torch.utils.cpp_extension.
+          pixi add --feature test "python=3.11.*" "setuptools>=68" --no-install
           pixi add --feature test --platform linux-64-cpu --pypi "torch==2.8.0" --index https://download.pytorch.org/whl/cpu --no-install
 
       - name: Run tests on CPU
