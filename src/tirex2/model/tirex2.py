@@ -455,14 +455,13 @@ class TiRex2(nn.Module):
         elif context.shape[-1] > max_ts_len:
             context = context[..., -max_ts_len:]
 
-        with torch.no_grad():
-            batch = {"x": context, "group_vector": group_vector, "target_mask": target_mask}
-            pred = self(batch)
-            # Drop the last token (predicts beyond sequence end); the remaining
-            # tail of length future_len covers exactly the 10 future patches
-            # that were directly supervised during training.
-            pred = pred[..., : -self.output_patch_size]
-            pred = pred[:, :, -self.future_len :]
+        batch = {"x": context, "group_vector": group_vector, "target_mask": target_mask}
+        pred = self(batch)
+        # Drop the last token (predicts beyond sequence end); the remaining
+        # tail of length future_len covers exactly the 10 future patches
+        # that were directly supervised during training.
+        pred = pred[..., : -self.output_patch_size]
+        pred = pred[:, :, -self.future_len :]
 
         return pred[:, :, :prediction_length]
 
