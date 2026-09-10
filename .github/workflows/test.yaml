@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   core-tests:
     name: core-tests (py${{ matrix.python-version }}, ${{ matrix.os }})
@@ -74,8 +78,6 @@ jobs:
   core-tests-preview:
     name: core-tests preview (py3.15, ubuntu-latest)
     runs-on: ubuntu-latest
-    # Preview dependency availability and compatibility should not block stable CI.
-    continue-on-error: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
@@ -84,6 +86,8 @@ jobs:
           cache: false
 
       - name: Select preview Python version for the test environment
+        # Preview dependency availability and compatibility should not block stable CI.
+        continue-on-error: true
         run: |
           pixi workspace channel add --feature test conda-forge/label/python_rc --priority=-1 --no-install
           pixi add --feature test --platform linux-64-cpu "python=3.15.*" --no-install
