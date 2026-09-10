@@ -85,7 +85,7 @@ jobs:
 
       - name: Select preview Python version for the test environment
         run: |
-          pixi workspace channel add --feature test conda-forge/label/python_rc --no-install
+          pixi workspace channel add --feature test conda-forge/label/python_rc --priority -1 --no-install
           pixi add --feature test --platform linux-64-cpu "python=3.15.*" --no-install
 
       - name: Run tests on CPU
