@@ -6,6 +6,9 @@ on:
       - main
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   core-tests:
     name: core-tests (py${{ matrix.python-version }}, ${{ matrix.os }})
