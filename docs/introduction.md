@@ -27,7 +27,7 @@ principle, but this open-source release does not itself expose an incremental,
 state-carrying forecast API — every call to
 [`forecast`][tirex2.api_adapter.forecast.ForecastModel.forecast] recomputes over the full
 context array you pass in. Incremental (no-recompute) streaming updates are part of
-[TiRex-2 Pro](pro.md). See [How-to: Streaming](how-to/streaming.md) for the full explanation.
+[TiRex-2 PRO](pro.md). See [How-to: Streaming](how-to/streaming.md) for the full explanation.
 
 ## Citation
 
