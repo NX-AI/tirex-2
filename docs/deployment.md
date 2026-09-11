@@ -10,7 +10,7 @@ Source code for the inference server is in
 [`inference/`](https://github.com/NX-AI/tirex-2/tree/main/inference) and this page documents its
 deployment.
 
-## Container Images
+## Container images
 
 Two container images are published:
 
@@ -20,7 +20,7 @@ Two container images are published:
   NVIDIA Container Toolkit, or on Windows via Docker Desktop's WSL2 backend with NVIDIA WSL
   GPU support.
 
-### Running a Container
+### Running a container
 
 To start a container from either image, run:
 
@@ -36,7 +36,7 @@ To start a container from either image, run:
     docker run -it --gpus 1 -p 8000:8000 ghcr.io/nx-ai/tirex2-gpu
     ```
 
-???+ info "Warmup and Compilation"
+???+ info "Warmup and compilation"
 
     Both images download the model and torch-compile the **univariate** forecast path at startup
     (C++ on CPU, Triton on GPU) to enable fast inference. This can take up to 20 seconds. Changing
@@ -79,25 +79,28 @@ To start a container from either image, run:
 
 ## HTTP API
 
-Once running, the HTTP API is at `http://localhost:8000/` (there's no route at the bare `/`
-path, so a plain `curl http://localhost:8000/` returns a 404 — that's expected), with Swagger
-docs at [http://localhost:8000/docs](http://localhost:8000/docs) and a liveness probe at
-`GET /health` (also used internally by the Docker `HEALTHCHECK`).
+- **Base URL:** `http://localhost:8000` (`/` returns 404).
+- **Swagger docs:** [http://localhost:8000/docs](http://localhost:8000/docs).
+- **Liveness probe:** [`GET /health`](http://localhost:8000/health), also used by Docker's `HEALTHCHECK`.
 
-Every request is batched — pass a list of series even for a single forecast. There is no
-internal batching, so choose a batch size appropriate for your hardware; larger batches are
-more efficient but too-large batches can cause out-of-memory errors.
+Send a list of series with each request, even if you only need one forecast. The server processes
+each batch as provided. Larger batches are more efficient, but can run out of memory, so choose
+a batch size that fits your hardware.
 
-The HTTP API has no authentication. Only expose it on trusted networks — don't port-forward it
-directly to the internet.
+???+ warning "Caution: no authentication"
+
+    The HTTP API doesn't require authentication, so keep it on a trusted network and don't expose
+    it directly to the Internet.
 
 ### Univariate endpoints
 
-`POST /univariate/forecast/mean` and `POST /univariate/forecast/quantiles` take a batch of
-plain 1D series. This endpoint shape has no covariate fields — any `past_covariates` /
-`future_covariates` in the request body are silently ignored (not an error). To condition on
-covariates, even for a single-variate series, use the multivariate endpoints below with a
-one-row `target`.
+Use `POST /univariate/forecast/mean` or `POST /univariate/forecast/quantiles` to forecast a batch of
+one-dimensional series with no covariates.
+
+???+ note "Two endpoints for different outputs"
+
+    The `/mean` endpoints return a batch of median forecasts. The `/quantiles` endpoints return a
+    batch of all 9 quantiles (10%, 20%, ..., 90%) for the same inputs.
 
 ```bash
 # Univariate series
@@ -117,10 +120,16 @@ curl -s -X POST "http://localhost:8000/univariate/forecast/mean" \
       }'
 ```
 
+???+ note "Covariates are ignored"
+
+    This endpoint shape has no covariate fields. To condition on covariates, even for a
+    single-variate series, use the multivariate endpoints below with a one-row `target`.
+
 ### Multivariate endpoints
 
-`POST /multivariate/forecast/mean` and `POST /multivariate/forecast/quantiles` take a batch
-of objects, each with a multi-row `target` and optional `past_covariates` / `future_covariates`:
+Use `POST /multivariate/forecast/mean` or `POST /multivariate/forecast/quantiles` to forecast a
+batch of multivariate time series. Each item contains a multi-row `target` and optional
+multi-row `past_covariates` and `future_covariates` fields:
 
 ```bash
 # Multivariate (multi-target) series
@@ -144,21 +153,20 @@ curl -s -X POST "http://localhost:8000/multivariate/forecast/mean" \
       }'
 ```
 
-`past_covariates` must have the same length as `target` (the context length). `future_covariates`
-must span at least the context plus the prediction horizon (`context_length + prediction_length`);
-extra trailing steps beyond that are ignored. A wrong length is rejected with a `500` error
-naming the expected and actual lengths, rather than silently producing a misaligned forecast.
+???+ note "Covariate length requirements"
+
+    `past_covariates` must have the same length as `target` (the context length).
+    `future_covariates` must span at least the context plus the prediction horizon (`context_length
+    + prediction_length`). Any extra trailing steps beyond that are ignored. A wrong length is
+    rejected with a `500` error.
 
 Batching multiple multivariate series works the same way, as a list under `context`. See
 [inference/README.md](https://github.com/NX-AI/tirex-2/blob/main/inference/README.md) for the
 full set of curl/Python examples, including batched multivariate-with-covariates requests.
 
-### `/quantiles` vs `/mean`
+### Python client
 
-The `/mean` endpoints return the median forecast. The `/quantiles` endpoints return all 9
-quantiles (10, 20, 30, 40, 50, 60, 70, 80, 90%) for the same inputs.
-
-### Python client example
+HTTP API can be accessed from Python via `requests` package:
 
 ```python
 import requests
