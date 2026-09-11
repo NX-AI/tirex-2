@@ -110,6 +110,7 @@ torch = { version = "*", index = "https://download.pytorch.org/whl/cpu" }
 default = []
 test = ["test"]
 examples = ["examples"]
+docs = ["docs"]
 pypi-build = ["pypi-build"]
 
 [tool.pixi.feature.test.pypi-dependencies]
@@ -120,6 +121,15 @@ pytest = "*"
 tirex-2 = { path = ".", editable = true, extras = ["examples", "gluonts", "fev"] }
 toolz = ">=0.12.1"
 
+[tool.pixi.feature.docs.dependencies]
+python = ">=3.11,<3.14"
+
+[tool.pixi.feature.docs.pypi-dependencies]
+mkdocs = ">=1.6,<2"
+mkdocs-material = ">=9.5"
+mkdocstrings = { version = ">=0.26", extras = ["python"] }
+mkdocs-material-extensions = ">=1.3"
+
 [tool.pixi.tasks]
 test = { cmd = "pytest test/", default-environment = "test" }
 notebook = { cmd = "jupyter lab examples/getting_started.ipynb", default-environment = "examples" }
@@ -128,6 +138,11 @@ notebook = { cmd = "jupyter lab examples/getting_started.ipynb", default-environ
 gifteval = { cmd = "python examples/gifteval/run_gifteval.py", default-environment = "examples" }
 # requires the path to the fev-bench storage
 fevbench = { cmd = "python examples/fevbench/run_fevbench.py", default-environment = "examples" }
+# docs tasks:
+# preview the docs site locally
+docs = { cmd = "mkdocs serve", default-environment = "docs" }
+# build the docs site for deployment
+docs-build = { cmd = "mkdocs build --strict", default-environment = "docs" }
 
 [tool.pixi.feature.pypi-build.dependencies]
 python = ">=3.11,<3.14"

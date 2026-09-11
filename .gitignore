@@ -25,3 +25,5 @@ test/*
 !test/test_references.py
 !test/references/
 /venv
+
+.DS_Store
