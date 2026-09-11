@@ -38,7 +38,8 @@ To start a container from either image, run:
 
 ???+ info "Warmup and compilation"
 
-    Both images download the model and torch-compile the **univariate** forecast path at startup
+    Both images download the model and compile the **univariate** forecast path with
+    `torch.compile` at startup
     (C++ on CPU, Triton on GPU) to enable fast inference. This can take up to 20 seconds. Changing
     context length or prediction horizon does not trigger recompilation.
 
@@ -49,7 +50,7 @@ To start a container from either image, run:
     The weights are not baked into the image — the container downloads them from Hugging Face on
     first use. The cache path differs by image:
 
-    - **CPU image**: runs as `appuser` (uid 1000), home `/home/appuser`.
+    - **CPU image**: runs as `appuser` (UID 1000), home `/home/appuser`.
     - **GPU image**: runs as `ubuntu`, home `/home/ubuntu`.
 
     The cache lands at the default location (`~/.cache/huggingface`) under that user's home. Mount a
@@ -66,7 +67,7 @@ To start a container from either image, run:
     === "GPU Image"
 
         ```bash
-        docker run -it -p 8000:8000 \
+        docker run -it --gpus 1 -p 8000:8000 \
           -v tirex2-cache:/home/ubuntu/.cache/huggingface \
           ghcr.io/nx-ai/tirex2-gpu
         ```
@@ -90,7 +91,7 @@ a batch size that fits your hardware.
 ???+ warning "Caution: no authentication"
 
     The HTTP API doesn't require authentication, so keep it on a trusted network and don't expose
-    it directly to the Internet.
+    it directly to the internet.
 
 ### Univariate endpoints
 
@@ -123,7 +124,7 @@ curl -s -X POST "http://localhost:8000/univariate/forecast/mean" \
 ???+ note "Covariates are ignored"
 
     This endpoint shape has no covariate fields. To condition on covariates, even for a
-    single-variate series, use the multivariate endpoints below with a one-row `target`.
+    univariate series, use the multivariate endpoints below with a one-row `target`.
 
 ### Multivariate endpoints
 
@@ -156,8 +157,8 @@ curl -s -X POST "http://localhost:8000/multivariate/forecast/mean" \
 ???+ note "Covariate length requirements"
 
     `past_covariates` must have the same length as `target` (the context length).
-    `future_covariates` must span at least the context plus the prediction horizon (`context_length
-    + prediction_length`). Any extra trailing steps beyond that are ignored. A wrong length is
+    `future_covariates` must span at least the context plus the prediction horizon
+    (`context_length + prediction_length`). Any extra trailing steps beyond that are ignored. A wrong length is
     rejected with a `500` error.
 
 Batching multiple multivariate series works the same way, as a list under `context`. See
@@ -166,7 +167,7 @@ full set of curl/Python examples, including batched multivariate-with-covariates
 
 ### Python client
 
-HTTP API can be accessed from Python via `requests` package:
+You can access the HTTP API from Python with the `requests` package:
 
 ```python
 import requests
@@ -180,37 +181,57 @@ print(resp.json())
 
 ## MQTT API
 
-The MQTT integration uses **MQTT v5** with a request/reply pattern: TiRex-2 subscribes to
-fixed forecast *request* topics and publishes each result back to the
-**response topic the requester specifies on the request** (the MQTT v5 `Response Topic`
-property). Every client receives only its own results — there is **no shared result topic**,
-unlike a design where all clients read from one common response topic.
+The MQTT integration uses **MQTT v5**. Send forecast requests to the request topics and set the
+`Response Topic` property to tell TiRex-2 where to send the results. Each client can use its
+own response topic, so there's no need for a shared results topic.
 
-Requests without a Response Topic are rejected. Optionally set `Correlation Data` to match a
-reply back to its request.
+Requests must include a `Response Topic`. You can also set `Correlation Data` to match replies
+to their requests.
 
-You need a **v5-capable** MQTT broker. For quick testing, a public broker like
-[broker.emqx.io](https://broker.emqx.io) works (don't send sensitive data to a public
-broker). The [MQTTX CLI](https://mqttx.app/cli) is convenient for testing:
+You'll need a broker that supports **MQTT v5**. For a quick test, you can use
+[broker.emqx.io](https://broker.emqx.io) with the [MQTTX CLI](https://mqttx.app/cli).
+Don't send sensitive data through a public broker.
+
+### Server configuration
+
+Start TiRex-2 with MQTT enabled and connect it to the broker:
+
+=== "CPU Image"
+
+    ```bash
+    docker run -p 8000:8000 -it \
+      -e MQTT_ENABLED=1 \
+      -e MQTT_BROKER_HOST=broker.emqx.io \
+      -e MQTT_BROKER_PORT=1883 \
+      ghcr.io/nx-ai/tirex2-cpu
+    ```
+
+=== "GPU Image"
+
+    ```bash
+    docker run --gpus 1 -p 8000:8000 -it \
+      -e MQTT_ENABLED=1 \
+      -e MQTT_BROKER_HOST=broker.emqx.io \
+      -e MQTT_BROKER_PORT=1883 \
+      ghcr.io/nx-ai/tirex2-gpu
+    ```
+
+### Client usage
+
+In a new terminal, install the MQTTX CLI on Linux x86_64:
 
 ```bash
-# Linux x86_64 — standalone binary
-curl -sL https://github.com/emqx/MQTTX/releases/latest/download/mqttx-cli-linux-x64 -o mqttx && sudo install mqttx /usr/local/bin/mqttx
+curl -sL https://github.com/emqx/MQTTX/releases/latest/download/mqttx-cli-linux-x64 -o mqttx \
+  && sudo install mqttx /usr/local/bin/mqttx
 ```
 
-Start the container with MQTT enabled:
-
-```bash
-docker run -p 8000:8000 -it -e MQTT_ENABLED=1 -e MQTT_BROKER_HOST=broker.emqx.io -e MQTT_BROKER_PORT=1883 ghcr.io/nx-ai/tirex2-cpu
-```
-
-Subscribe to your own reply topic first, over MQTT v5:
+Subscribe to your reply topic using MQTT v5:
 
 ```bash
 mqttx sub -V 5 -t 'tirex/my-client/result' -h 'broker.emqx.io' -p 1883
 ```
 
-Then send a forecast request, pointing its Response Topic at that reply topic:
+Then, in a separate terminal, send a forecast request with `Response Topic` set to your reply topic:
 
 ```bash
 mqttx pub -V 5 \
@@ -221,16 +242,15 @@ mqttx pub -V 5 \
   -m '{"id": "1234", "context": [[0, 1, 2, 3]], "prediction_length": 4}'
 ```
 
-The result is published to your Response Topic, with the Correlation Data echoed back.
-Successful results contain `mean` and `quantiles`; if an error occurs during processing, the
-message published to the same Response Topic contains an `error` field instead.
+The reply arrives on your chosen topic with the same `Correlation Data`. It contains `mean`
+and `quantiles` if the forecast succeeds, or an `error` field if processing fails.
 
 ## MCP
 
-Start the container as in the HTTP API section above, then connect a tool like Claude
+Start the container as in the [HTTP API section above](#http-api), then connect a tool like Claude
 Desktop by following its
 [guide for connecting local servers](https://modelcontextprotocol.io/docs/develop/connect-local-servers).
-Add the following to `claude_desktop_config.json` under `mcpServers`:
+Add the following `mcpServers` entry to `claude_desktop_config.json`:
 
 ```json
 {
@@ -240,59 +260,84 @@ Add the following to `claude_desktop_config.json` under `mcpServers`:
 }
 ```
 
-Two MCP tools are exposed: a univariate `tirex_model(context, prediction_length)` and a
-multivariate `tirex_model_multivariate(target, prediction_length, past_covariates,
-future_covariates)`. Unlike the HTTP and MQTT APIs, MCP is **not batched** — each call
-forecasts a single series.
+Two MCP tools are exposed:
+
+- **Univariate:** `tirex_model(context, prediction_length)`.
+- **Multivariate:**
+  `tirex_model_multivariate(target, prediction_length, past_covariates, future_covariates)`.
+
+Unlike the HTTP and MQTT APIs, MCP is **not batched** — each call forecasts a single series.
 
 ## Configuration options
 
-Set these as environment variables via `-e`, e.g.
-`docker run -e MODEL_DEVICE=cuda ghcr.io/nx-ai/tirex2-cpu`:
+Set environment variables with `-e`, for example:
 
-| Environment Variable | Default Value | Description |
-| :-------------------- | :------------- | :----------- |
-| `MODEL_PATH` | `NX-AI/TiRex-2` | The Hugging Face model id. |
-| `MODEL_DEVICE` | `cpu` | Device to run the model on (`cpu` or `cuda`). |
-| `HTTP_HOST` | `0.0.0.0` | Host the HTTP server binds to. |
-| `HTTP_PORT` | `8000` | Port the HTTP server binds to. |
-| `MQTT_ENABLED` | `0` | Enable MQTT client functionality (`1`=True, `0`=False). |
-| `MQTT_BROKER_HOST` | `None` | Hostname or IP address of the MQTT broker. |
-| `MQTT_BROKER_PORT` | `None` | Port of the MQTT broker. |
-| `MQTT_BROKER_USERNAME` | `None` | Username for authenticating with the MQTT broker (if required). |
-| `MQTT_BROKER_PASSWORD` | `None` | Password for authenticating with the MQTT broker (if required). |
-| `MQTT_CLIENT_ID` | `tirex-worker` | Stable, unique client id so the broker can resume the session on reconnect. |
-| `MQTT_SESSION_EXPIRY` | `3600` | Seconds the broker retains the session (and queued requests) while disconnected. |
-| `MQTT_TOPIC_UNIVARIATE_FORECAST` | `tirex/univariate/forecast/request` | Topic to subscribe to for univariate forecast requests. |
-| `MQTT_TOPIC_MULTIVARIATE_FORECAST` | `tirex/multivariate/forecast/request` | Topic to subscribe to for multivariate forecast requests. |
+=== "CPU Image"
+
+    ```bash
+    docker run -p 8000:8000 -e MODEL_DEVICE=cpu ghcr.io/nx-ai/tirex2-cpu
+    ```
+
+=== "GPU Image"
+
+    ```bash
+    docker run --gpus 1 -p 8000:8000 -e MODEL_DEVICE=cuda ghcr.io/nx-ai/tirex2-gpu
+    ```
+
+Available options are:
+
+| Environment Variable               | Default Value                         | Description                                                                      |
+| :--------------------------------- | :------------------------------------ | :------------------------------------------------------------------------------- |
+| `MODEL_PATH`                       | `NX-AI/TiRex-2`                       | The Hugging Face model ID.                                                       |
+| `MODEL_DEVICE`                     | `cpu`                                 | Device to run the model on (`cpu` or `cuda`).                                    |
+| `HTTP_HOST`                        | `0.0.0.0`                             | Host the HTTP server binds to.                                                   |
+| `HTTP_PORT`                        | `8000`                                | Port the HTTP server binds to.                                                   |
+| `MQTT_ENABLED`                     | `0`                                   | Enable MQTT client functionality (`1` = true, `0` = false).                      |
+| `MQTT_BROKER_HOST`                 | `None`                                | Hostname or IP address of the MQTT broker.                                       |
+| `MQTT_BROKER_PORT`                 | `None`                                | Port of the MQTT broker.                                                         |
+| `MQTT_BROKER_USERNAME`             | `None`                                | Username for authenticating with the MQTT broker (if required).                  |
+| `MQTT_BROKER_PASSWORD`             | `None`                                | Password for authenticating with the MQTT broker (if required).                  |
+| `MQTT_CLIENT_ID`                   | `tirex-worker`                        | Stable, unique client ID so the broker can resume the session on reconnect.      |
+| `MQTT_SESSION_EXPIRY`              | `3600`                                | Seconds the broker retains the session (and queued requests) while disconnected. |
+| `MQTT_TOPIC_UNIVARIATE_FORECAST`   | `tirex/univariate/forecast/request`   | Topic to subscribe to for univariate forecast requests.                          |
+| `MQTT_TOPIC_MULTIVARIATE_FORECAST` | `tirex/multivariate/forecast/request` | Topic to subscribe to for multivariate forecast requests.                        |
 
 ## Building the images yourself
 
 ```bash
 cd inference
-docker build -f Dockerfile.cpu -t tirex2-inference-cpu .
-docker run --rm -p 8000:8000 tirex2-inference-cpu
 ```
 
-```bash
-docker build -f Dockerfile.gpu -t tirex2-inference-gpu .
-docker run --rm --gpus 1 -p 8000:8000 tirex2-inference-gpu
-```
+=== "CPU Image"
+
+    ```bash
+    docker build -f Dockerfile.cpu -t tirex2-inference-cpu .
+    docker run --rm -p 8000:8000 tirex2-inference-cpu
+    ```
+
+=== "GPU Image"
+
+    ```bash
+    docker build -f Dockerfile.gpu -t tirex2-inference-gpu .
+    docker run --rm --gpus 1 -p 8000:8000 tirex2-inference-gpu
+    ```
 
 ## Development setup
+
+In a virtual environment, install the requirements and start the server:
 
 ```bash
 pip install -r requirements.txt -r requirements-dev.txt
 python -m app.main
 ```
 
-Run the tests against a locally-started server:
+Run the tests against a locally started server:
 
 ```bash
 pytest tests
 ```
 
-Or against an already-running container:
+Or against an running container:
 
 ```bash
 TEST_START_SERVER=0 TEST_PORT=8000 pytest tests -s
