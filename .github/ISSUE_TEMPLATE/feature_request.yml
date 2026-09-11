@@ -1,9 +1,7 @@
 name: Feature Request
 description: Suggest an idea for this project
 title: "[Feature]: "
-labels: ["feature", "triage"]
-assignees:
-  - daidahao
+labels: ["enhancement", "triage"]
 body:
 
   - type: dropdown

@@ -53,6 +53,7 @@ nav:
   - Benchmarks: benchmarks.md
   - Deployment: deployment.md
   - TiRex-2 Pro: pro.md
+  - Changelog: changelog.md
   - Contributing: contributing.md
   - About NXAI: about.md
   - API reference:
