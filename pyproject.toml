@@ -17,6 +17,7 @@ dependencies = [
 	"xlstm~=2.0.3",
 	"PyYAML>=6",
 	"huggingface-hub>=0.35.3",
+	"narwhals>=2.0",
 ]
 
 [project.optional-dependencies]
@@ -114,8 +115,13 @@ docs = ["docs"]
 pypi-build = ["pypi-build"]
 
 [tool.pixi.feature.test.pypi-dependencies]
-tirex-2 = { path = ".", editable = true, extras = ["gluonts", "fev"] }
 pytest = "*"
+# The dataframe adapter is backend-agnostic (narwhals is a core dependency), so the concrete
+# dataframe libraries are a test-only concern
+pandas = "*"
+polars = ">=1.0"
+pyarrow = ">=15.0"
+tirex-2 = { path = ".", editable = true, extras = ["gluonts", "fev"] }
 
 [tool.pixi.feature.examples.pypi-dependencies]
 tirex-2 = { path = ".", editable = true, extras = ["examples", "gluonts", "fev"] }

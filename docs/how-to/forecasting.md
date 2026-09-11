@@ -148,6 +148,14 @@ retried, without affecting the rest of the call.
 | `"numpy"` | list of `numpy.ndarray`, shape `(V, 9, H)` | — |
 | `"gluonts"` | list of GluonTS `QuantileForecast` | `pip install "tirex-2[gluonts]"` |
 | `"fev"` | a `datasets.DatasetDict` for `fev.Task.evaluation_summary` | `pip install "tirex-2[fev]"` |
+| `"dataframe"` | one long-format frame, in the input's dataframe library | a dataframe library |
+| `"pandas"` | the same frame, always as pandas | `pip install pandas` |
+
+`"dataframe"` and `"pandas"` are the natural fit for
+[`forecast_df`][tirex2.api_adapter.forecast.ForecastModel.forecast_df] (where `"dataframe"` is the
+default) — see [DataFrames](dataframes.md). They work from any forecast call, but without an input
+frame there is no id or time axis to carry over, so rows fall back to integer positions and
+generated target names.
 
 The 9 quantiles are the levels `0.1, 0.2, ..., 0.9`, with index `4` being the median.
 
