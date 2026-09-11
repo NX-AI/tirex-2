@@ -85,8 +85,8 @@ To start a container from either image, run:
 - **Liveness probe:** [`GET /health`](http://localhost:8000/health), also used by Docker's `HEALTHCHECK`.
 
 Send a list of series with each request, even if you only need one forecast. The server processes
-each batch as provided. Larger batches are more efficient, but can run out of memory, so choose
-a batch size that fits your hardware.
+requests in batches of up to 512 series and reduces the batch size if device memory runs out.
+A single batch can still exceed available memory, so size your requests for your hardware.
 
 ???+ warning "Caution: no authentication"
 
@@ -247,7 +247,7 @@ and `quantiles` if the forecast succeeds, or an `error` field if processing fail
 
 ## MCP
 
-Start the container as in the [HTTP API section above](#http-api), then connect a tool like Claude
+Start the container as in [Running a container](#running-a-container), then connect a tool like Claude
 Desktop by following its
 [guide for connecting local servers](https://modelcontextprotocol.io/docs/develop/connect-local-servers).
 Add the following `mcpServers` entry to `claude_desktop_config.json`:
@@ -289,7 +289,7 @@ Available options are:
 | Environment Variable               | Default Value                         | Description                                                                      |
 | :--------------------------------- | :------------------------------------ | :------------------------------------------------------------------------------- |
 | `MODEL_PATH`                       | `NX-AI/TiRex-2`                       | The Hugging Face model ID.                                                       |
-| `MODEL_DEVICE`                     | `cpu`                                 | Device to run the model on (`cpu` or `cuda`).                                    |
+| `MODEL_DEVICE`                     | `cpu` (CPU image), `cuda` (GPU image) | Device to run the model on (`cpu` or `cuda`).                                    |
 | `HTTP_HOST`                        | `0.0.0.0`                             | Host the HTTP server binds to.                                                   |
 | `HTTP_PORT`                        | `8000`                                | Port the HTTP server binds to.                                                   |
 | `MQTT_ENABLED`                     | `0`                                   | Enable MQTT client functionality (`1` = true, `0` = false).                      |
@@ -324,14 +324,15 @@ cd inference
 
 ## Development setup
 
-In a virtual environment, install the requirements and start the server:
+From the `inference/` directory, activate a virtual environment, install the requirements,
+and start the server:
 
 ```bash
 pip install -r requirements.txt -r requirements-dev.txt
 python -m app.main
 ```
 
-Run the tests against a locally started server:
+The test suite starts its own server by default:
 
 ```bash
 pytest tests
