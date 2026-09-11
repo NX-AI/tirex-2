@@ -6,87 +6,83 @@ TiRex-2 ships a Docker-based inference server that exposes the model over three 
 - **MQTT** (request/reply over MQTT v5)
 - **MCP** (Model Context Protocol, for tools like Claude Desktop)
 
-Source: [`inference/`](https://github.com/NX-AI/tirex-2/tree/main/inference) in the repository
-— this page documents what is actually implemented there.
+Source code for the inference server is in
+[`inference/`](https://github.com/NX-AI/tirex-2/tree/main/inference) and this page documents its
+deployment.
 
-## Images
+## Container Images
 
 Two container images are published:
 
-- `ghcr.io/nx-ai/tirex2-cpu` — Linux image for `linux/amd64` and `linux/arm64`. Runs on Linux,
+- [`ghcr.io/nx-ai/tirex2-cpu`](https://ghcr.io/nx-ai/tirex2-cpu) — Linux image for `linux/amd64` and `linux/arm64`. Runs on Linux,
   macOS, or Windows via Docker Desktop's Linux container backend.
-- `ghcr.io/nx-ai/tirex2-gpu` — CUDA Linux image for `linux/amd64`. Runs on Linux with the
+- [`ghcr.io/nx-ai/tirex2-gpu`](https://ghcr.io/nx-ai/tirex2-gpu) — CUDA Linux image for `linux/amd64`. Runs on Linux with the
   NVIDIA Container Toolkit, or on Windows via Docker Desktop's WSL2 backend with NVIDIA WSL
   GPU support.
 
-Both images run a warmup forecast on startup so the model is `torch.compile`d (C++ kernels on
-CPU, Triton on GPU) before the first real request; this download-and-warmup step can take up
-to ~10-20 seconds. The startup warmup only covers the univariate path — the first
-**multivariate** request still pays its own one-time compile cost, after startup has finished
-and while univariate requests are already being served normally (verified on both an amd64 NAS
-and an arm64 Mac).
+### Running a Container
 
-Once compiled, neither context length nor prediction horizon triggers recompilation — you don't
-need to pin or pad request shapes to avoid extra latency.
+To start a container from either image, run:
 
-### Caching model weights
+=== "CPU Image"
 
-The weights are not baked into the image — the container downloads them from Hugging Face on
-first use. The cache path differs by image:
+    ```bash
+    docker run -it -p 8000:8000 ghcr.io/nx-ai/tirex2-cpu
+    ```
 
-- **CPU image**: runs as `appuser` (uid 1000), home `/home/appuser`.
-- **GPU image**: runs as `ubuntu`, home `/home/ubuntu`.
+=== "GPU Image"
 
-Neither sets `HF_HOME` or `HF_HUB_CACHE`, so the cache lands at the default location under
-that user's home, e.g. `/home/appuser/.cache/huggingface` for the CPU image. Mount a volume
-there to avoid re-downloading:
+    ```bash
+    docker run -it --gpus 1 -p 8000:8000 ghcr.io/nx-ai/tirex2-gpu
+    ```
 
-```bash
-docker run -it -p 8000:8000 \
-  -v tirex2-cache:/home/appuser/.cache/huggingface \
-  ghcr.io/nx-ai/tirex2-cpu
-```
+???+ info "Warmup and Compilation"
 
-(use `/home/ubuntu/.cache/huggingface` for the GPU image instead).
+    Both images download the model and torch-compile the **univariate** forecast path at startup
+    (C++ on CPU, Triton on GPU) to enable fast inference. This can take up to 20 seconds. Changing
+    context length or prediction horizon does not trigger recompilation.
 
-Without this volume, a stopped-and-restarted container keeps the weights (the writable layer
-persists), but a **recreated** container re-downloads them — this includes every
-`docker compose up` after an edit and every image update.
+    However, the first **multivariate** request requires a separate, one-time compilation.
 
-If you point the cache at your own mount instead, make sure it's writable by the container's
-user (uid 1000 for the CPU image); a root-owned mount produces an unhandled `PermissionError`
-inside the container.
+??? tip "Caching model weights"
 
-### Run the CPU image
+    The weights are not baked into the image — the container downloads them from Hugging Face on
+    first use. The cache path differs by image:
 
-```bash
-docker run -it -p 8000:8000 ghcr.io/nx-ai/tirex2-cpu
-```
+    - **CPU image**: runs as `appuser` (uid 1000), home `/home/appuser`.
+    - **GPU image**: runs as `ubuntu`, home `/home/ubuntu`.
 
-PowerShell:
+    The cache lands at the default location (`~/.cache/huggingface`) under that user's home. Mount a
+    volume there to avoid re-downloading:
 
-```powershell
-docker run -it -p 8000:8000 ghcr.io/nx-ai/tirex2-cpu
-```
+    === "CPU Image"
 
-### Run the GPU image
+        ```bash
+        docker run -it -p 8000:8000 \
+          -v tirex2-cache:/home/appuser/.cache/huggingface \
+          ghcr.io/nx-ai/tirex2-cpu
+        ```
 
-```bash
-docker run -it --gpus 1 -p 8000:8000 ghcr.io/nx-ai/tirex2-gpu
-```
+    === "GPU Image"
 
-PowerShell:
+        ```bash
+        docker run -it -p 8000:8000 \
+          -v tirex2-cache:/home/ubuntu/.cache/huggingface \
+          ghcr.io/nx-ai/tirex2-gpu
+        ```
 
-```powershell
-docker run -it --gpus 1 -p 8000:8000 ghcr.io/nx-ai/tirex2-gpu
-```
+    Without this volume, a stopped-and-restarted container keeps the weights, but a **recreated**
+    container re-downloads them. This includes every `docker compose up` after an edit and every
+    image update.
+
+    If you point the cache at your own mount instead, make sure it's writable by the container's user.
+
+## HTTP API
 
 Once running, the HTTP API is at `http://localhost:8000/` (there's no route at the bare `/`
 path, so a plain `curl http://localhost:8000/` returns a 404 — that's expected), with Swagger
 docs at [http://localhost:8000/docs](http://localhost:8000/docs) and a liveness probe at
 `GET /health` (also used internally by the Docker `HEALTHCHECK`).
-
-## HTTP API
 
 Every request is batched — pass a list of series even for a single forecast. There is no
 internal batching, so choose a batch size appropriate for your hardware; larger batches are
