@@ -1,4 +1,4 @@
-See https://docs.readthedocs.io/en/stable/config-file/v2.html for details
+# See https://docs.readthedocs.io/en/stable/config-file/v2.html for details
 
 # Required
 version: 2
@@ -7,18 +7,18 @@ version: 2
 build:
   os: ubuntu-24.04
   tools:
-    python: "3.14"
-   jobs:
-      create_environment:
-         - asdf plugin add pixi
-         - asdf install pixi latest
-         - asdf global pixi latest
-      install:
-         # assuming you have an environment called "docs"
-         - pixi install -e docs
-      build:
-         html:
-            - NO_COLOR=1 pixi run docs-build --site-dir $READTHEDOCS_OUTPUT/html
+    python: "3.13"
+  jobs:
+    create_environment:
+        - asdf plugin add pixi
+        - asdf install pixi latest
+        - asdf global pixi latest
+    install:
+        # assuming you have an environment called "docs"
+        - pixi install --frozen -e docs
+    build:
+        html:
+          - NO_COLOR=1 pixi run docs-build --site-dir $READTHEDOCS_OUTPUT/html
 
 # Build documentation with Mkdocs
 mkdocs:
