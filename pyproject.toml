@@ -39,18 +39,6 @@ gluonts = [
 	"pandas~=2.3.3",
 ]
 
-pandas = [
-	"pandas~=2.2.3",
-]
-
-polars = [
-	"polars>=1.0",
-]
-
-pyarrow = [
-	"pyarrow>=15.0",
-]
-
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
@@ -128,7 +116,12 @@ pypi-build = ["pypi-build"]
 
 [tool.pixi.feature.test.pypi-dependencies]
 pytest = "*"
-tirex-2 = { path = ".", editable = true, extras = ["gluonts", "fev", "polars", "pyarrow"] }
+# The dataframe adapter is backend-agnostic (narwhals is a core dependency), so the concrete
+# dataframe libraries are a test-only concern
+pandas = "*"
+polars = ">=1.0"
+pyarrow = ">=15.0"
+tirex-2 = { path = ".", editable = true, extras = ["gluonts", "fev"] }
 
 [tool.pixi.feature.examples.pypi-dependencies]
 tirex-2 = { path = ".", editable = true, extras = ["examples", "gluonts", "fev"] }

@@ -5,21 +5,27 @@
 
 import logging
 import time
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, get_args
 
 import numpy as np
 import torch
 
 from ..model.types import TimeseriesType
+from .dataframe_adapter import build_df_timeseries, format_df_output
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from .dataframe_adapter import IntoDataFrame
+    import datasets
+    import fev
+    from narwhals.typing import IntoDataFrame
 
 logger = logging.getLogger(__file__)
 
 ForecastOutputType = Literal["torch", "numpy", "gluonts", "fev", "dataframe", "pandas"]
+# forecast_df can never produce "fev" output (that needs FEV window metadata; use forecast_fev),
+# so it advertises the narrower set rather than failing deep inside the formatter.
+DataFrameOutputType = Literal["dataframe", "pandas", "torch", "numpy", "gluonts"]
 
 
 def _is_oom_error(exc: BaseException) -> bool:
@@ -50,10 +56,6 @@ def _format_output(forecasts, meta, output_type, quantile_levels):
     elif output_type == "numpy":
         return [f.cpu().numpy() for f in forecasts]
     elif output_type in ("dataframe", "pandas"):
-        try:
-            from .dataframe_adapter import format_df_output
-        except ImportError:
-            raise ValueError(f"output_type {output_type} needs narwhals but narwhals is not available (not installed)!")
         # "dataframe" keeps the library the input came from; "pandas" always returns a pandas frame
         return format_df_output(forecasts, meta, quantile_levels, backend="pandas" if output_type == "pandas" else None)
     elif output_type == "gluonts":
@@ -93,7 +95,6 @@ def _predict_adaptive(
     memory backing completed batches is released as we go rather than accumulating
     across the whole dataset.
     """
-    assert batch_size >= 1, "Batch size must be >= 1"
     num_items = len(timeseries)
     device = str(getattr(model, "device", "cpu"))
     start = 0
@@ -103,7 +104,7 @@ def _predict_adaptive(
         try:
             forecasts = model.predict(timeseries[start:end], prediction_length, **predict_kwargs)
             formatted = _format_output(forecasts, meta[start:end], output_type, quantile_levels)
-        except (torch.cuda.OutOfMemoryError, RuntimeError) as exc:
+        except RuntimeError as exc:  # torch.cuda.OutOfMemoryError is a RuntimeError subclass
             if not _is_oom_error(exc):
                 raise
             _empty_device_cache(device)
@@ -145,7 +146,6 @@ def build_fev_timeseries(
     """Convert a fev evaluation window into timeseries plus metadata for FEV formatting."""
     import datasets
     import fev
-    import torch
 
     if as_univariate:
         past_data, future_data = fev.convert_input_data(window, adapter="datasets", as_univariate=True)
@@ -258,6 +258,7 @@ def _gen_forecast(
     yield_per_batch,
     quantile_levels,
     return_inference_time=False,
+    allowed_output_types=get_args(ForecastOutputType),
     **predict_kwargs,
 ):
     """Batch the timeseries, run :meth:`TiRex2.predict`, and accumulate or stream the formatted output.
@@ -268,8 +269,10 @@ def _gen_forecast(
     if meta is None:
         meta = [{} for _ in timeseries]
 
-    if output_type not in ["numpy", "torch", "gluonts", "fev", "dataframe", "pandas"]:
-        raise ValueError("Invalid output type")
+    if batch_size < 1:
+        raise ValueError(f"batch_size must be >= 1, got {batch_size}.")
+    if output_type not in allowed_output_types:
+        raise ValueError(f"Invalid output type: {output_type!r}; expected one of {list(allowed_output_types)}.")
 
     if output_type == "fev" and yield_per_batch:
         raise ValueError("yield_per_batch=True is not supported with output_type='fev'.")
@@ -345,12 +348,22 @@ class ForecastModel:
         self,
         timeseries: list[TimeseriesType],
         prediction_length: int,
+        *,
         output_type: ForecastOutputType = "torch",
         batch_size: int = 512,
         yield_per_batch: bool = False,
         **predict_kwargs,
     ):
         """Forecast a list of :class:`TimeseriesType`, each carrying a target and optional covariates.
+
+        Series are processed in contiguous windows of at most ``batch_size``, one
+        :meth:`TiRex2.predict` call each. The window is packed into a single tensor whose rows are
+        every series' target variates plus its covariates, left-padded to the longest target in
+        the window, so ``batch_size`` sets peak device memory - and, on a panel of very uneven
+        lengths, how much padding is wasted. On a CUDA or MPS out-of-memory error the size is
+        halved and the failing window retried, for the remainder of the call; treat the argument
+        as a starting size rather than a hard one. With ``yield_per_batch=True`` one formatted
+        result is yielded per window, and the device memory behind each is released as it goes.
 
         Extra ``predict_kwargs`` are forwarded verbatim to :meth:`TiRex2.predict`.
         In particular ``tta_sign_flip`` controls sign-flip test-time augmentation
@@ -368,7 +381,6 @@ class ForecastModel:
         >>> forecasts[0].shape
         (1, 9, 32)
         """
-        assert batch_size >= 1, "Batch size must be >= 1"
         return _gen_forecast(
             self.model,
             list(timeseries),
@@ -385,6 +397,7 @@ class ForecastModel:
         self,
         gluonDataset,
         prediction_length: int,
+        *,
         output_type: ForecastOutputType = "torch",
         batch_size: int = 512,
         yield_per_batch: bool = False,
@@ -397,7 +410,10 @@ class ForecastModel:
         With ``multivariate=False`` (default) each target variate is rendered as its own
         univariate ``QuantileForecast``; with ``multivariate=True`` each series yields a single
         forecast retaining the variate axis, so a multivariate dataset is scored jointly rather
-        than channel-by-channel. The flag only affects ``output_type="gluonts"`` formatting.
+        than channel-by-channel. The flag only affects ``output_type="gluonts"`` formatting - it
+        does not change what the model is fed, and ``False`` is the GIFT-Eval leaderboard
+        protocol. This is *not* the same flag as :meth:`forecast_df`'s ``multivariate``, which
+        does change how the frame's columns are grouped into series.
 
         Extra ``predict_kwargs`` are forwarded verbatim to :meth:`TiRex2.predict`.
         In particular ``tta_sign_flip`` controls sign-flip test-time augmentation
@@ -405,7 +421,6 @@ class ForecastModel:
         differencing; when omitted, the checkpoint's configured defaults
         (``model-config.yaml``) are used. Pass ``True``/``False`` to override.
         """
-        assert batch_size >= 1, "Batch size must be >= 1"
         try:
             from .gluon import build_gluon_timeseries
         except ImportError:
@@ -428,14 +443,15 @@ class ForecastModel:
         self,
         df: "IntoDataFrame",
         prediction_length: int,
-        target: "str | Sequence[str] | None" = None,
+        *,
         id_column: str | None = None,
         timestamp_column: str | None = None,
+        target: "str | Sequence[str] | None" = None,
         past_covariates: "str | Sequence[str] | None" = None,
         future_covariates: "str | Sequence[str] | None" = None,
         future_df: "IntoDataFrame | None" = None,
-        multivariate: bool = False,
-        output_type: ForecastOutputType = "dataframe",
+        multivariate: bool = True,
+        output_type: DataFrameOutputType = "dataframe",
         batch_size: int = 512,
         yield_per_batch: bool = False,
         **predict_kwargs,
@@ -449,12 +465,21 @@ class ForecastModel:
         The frame may be long-format - many series stacked, identified by ``id_column`` - or a
         single series, and its time axis may come from ``timestamp_column`` or from a pandas
         ``DatetimeIndex``. Target columns default to every numeric column that is not the id
-        column, the timestamp column or a covariate column. With ``multivariate=False`` (default)
-        each target column is forecast as an independent univariate series; with
-        ``multivariate=True`` the target columns of a series are forecast jointly.
+        column, the timestamp column or a covariate column.
+
+        With ``multivariate=True`` (default) the target columns of a series are forecast jointly,
+        so the model can exploit their cross-variate structure; ``multivariate=False`` forecasts
+        every target column as an independent univariate series, which is what a wide frame of
+        unrelated series wants. With a single target column the two are equivalent. Note that
+        :meth:`forecast_gluon` has a same-named flag with a *different* meaning: there it only
+        selects the ``QuantileForecast`` output layout and defaults to ``False``, the GIFT-Eval
+        leaderboard protocol.
 
         Known-future covariates need their horizon values, supplied via ``future_df`` in the same
         layout as ``df``.
+
+        Every argument after ``prediction_length`` is keyword-only, so the signature can grow
+        without breaking callers.
 
         The default ``output_type="dataframe"`` returns one long-format frame *in the same
         dataframe library as* ``df``: a row per series, target column and forecast step, with a
@@ -463,20 +488,17 @@ class ForecastModel:
         relative to the series start. ``output_type="pandas"`` returns the same frame but always as
         pandas; the other output types behave as in :meth:`forecast`.
 
+        ``batch_size`` counts *series*, not rows or ids: with ``multivariate=False`` a frame of
+        100 ids and 4 target columns produces 400 series. See :meth:`forecast` for the rest.
+
         Extra ``predict_kwargs`` are forwarded verbatim to :meth:`TiRex2.predict` (see
         :meth:`forecast`).
         """
-        assert batch_size >= 1, "Batch size must be >= 1"
-        try:
-            from .dataframe_adapter import build_df_timeseries
-        except ImportError:
-            raise ValueError("forecast_df needs narwhals but narwhals is not available (not installed)!")
-
         timeseries, meta = build_df_timeseries(
             df,
-            target=target,
             id_column=id_column,
             timestamp_column=timestamp_column,
+            target=target,
             past_covariates=past_covariates,
             future_covariates=future_covariates,
             future_df=future_df,
@@ -491,6 +513,7 @@ class ForecastModel:
             batch_size,
             yield_per_batch,
             self._quantile_levels(),
+            allowed_output_types=get_args(DataFrameOutputType),
             **predict_kwargs,
         )
 
@@ -498,6 +521,7 @@ class ForecastModel:
         self,
         window: "fev.EvaluationWindow",
         prediction_length: int,
+        *,
         output_type: ForecastOutputType = "torch",
         batch_size: int = 512,
         yield_per_batch: bool = False,
@@ -516,7 +540,6 @@ class ForecastModel:
         also return the model-only prediction time, excluding FEV input
         conversion and final ``DatasetDict`` construction.
         """
-        assert batch_size >= 1, "Batch size must be >= 1"
         try:
             import fev  # noqa: F401
         except ImportError:

@@ -17,6 +17,7 @@ import warnings
 from collections.abc import Sequence
 from functools import lru_cache
 from types import ModuleType
+from typing import TYPE_CHECKING
 
 import narwhals as nw
 import numpy as np
@@ -24,12 +25,12 @@ import torch
 
 from ..model.types import TimeseriesType
 
-DEF_ID_COLUMN = "item_id"
+if TYPE_CHECKING:
+    from narwhals.typing import IntoDataFrame
+
 DEF_TIMESTAMP_COLUMN = "timestamp"
 DEF_TARGET_NAME_COLUMN = "target"
 DEF_PREDICTION_COLUMN = "prediction"
-
-IntoDataFrame = object  # any eager dataframe narwhals understands
 
 
 @lru_cache(maxsize=1)
@@ -127,12 +128,18 @@ def _select_target_columns(
     reserved: Sequence[str],
 ) -> list[str]:
     """Resolve the target columns, defaulting to every numeric column that is not reserved."""
+    schema = df.schema
     if target is not None:
         targets = _as_column_list(target)
         _require_columns(df, targets, "Target")
+        non_numeric = [c for c in targets if not schema[c].is_numeric()]
+        if non_numeric:
+            raise ValueError(
+                f"Target column(s) {non_numeric} are not numeric "
+                f"({ {c: str(schema[c]) for c in non_numeric} }); a target must hold numbers."
+            )
         return targets
     reserved_set = set(reserved)
-    schema = df.schema
     targets = [c for c in df.columns if c not in reserved_set and schema[c].is_numeric()]
     if not targets:
         raise ValueError("Could not infer any numeric target column; pass target=... explicitly.")
@@ -141,8 +148,9 @@ def _select_target_columns(
 
 def _values_2d(frame: nw.DataFrame, columns: Sequence[str]) -> torch.Tensor:
     """Extract ``columns`` of ``frame`` as a float32 ``[num_variates, T]`` tensor."""
-    # astype always copies, which also lifts the read-only flag some backends put on their arrays
-    return torch.as_tensor(frame[list(columns)].to_numpy().astype(np.float32).T)
+    # transpose first, so astype's copy lands contiguous; it also lifts the read-only flag
+    # some backends put on their arrays
+    return torch.as_tensor(frame[list(columns)].to_numpy().T.astype(np.float32))
 
 
 def _to_narwhals(df, promote_index: bool) -> tuple[nw.DataFrame, str | None]:
@@ -201,14 +209,15 @@ def _group_by_id(df: nw.DataFrame, id_column: str | None) -> list[tuple]:
 
 
 def build_df_timeseries(
-    df: IntoDataFrame,
-    target: str | Sequence[str] | None = None,
+    df: "IntoDataFrame",
+    *,
     id_column: str | None = None,
     timestamp_column: str | None = None,
+    target: str | Sequence[str] | None = None,
     past_covariates: str | Sequence[str] | None = None,
     future_covariates: str | Sequence[str] | None = None,
-    future_df: IntoDataFrame | None = None,
-    multivariate: bool = False,
+    future_df: "IntoDataFrame | None" = None,
+    multivariate: bool = True,
 ) -> tuple[list[TimeseriesType], list[dict]]:
     """Extract the series of a ``DataFrame`` into timeseries plus formatting metadata.
 
@@ -219,11 +228,14 @@ def build_df_timeseries(
         Rows of one series must share the same ``id_column`` value; within a series, rows are
         ordered by ``timestamp_column`` (a pandas ``DatetimeIndex`` is used automatically when no
         timestamp column is given).
+    id_column
+        Column identifying the series. When omitted the whole frame is a single series.
+    timestamp_column
+        Column holding the time axis. When omitted a pandas ``DatetimeIndex`` is promoted and
+        used automatically, on ``df`` and ``future_df`` alike.
     target
         Target column(s). Defaults to every numeric column that is not the id column, the
         timestamp column or a covariate column.
-    id_column
-        Column identifying the series. When omitted the whole frame is a single series.
     past_covariates, future_covariates
         Covariate columns. ``future_covariates`` must also be present in ``future_df``, which
         supplies their values over the forecast horizon.
@@ -231,12 +243,18 @@ def build_df_timeseries(
         Known-future covariate values, in the same layout as ``df`` (same id and timestamp
         columns). Required when ``future_covariates`` is given.
     multivariate
-        ``False`` (default) treats every target column as an independent univariate series;
-        ``True`` forecasts the target columns of a series jointly as one multivariate series.
+        ``True`` (default) forecasts the target columns of a series jointly as one multivariate
+        series, so the model can use their cross-variate structure. ``False`` treats every target
+        column as an independent univariate series - the right choice for a wide frame whose
+        columns are unrelated series rather than channels of one system. With a single target
+        column the two are equivalent.
     """
     past_cov_cols = _as_column_list(past_covariates)
     future_cov_cols = _as_column_list(future_covariates)
 
+    # the caller's own argument, before it is resolved against df's index below: future_df carries
+    # its own index and must be promoted on the same terms df was, not on the resolved name
+    requested_timestamp_column = timestamp_column
     df, index_column = _to_narwhals(df, promote_index=timestamp_column is None)
     backend = df.implementation
     df, timestamp_column = _with_timestamp_column(df, timestamp_column or index_column)
@@ -252,7 +270,7 @@ def build_df_timeseries(
         raise ValueError("future_covariates need their future values; pass future_df=...")
     future_groups: dict = {}
     if future_cov_cols:
-        future_df, future_index_column = _to_narwhals(future_df, promote_index=timestamp_column is None)
+        future_df, future_index_column = _to_narwhals(future_df, promote_index=requested_timestamp_column is None)
         future_df, future_ts_column = _with_timestamp_column(future_df, timestamp_column or future_index_column)
         _require_columns(future_df, future_cov_cols, "Future covariate")
         if id_column is not None:
@@ -260,6 +278,13 @@ def build_df_timeseries(
         future_groups = dict(_group_by_id(future_df, id_column))
         if future_ts_column is not None:
             future_groups = {key: _sort_by_time(frame, future_ts_column) for key, frame in future_groups.items()}
+        if id_column is not None:
+            unmatched = [key for key in future_groups if key not in set(df[id_column].to_list())]
+            if unmatched:
+                warnings.warn(
+                    f"future_df holds series {unmatched} that are absent from df; their rows are ignored.",
+                    stacklevel=2,
+                )
 
     series: list[TimeseriesType] = []
     meta: list[dict] = []
@@ -311,7 +336,7 @@ def format_df_output(
     meta: list[dict],
     quantile_levels: list[float],
     backend=None,
-) -> IntoDataFrame:
+) -> "IntoDataFrame":
     """Convert per-series ``[V_t, Q, H]`` quantile tensors into one long-format dataframe.
 
     Each row is a single forecast step of a single target variate and carries the series id (when

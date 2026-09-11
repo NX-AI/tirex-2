@@ -186,12 +186,15 @@ def test_build_df_timeseries_long_format_one_series_per_id(backend):
 def test_build_df_timeseries_multiple_targets_univariate_vs_multivariate(backend):
     df = _as_backend(_long_df(), backend)
 
-    univariate, uni_meta = build_df_timeseries(df, id_column="item_id", timestamp_column="timestamp")
+    univariate, uni_meta = build_df_timeseries(
+        df, id_column="item_id", timestamp_column="timestamp", multivariate=False
+    )
     assert len(univariate) == 4  # two ids x two numeric target columns
     assert all(ts.target.shape == (1, 20) for ts in univariate)
     assert [m["target_names"] for m in uni_meta] == [["sales"], ["price"]] * 2
 
-    joint, joint_meta = build_df_timeseries(df, id_column="item_id", timestamp_column="timestamp", multivariate=True)
+    # multivariate=True is the default: the two target columns of an id are forecast jointly.
+    joint, joint_meta = build_df_timeseries(df, id_column="item_id", timestamp_column="timestamp")
     assert len(joint) == 2
     assert all(ts.target.shape == (2, 20) for ts in joint)
     assert joint_meta[0]["target_names"] == ["sales", "price"]
@@ -256,10 +259,49 @@ def test_build_df_timeseries_covariates_extend_over_horizon(backend):
 
 
 @_needs_df_adapter
+def test_build_df_timeseries_future_df_also_uses_a_pandas_datetime_index():
+    """A DatetimeIndex on ``df`` must not stop ``future_df``'s own index from being promoted."""
+    df = pd.DataFrame(
+        {"sales": np.random.randn(20), "price": np.random.randn(20)},
+        index=pd.date_range("2020-01-01", periods=20, freq="D"),
+    )
+    future_df = pd.DataFrame({"price": np.random.randn(H)}, index=pd.date_range("2020-01-21", periods=H, freq="D"))
+
+    series, meta = build_df_timeseries(df, target="sales", future_covariates="price", future_df=future_df)
+
+    assert series[0].future_covariates.shape == (1, 20 + H)
+    assert meta[0]["last_timestamp"] == np.datetime64("2020-01-20")
+
+
+@_needs_df_adapter
+def test_build_df_timeseries_warns_about_future_df_series_missing_from_df():
+    df = _long_df()
+    future_df = pd.DataFrame(
+        {
+            "item_id": np.repeat(["item_0", "item_1", "item_ghost"], H),
+            "timestamp": np.tile(pd.date_range("2020-01-21", periods=H, freq="D"), 3),
+            "price": np.random.randn(3 * H),
+        }
+    )
+
+    with pytest.warns(UserWarning, match="item_ghost"):
+        build_df_timeseries(
+            df,
+            target="sales",
+            id_column="item_id",
+            timestamp_column="timestamp",
+            future_covariates="price",
+            future_df=future_df,
+        )
+
+
+@_needs_df_adapter
 def test_build_df_timeseries_reports_bad_columns():
     df = _long_df()
     with pytest.raises(ValueError, match="Target column"):
         build_df_timeseries(df, target="missing", id_column="item_id")
+    with pytest.raises(ValueError, match="are not numeric"):
+        build_df_timeseries(df, target="item_id", id_column="item_id")
     with pytest.raises(ValueError, match="pass future_df"):
         build_df_timeseries(df, target="sales", id_column="item_id", future_covariates="price")
     with pytest.raises(ValueError, match="no rows for series"):
