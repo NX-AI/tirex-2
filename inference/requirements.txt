@@ -1,6 +1,6 @@
 fastapi[standard]==0.141.1
 paho-mqtt==2.1.0
-pydantic==2.13.0
+pydantic==2.13.5
 fastmcp==3.4.0
 pydantic-settings==2.14.2
 requests==2.34.2
