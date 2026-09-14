@@ -34,7 +34,7 @@ model = load_model("NX-AI/TiRex-2", device="cuda", use_flex_attention=True)
 ```
 
 `compile` applies `torch.compile` to the mLSTM on every device, and sLSTM
-on CPU only. Compilation happens on the first forecast per input shape, so it pays off for repeated calls rather than one-shot use. It applies per model instance.
+on CPU/MPS only. Compilation happens on the first forecast per input shape, so it pays off for repeated calls rather than one-shot use. It applies per model instance.
 
 ```python
 model = load_model("NX-AI/TiRex-2", device="cpu", compile=True)

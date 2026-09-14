@@ -82,7 +82,7 @@ def load_model(
         checkpoint configuration and package defaults.
     compile : bool
         If True, ``torch.compile`` the recurrent layers: mLSTM always, and sLSTM
-        only on CPU.
+        only on CPU/MPS.
 
     Returns
     -------
@@ -129,7 +129,7 @@ def load_model(
     model.load_state_dict(state_dict, strict=True)
     model.eval()
     if compile:
-        # slSTM compiled on cpu only.
+        # slSTM compiled on cpu/mps only.
         targets = (mLSTMLayer,) if device == "cuda" else (mLSTMLayer, _FlashRNNLayer)
         for module in model.modules():
             if isinstance(module, targets):

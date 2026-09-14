@@ -1,5 +1,4 @@
 import json
-import sys
 from pathlib import Path
 
 import pytest
@@ -8,8 +7,6 @@ import torch
 from tirex2 import TimeseriesType, load_model
 from tirex2.model.component.flashrnn_slstm import _FlashRNNLayer
 from tirex2.model.component.mlstm_block import mLSTMLayer
-
-pytestmark = pytest.mark.skipif(sys.platform != "linux", reason="reference outputs were recorded on Linux")
 
 REFERENCES = Path(__file__).parent / "references"
 CHECKPOINT = "NX-AI/TiRex-2"
