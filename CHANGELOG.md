@@ -11,6 +11,7 @@ All notable changes to TiRex-2 are documented here.
 
 ### Documentation and development
 
+- Corrected deployment examples and guidance for covariates, model caching, compilation, and the HTTP API, and added an Open Source vs PRO feature comparison table with consistent PRO naming in [#21](https://github.com/NX-AI/tirex-2/pull/21), contributed by [Lukas Fischer](https://github.com/lukfischer), Claude Sonnet 5, and [Zhihao Dai](https://github.com/daidahao).
 - Added FAQs covering CUDA setup, supported NVIDIA GPU architectures, and Windows MSVC compiler setup in [#19](https://github.com/NX-AI/tirex-2/pull/19), contributed by [Yipeng Sun](https://github.com/sypsyp97) and [Daniil Yefimov](https://github.com/DaniilYefimov).
 - Added a Pixi documentation environment and preview/build commands, migrated documentation deployment to GitHub Pages artifact actions, and updated contributor instructions in [#37](https://github.com/NX-AI/tirex-2/pull/37), contributed by [Zhihao Dai](https://github.com/daidahao).
 - Removed the unused root `requirements.txt` in [#40](https://github.com/NX-AI/tirex-2/pull/40), contributed by [Copilot](https://github.com/apps/copilot-swe-agent) and [Zhihao Dai](https://github.com/daidahao).
