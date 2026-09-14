@@ -338,7 +338,7 @@ The test suite starts its own server by default:
 pytest tests
 ```
 
-Or against an running container:
+Or against a running container:
 
 ```bash
 TEST_START_SERVER=0 TEST_PORT=8000 pytest tests -s
