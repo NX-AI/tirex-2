@@ -129,7 +129,7 @@ def load_model(
     model.load_state_dict(state_dict, strict=True)
     model.eval()
     if compile:
-       # slSTM compiled on cpu only.
+        # slSTM compiled on cpu only.
         targets = (mLSTMLayer,) if device == "cuda" else (mLSTMLayer, _FlashRNNLayer)
         for module in model.modules():
             if isinstance(module, targets):
