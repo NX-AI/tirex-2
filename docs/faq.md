@@ -18,6 +18,15 @@
     - Older cards — Turing (7.5), Volta (7.0) and earlier — cannot run `device="cuda"`; use
       `device="cpu"` instead.
 
+??? question "When should I use `compile=True`?"
+
+    We recommend to use `compile=True` on CPU, when the context length and prediction length stay the same across forecasts —
+    `torch.compile` re-traces on every new input shape, so the speed-up only pays off when one
+    shape is reused.
+
+    See [Forecasting](how-to/forecasting.md#loading-the-model) and
+    [#47](https://github.com/NX-AI/tirex-2/pull/47) for the CPU benchmarks.
+
 ??? question "Why does TiRex-2 fail with `where cl` on Windows?"
 
     PyTorch may compile model components at runtime, so the Python process needs access to
