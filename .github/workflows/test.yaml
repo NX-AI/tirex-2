@@ -54,6 +54,19 @@ jobs:
       - name: Run tests on CPU
         run: pixi run test
 
+  core-tests-frozen:
+    name: core-tests frozen (ubuntu-latest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
+        with:
+          run-install: false
+          cache: false
+
+      - name: Run tests on CPU using pixi.lock
+        run: pixi run --frozen test
+
   core-tests-lowest-bound:
     name: core-tests lowest bound (py3.11, torch2.8.0)
     runs-on: ubuntu-latest
