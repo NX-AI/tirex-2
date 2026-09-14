@@ -6,6 +6,7 @@ All notable changes to TiRex-2 are documented here.
 
 ### Improvements
 
+- Added opt-in recurrent-layer compilation with `load_model(..., compile=True)` for faster repeated forecasts (up to 1.82x on CPU), in [#47](https://github.com/NX-AI/tirex-2/pull/47), contributed by [Daniil Yefimov](https://github.com/DaniilYefimov).
 - Replaced `einops` rearrangements with native PyTorch operations and removed the direct `einops` dependency in [#41](https://github.com/NX-AI/tirex-2/pull/41), contributed by [Copilot](https://github.com/apps/copilot-swe-agent) and [Zhihao Dai](https://github.com/daidahao).
 - Removed a redundant `torch.no_grad()` context from prediction code in [#42](https://github.com/NX-AI/tirex-2/pull/42), contributed by [Zhihao Dai](https://github.com/daidahao).
 
