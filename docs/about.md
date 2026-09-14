@@ -18,4 +18,4 @@ applications.
 TiRex-2 builds on [xLSTM](https://arxiv.org/abs/2405.04517) and generalizes NXAI's original
 univariate forecasting model, [TiRex](https://github.com/NX-AI/tirex) (see the
 [Introduction](introduction.md)). For additional capabilities beyond this open-source
-release, see [TiRex-2 Pro](pro.md).
+release, see [TiRex-2 PRO](pro.md).
