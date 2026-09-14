@@ -12,6 +12,8 @@ from huggingface_hub import snapshot_download
 
 from .api_adapter import ForecastModel
 from .model import TiRex2
+from .model.component.flashrnn_slstm import _FlashRNNLayer
+from .model.component.mlstm_block import mLSTMLayer
 
 CONFIG_FILENAME = "model-config.yaml"
 CKPT_FILENAME = "model.ckpt"
@@ -55,6 +57,7 @@ def load_model(
     *,
     hf_kwargs: dict[str, Any] | None = None,
     use_flex_attention: bool | None = None,
+    compile: bool = False,
 ) -> ForecastModel:
     """Load an inference-ready :class:`TiRex2` from a checkpoint directory or HF repo.
 
@@ -77,6 +80,9 @@ def load_model(
         multivariate batches on CUDA but adds first-call compilation overhead.
         ``False`` forces dense attention. Leave as ``None`` to preserve the
         checkpoint configuration and package defaults.
+    compile : bool
+        If True, ``torch.compile`` the recurrent layers: mLSTM always, and sLSTM
+        only on CPU.
 
     Returns
     -------
@@ -115,10 +121,18 @@ def load_model(
     if use_flex_attention is not None:
         for template in config["stack_config"]["templates"].values():
             template["variate_mixer"]["use_flex_attention"] = use_flex_attention
+
     model = TiRex2(**config)
 
     checkpoint = torch.load(weights_file, map_location="cpu", weights_only=True)
     state_dict = checkpoint.get("state_dict", checkpoint) if isinstance(checkpoint, dict) else checkpoint
     model.load_state_dict(state_dict, strict=True)
+    model.eval()
+    if compile:
+       # slSTM compiled on cpu only.
+        targets = (mLSTMLayer,) if device == "cuda" else (mLSTMLayer, _FlashRNNLayer)
+        for module in model.modules():
+            if isinstance(module, targets):
+                module.compile()
 
-    return ForecastModel(model.eval())
+    return ForecastModel(model)
