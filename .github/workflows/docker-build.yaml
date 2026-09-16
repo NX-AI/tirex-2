@@ -11,138 +11,14 @@ on:
   workflow_dispatch:
 
 jobs:
-  docker-build-smoke:
-    name: Docker Build Smoke
-    runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'pull_request' }}
-    permissions:
-      contents: read
-
-    services:
-      mqtt:
-        image: emqx/emqx:5.10.4
-        ports:
-          - 1883:1883
-        options: >-
-          --health-cmd "emqx ctl status"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 20
-          --health-start-period 10s
-
-    steps:
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-    - name: Free up disk space
-      run: |
-        sudo rm -rf /opt/hostedtoolcache
-        sudo rm -rf /usr/share/dotnet
-        sudo rm -rf /usr/local/lib/android
-        sudo rm -rf /opt/ghc
-        sudo apt-get clean
-        docker system prune -af --volumes
-
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
-
-    - name: Build CPU image
-      uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
-      with:
-        platforms: linux/amd64
-        context: inference
-        file: inference/Dockerfile.cpu
-        load: true
-        tags: tirex2-cpu:test
-        push: false
-
-    # Hosted runners have no GPU; both images exercise inference on CPU.
-    - name: Test CPU image inference (CPU execution)
-      timeout-minutes: 15
-      env:
-        TEST_IMAGE: tirex2-cpu:test
-      run: |
-        cleanup() {
-          docker logs tirex-inference-server || true
-          docker rm -f tirex-inference-tests tirex-inference-server >/dev/null 2>&1 || true
-        }
-        trap cleanup EXIT
-
-        # Test the server without adding pytest dependencies to its environment.
-        docker run -d --name tirex-inference-server --network host \
-          -e MODEL_DEVICE=cpu \
-          -e HTTP_HOST=127.0.0.1 \
-          -e HTTP_PORT=8000 \
-          -e MQTT_ENABLED=1 \
-          -e MQTT_BROKER_HOST=127.0.0.1 \
-          -e MQTT_BROKER_PORT=1883 \
-          "$TEST_IMAGE"
-
-        docker run --rm --name tirex-inference-tests --network host --entrypoint sh \
-          -e TEST_START_SERVER=0 \
-          -e TEST_HOST=127.0.0.1 \
-          -e TEST_PORT=8000 \
-          -e TEST_MQTT_BROKER_HOST=127.0.0.1 \
-          -e TEST_MQTT_BROKER_PORT=1883 \
-          -v "$GITHUB_WORKSPACE/inference:/tmp/inference:ro" \
-          python:3.13-slim -ec '
-            python -m pip install --no-cache-dir -r /tmp/inference/requirements-dev.txt
-            python -m pytest -c /tmp/inference/pytest.ini /tmp/inference/tests -s -p no:cacheprovider
-          '
-
-    - name: Clean up after CPU build
-      run: docker system prune -af --volumes
-
-    - name: Build GPU image
-      uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
-      with:
-        platforms: linux/amd64
-        context: inference
-        file: inference/Dockerfile.gpu
-        load: true
-        tags: tirex2-gpu:test
-        push: false
-
-    # Hosted runners have no GPU; both images exercise inference on CPU.
-    - name: Test GPU image inference (CPU execution)
-      timeout-minutes: 15
-      env:
-        TEST_IMAGE: tirex2-gpu:test
-      run: |
-        cleanup() {
-          docker logs tirex-inference-server || true
-          docker rm -f tirex-inference-tests tirex-inference-server >/dev/null 2>&1 || true
-        }
-        trap cleanup EXIT
-
-        # Test the server without adding pytest dependencies to its environment.
-        docker run -d --name tirex-inference-server --network host \
-          -e MODEL_DEVICE=cpu \
-          -e HTTP_HOST=127.0.0.1 \
-          -e HTTP_PORT=8000 \
-          -e MQTT_ENABLED=1 \
-          -e MQTT_BROKER_HOST=127.0.0.1 \
-          -e MQTT_BROKER_PORT=1883 \
-          "$TEST_IMAGE"
-
-        docker run --rm --name tirex-inference-tests --network host --entrypoint sh \
-          -e TEST_START_SERVER=0 \
-          -e TEST_HOST=127.0.0.1 \
-          -e TEST_PORT=8000 \
-          -e TEST_MQTT_BROKER_HOST=127.0.0.1 \
-          -e TEST_MQTT_BROKER_PORT=1883 \
-          -v "$GITHUB_WORKSPACE/inference:/tmp/inference:ro" \
-          python:3.13-slim -ec '
-            python -m pip install --no-cache-dir -r /tmp/inference/requirements-dev.txt
-            python -m pytest -c /tmp/inference/pytest.ini /tmp/inference/tests -s -p no:cacheprovider
-          '
-
   build-and-push-docker-images:
     name: Build and Push Docker Images
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
-    if: ${{ (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success') && github.repository == 'NX-AI/tirex-2' }}
+    env:
+      PUBLISH_IMAGES: ${{ github.repository == 'NX-AI/tirex-2' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')) }}
 
     services:
       mqtt:
@@ -169,12 +45,14 @@ jobs:
         docker system prune -af --volumes
 
     - name: Extract version of TiRex 2 from pyproject.toml
+      if: ${{ env.PUBLISH_IMAGES == 'true' }}
       id: get_version
       run: |
         VERSION=$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
         echo "version=$VERSION" >> $GITHUB_OUTPUT
 
     - name: Set up QEMU
+      if: ${{ env.PUBLISH_IMAGES == 'true' }}
       uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
       with:
         platforms: arm64
@@ -183,6 +61,7 @@ jobs:
       uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
 
     - name: Login to GitHub Container Registry
+      if: ${{ env.PUBLISH_IMAGES == 'true' }}
       uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
       with:
         registry: ghcr.io
@@ -236,6 +115,7 @@ jobs:
           '
 
     - name: Build and push CPU image
+      if: ${{ env.PUBLISH_IMAGES == 'true' }}
       uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
       with:
         platforms: linux/amd64,linux/arm64
@@ -298,6 +178,7 @@ jobs:
           '
 
     - name: Build and push GPU image
+      if: ${{ env.PUBLISH_IMAGES == 'true' }}
       uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
       with:
         platforms: linux/amd64
