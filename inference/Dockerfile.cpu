@@ -8,43 +8,13 @@ FROM python:3.13-slim AS build
 
 ARG DEBIAN_FRONTEND=noninteractive
 
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
-
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        build-essential \
-        curl \
-        git && \
-    rm -rf /var/lib/apt/lists/*
-
 WORKDIR /app
 
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir torch==2.9.1 --index-url https://download.pytorch.org/whl/cpu
+    pip install --no-cache-dir torch==2.14.0 --index-url https://download.pytorch.org/whl/cpu
 
 COPY requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
-
-# Remove pythoch cache and test folders
-RUN find /usr/local/lib/python3.13/site-packages -type d \
-        \( -name '__pycache__' -o -name tests -o -name test \) -prune -exec rm -rf {} +
-
-# Remove packagesd, which are not used. Still to be tested
-# Transformers paackage is in xlSTM, but runs without errors
-RUN pip uninstall -y \
-        ipykernel ipython jedi debugpy \
-        jupyter-client jupyter-core pyzmq tornado nest-asyncio comm \
-        prompt_toolkit pygments traitlets matplotlib-inline stack-data executing \
-        asttokens parso pexpect ptyprocess decorator wcwidth \
-        joypy seaborn \
-        matplotlib pillow fonttools contourpy kiwisolver cycler pyparsing \
-        scipy pandas pytz tzdata \
-        transformers tokenizers safetensors regex \
-    || true
-
 
 # -------------------------
 # --- Stage 2: Runtime
