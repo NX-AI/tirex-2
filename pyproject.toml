@@ -90,8 +90,8 @@ cuda-libraries-dev = "13.2.*"
 cuda-nvcc = "12.6.*"
 cuda-libraries-dev = "12.6.*"
 
-[tool.pixi.target.win-64-cuda.pypi-dependencies]
-# resolve torch (cuda) for the default Windows CUDA platform
+[tool.pixi.target."*-cuda".pypi-dependencies]
+# resolve torch (cuda) for the default CUDA platforms
 torch = { version = "*", index = "https://download.pytorch.org/whl/cu130" }
 
 [tool.pixi.target."*-cpu".pypi-dependencies]
