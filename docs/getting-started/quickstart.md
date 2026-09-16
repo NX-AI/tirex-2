@@ -76,5 +76,5 @@ fig.show()
 
 - [Forecasting](../how-to/forecasting.md) — univariate and multivariate forecasting in depth.
 - [Covariates](../how-to/covariates.md) — past and future-known covariates.
-- [Streaming](../how-to/streaming.md) — what's open-source and what's Pro-only.
+- [Streaming](../how-to/streaming.md) — what's open-source and what's PRO-only.
 - [API reference](../api/index.md) — full signatures and parameters.

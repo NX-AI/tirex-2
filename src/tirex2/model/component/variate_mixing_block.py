@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from typing import Any, Literal
 
 import torch
-from einops import rearrange
 from torch import nn
 
 from .attention_block import AttentionBlock
@@ -173,14 +172,14 @@ class MultivariateBlock(nn.Module):
         # Stage 2: Variate Mixing
         # Transpose for variate mixing: [B*V, L, P] -> [L, B*V, P]
         # This treats L as the new batch dimension and mixes across B*V (all variates)
-        x_variate = rearrange(time_output, "bv l p -> l bv p", bv=BV, l=L, p=P)  # [L, B*V, P]
+        x_variate = time_output.permute(1, 0, 2)  # [L, B*V, P]
 
         variate_output, _ = _unwrap_output(
             self.variate_mixer(x_variate, group_vector=group_vector, target_mask=target_mask)
         )
 
         # Transpose back: [L, B*V, P] -> [B*V, L, P]
-        x = rearrange(variate_output, "l bv p -> bv l p", l=L, bv=BV, p=P)
+        x = variate_output.permute(1, 0, 2)
 
         return x, {}
 
