@@ -90,6 +90,10 @@ cuda-libraries-dev = "13.2.*"
 cuda-nvcc = "12.6.*"
 cuda-libraries-dev = "12.6.*"
 
+[tool.pixi.target.win-64-cuda.pypi-dependencies]
+# resolve torch (cuda) for the default Windows CUDA platform
+torch = { version = "*", index = "https://download.pytorch.org/whl/cu130" }
+
 [tool.pixi.target."*-cpu".pypi-dependencies]
 # resolve torch (cpu) for cpu platforms
 torch = { version = "*", index = "https://download.pytorch.org/whl/cpu" }
@@ -152,6 +156,9 @@ build = "*"
 
 [tool.pixi.feature.examples.activation.env]
 PYTHONPATH = "$PIXI_PROJECT_ROOT/examples/gifteval:$PYTHONPATH"
+
+[tool.pixi.target."*-cuda*".tasks]
+test = { cmd = "pytest test/ --require-cuda", default-environment = "test" }
 
 # ruff
 [tool.ruff]
