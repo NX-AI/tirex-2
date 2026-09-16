@@ -17,6 +17,7 @@ dependencies = [
 	"xlstm~=2.0.3",
 	"PyYAML>=6",
 	"huggingface-hub>=0.35.3",
+	"safetensors>=0.6",
 ]
 
 [project.optional-dependencies]

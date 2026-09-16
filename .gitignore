@@ -23,6 +23,7 @@ test/*
 !test/test_forecast_model.py
 !test/test_fev_adapter.py
 !test/test_references.py
+!test/test_safetensors_checkpoint.py
 !test/references/
 /venv
 

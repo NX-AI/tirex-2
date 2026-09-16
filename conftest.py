@@ -5,8 +5,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 import pytest
+from safetensors.torch import save_file as save_safetensors
 from torch import nn
 
+from tirex2._state_dict import drop_shared_duplicates
+from tirex2.base import WEIGHTS_FILENAME
 from tirex2.model.component.variate_mixing_block import (
     MultivariateBlockConfig,
     TimeMixerConfig,
@@ -137,6 +140,18 @@ def _build_small_model(device: str, recipe: list[str] | None = None) -> TiRex2:
     return TiRex2(**_small_model_kwargs(device, recipe))
 
 
+def _write_weights(directory: Path, model: TiRex2) -> Path:
+    """Write ``model``'s weights the way ``load_model`` expects to read them.
+
+    Tensors the model shares under several ``state_dict`` names are stored once,
+    because safetensors refuses shared storage; ``load_model`` restores them.
+    """
+    weights_file = Path(directory) / WEIGHTS_FILENAME
+    kept, _ = drop_shared_duplicates(model, model.state_dict())
+    save_safetensors(kept, str(weights_file))
+    return weights_file
+
+
 @pytest.fixture
 def build_model():
     return _build_model
@@ -150,3 +165,8 @@ def small_model_kwargs():
 @pytest.fixture
 def build_small_model():
     return _build_small_model
+
+
+@pytest.fixture
+def write_weights():
+    return _write_weights
