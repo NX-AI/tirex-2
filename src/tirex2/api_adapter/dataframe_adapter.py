@@ -97,17 +97,6 @@ def _infer_time_step(timestamps: nw.Series | None):
     return _modal_diff(values)
 
 
-def _period_start(timestamps: nw.Series | None, step):
-    """Return the first timestamp as a ``pandas.Period``, or ``None`` without a usable frequency."""
-    pd = _pandas()
-    if pd is None or timestamps is None or not len(timestamps) or not timestamps.dtype.is_temporal():
-        return None
-    try:
-        return pd.Period(pd.Timestamp(timestamps.to_numpy()[0]), freq=step)
-    except (ValueError, TypeError):
-        return None
-
-
 def _future_timestamps(meta: dict, horizon: int) -> np.ndarray:
     """Continue a series' time axis for ``horizon`` steps beyond its last observed timestamp."""
     last = meta.get("last_timestamp")
@@ -217,9 +206,12 @@ def build_df_timeseries(
     past_covariates: str | Sequence[str] | None = None,
     future_covariates: str | Sequence[str] | None = None,
     future_df: "IntoDataFrame | None" = None,
-    multivariate: bool = True,
 ) -> tuple[list[TimeseriesType], list[dict]]:
     """Extract the series of a ``DataFrame`` into timeseries plus formatting metadata.
+
+    The target columns of one series always become a single multivariate series, so the model can
+    use their cross-variate structure. Columns that are unrelated series rather than channels of
+    one system belong in long format, split by ``id_column``.
 
     Parameters
     ----------
@@ -242,12 +234,6 @@ def build_df_timeseries(
     future_df
         Known-future covariate values, in the same layout as ``df`` (same id and timestamp
         columns). Required when ``future_covariates`` is given.
-    multivariate
-        ``True`` (default) forecasts the target columns of a series jointly as one multivariate
-        series, so the model can use their cross-variate structure. ``False`` treats every target
-        column as an independent univariate series - the right choice for a wide frame whose
-        columns are unrelated series rather than channels of one system. With a single target
-        column the two are equivalent.
     """
     past_cov_cols = _as_column_list(past_covariates)
     future_cov_cols = _as_column_list(future_covariates)
@@ -304,29 +290,25 @@ def build_df_timeseries(
                 (_values_2d(frame, future_cov_cols), _values_2d(future_groups[key], future_cov_cols)), dim=-1
             )
 
-        time_step = _infer_time_step(timestamps)
-        base_meta = {
-            "start": _period_start(timestamps, time_step),  # lets output_type="gluonts" keep the real time axis
-            "item_id": key,
-            "id_column": id_column,
-            "timestamp_column": timestamp_column or DEF_TIMESTAMP_COLUMN,
-            "length": len(frame),
-            "last_timestamp": timestamps.to_numpy()[-1] if timestamps is not None and len(timestamps) else None,
-            "time_step": time_step,
-            "multivariate": multivariate,
-            "backend": backend,
-        }
-
-        variate_groups = [target_cols] if multivariate else [[col] for col in target_cols]
-        for columns in variate_groups:
-            series.append(
-                TimeseriesType(
-                    target=_values_2d(frame, columns),
-                    past_covariates=past_cov,
-                    future_covariates=future_cov,
-                )
+        series.append(
+            TimeseriesType(
+                target=_values_2d(frame, target_cols),
+                past_covariates=past_cov,
+                future_covariates=future_cov,
             )
-            meta.append({**base_meta, "target_names": list(columns), "num_targets": len(columns)})
+        )
+        meta.append(
+            {
+                "item_id": key,
+                "id_column": id_column,
+                "timestamp_column": timestamp_column or DEF_TIMESTAMP_COLUMN,
+                "length": len(frame),
+                "last_timestamp": timestamps.to_numpy()[-1] if timestamps is not None and len(timestamps) else None,
+                "time_step": _infer_time_step(timestamps),
+                "backend": backend,
+                "target_names": list(target_cols),
+            }
+        )
 
     return series, meta
 

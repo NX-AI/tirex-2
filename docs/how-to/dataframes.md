@@ -82,32 +82,20 @@ forecast["target"].unique().tolist()
 # ['Beer', 'Cement', 'Electricity', 'Gas']
 ```
 
-Joint forecasting is the default (`multivariate=True`) because it is what TiRex-2 is built for —
-beer, cement, electricity and gas really are four channels of one economy, and the variate-mixing
-path can exploit that.
+Joint forecasting is not optional here, because it is what TiRex-2 is built for — beer, cement,
+electricity and gas really are four channels of one economy, and the variate-mixing path can
+exploit that.
 
 That is not always the right reading of a wide frame. If your columns are unrelated series that
 merely share a time axis — one column per SKU, per sensor, per customer — they should not inform
-each other. Pass `multivariate=False` and each column is forecast as an independent univariate
-series instead:
-
-```python
-forecast = model.forecast_df(
-    df,
-    prediction_length=8,
-    timestamp_column="timestamp",
-    multivariate=False,
-)
-```
-
-The output frame looks the same either way: one row per target column and forecast step. With a
-single target column the flag makes no difference at all.
+each other. Reshape them into long format so every column gets its own id, as the next section
+does — ids are forecast independently, with no cross-variate information flowing between them.
 
 !!! note
-    [`forecast_gluon`][tirex2.api_adapter.forecast.ForecastModel.forecast_gluon] has a same-named
-    `multivariate` argument that means something else: there it only picks the `QuantileForecast`
-    output layout and defaults to `False`, the GIFT-Eval leaderboard protocol. Only `forecast_df`'s
-    flag changes how columns are grouped into series.
+    [`forecast_gluon`][tirex2.api_adapter.forecast.ForecastModel.forecast_gluon] does have a
+    `multivariate` argument, but it means something else: there it only picks the
+    `QuantileForecast` output layout and defaults to `False`, the GIFT-Eval leaderboard protocol.
+    It never changes how data is grouped into series.
 
 ## Forecast many series in one frame
 
@@ -129,8 +117,8 @@ forecast = model.forecast_df(
 Each `product` becomes its own series and the id column is carried into the output. Series keep
 their first-appearance order and rows are sorted by timestamp, so the input need not be pre-sorted.
 
-Because there is one target column here, `multivariate` is irrelevant: each id is a separate
-series regardless. The flag only ever groups *columns within an id*, never rows across ids.
+Joint forecasting only ever groups *target columns within an id*, never rows across ids — so a
+long frame with a single target column gives you fully independent series.
 
 ## Add covariates
 
@@ -178,9 +166,8 @@ packed into one tensor and left-padded to the longest context in the batch, whic
 `batch_size` the knob for peak GPU memory. On a CUDA or MPS out-of-memory error the batch size is
 halved and the failing batch retried, so treat the number as a starting point rather than a limit.
 
-`batch_size` counts **series, not rows and not ids**. A panel of 100 ids with 4 target columns is
-100 series with the default `multivariate=True`, but 400 series with `multivariate=False` — worth
-remembering when you tune it.
+`batch_size` counts **series, not rows**. A panel of 100 ids is 100 series, whether each id has
+one target column or four — worth remembering when you tune it.
 
 For datasets too large to hold at once, `yield_per_batch=True` yields one frame per batch instead
 of concatenating them:
@@ -198,9 +185,8 @@ for batch in model.forecast_df(
     write_somewhere(batch)
 ```
 
-Batches are cut on series boundaries, not id boundaries. With `multivariate=False` and several
-target columns, one id's columns can land in two consecutive frames — so concatenate before
-grouping by id, rather than treating each yielded frame as a complete set of ids.
+Each yielded frame holds the ids of one batch, in input order, so you can write it straight out
+without waiting for the rest.
 
 ## Switch dataframe library
 
@@ -221,18 +207,17 @@ type(forecast)  # polars.DataFrame
 
 `pyarrow.csv.read_csv` works the same way and returns a `pyarrow.Table`.
 
-## Choose another output type
+## Output type
 
-`output_type` defaults to `"dataframe"`, which is almost always what you want from a dataframe
-call. The other formats are there for when you would only unpack the frame again:
+A dataframe call returns a dataframe. `output_type` accepts exactly two values:
 
 | `output_type` | Returns |
 | :------------ | :------ |
 | `"dataframe"` (default) | one long-format frame, in the input's dataframe library |
 | `"pandas"` | the same frame, always as pandas |
-| `"torch"` / `"numpy"` | a list of `(V, 9, H)` arrays, one per series — skips building the frame |
-| `"gluonts"` | a list of `QuantileForecast`, starting at the first forecast timestamp |
 
-`"fev"` is not available here — it needs FEV evaluation-window metadata that a plain dataframe does
-not carry. Use [`forecast_fev`][tirex2.api_adapter.forecast.ForecastModel.forecast_fev] for that.
-See [Forecasting](forecasting.md#output-types) for the shared output types in general.
+Anything else raises a `ValueError`. Tensor, GluonTS and FEV output come from the calls that are
+built for them — [`forecast`][tirex2.api_adapter.forecast.ForecastModel.forecast],
+[`forecast_gluon`][tirex2.api_adapter.forecast.ForecastModel.forecast_gluon] and
+[`forecast_fev`][tirex2.api_adapter.forecast.ForecastModel.forecast_fev] — which carry the
+metadata those formats need. See [Forecasting](forecasting.md#output-types) for the full set.

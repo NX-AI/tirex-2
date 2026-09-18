@@ -23,9 +23,6 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__file__)
 
 ForecastOutputType = Literal["torch", "numpy", "gluonts", "fev", "dataframe", "pandas"]
-# forecast_df can never produce "fev" output (that needs FEV window metadata; use forecast_fev),
-# so it advertises the narrower set rather than failing deep inside the formatter.
-DataFrameOutputType = Literal["dataframe", "pandas", "torch", "numpy", "gluonts"]
 
 
 def _is_oom_error(exc: BaseException) -> bool:
@@ -75,6 +72,7 @@ def _predict_adaptive(
     timeseries,
     meta,
     prediction_length,
+    *,
     output_type,
     batch_size,
     quantile_levels,
@@ -253,12 +251,12 @@ def _gen_forecast(
     timeseries,
     meta,
     prediction_length,
+    *,
     output_type,
     batch_size,
     yield_per_batch,
     quantile_levels,
     return_inference_time=False,
-    allowed_output_types=get_args(ForecastOutputType),
     **predict_kwargs,
 ):
     """Batch the timeseries, run :meth:`TiRex2.predict`, and accumulate or stream the formatted output.
@@ -271,8 +269,8 @@ def _gen_forecast(
 
     if batch_size < 1:
         raise ValueError(f"batch_size must be >= 1, got {batch_size}.")
-    if output_type not in allowed_output_types:
-        raise ValueError(f"Invalid output type: {output_type!r}; expected one of {list(allowed_output_types)}.")
+    if output_type not in get_args(ForecastOutputType):
+        raise ValueError(f"Invalid output type: {output_type!r}; expected one of {list(get_args(ForecastOutputType))}.")
 
     if output_type == "fev" and yield_per_batch:
         raise ValueError("yield_per_batch=True is not supported with output_type='fev'.")
@@ -288,9 +286,9 @@ def _gen_forecast(
         timeseries,
         meta,
         prediction_length,
-        adaptive_output_type,
-        batch_size,
-        quantile_levels,
+        output_type=adaptive_output_type,
+        batch_size=batch_size,
+        quantile_levels=quantile_levels,
         **predict_kwargs,
     )
 
@@ -386,10 +384,10 @@ class ForecastModel:
             list(timeseries),
             None,
             prediction_length,
-            output_type,
-            batch_size,
-            yield_per_batch,
-            self._quantile_levels(),
+            output_type=output_type,
+            batch_size=batch_size,
+            yield_per_batch=yield_per_batch,
+            quantile_levels=self._quantile_levels(),
             **predict_kwargs,
         )
 
@@ -402,7 +400,7 @@ class ForecastModel:
         batch_size: int = 512,
         yield_per_batch: bool = False,
         multivariate: bool = False,
-        data_kwargs: dict = {},
+        data_kwargs: dict | None = None,
         **predict_kwargs,
     ):
         """Forecast every entry of a GluonTS dataset, carrying its covariates and metadata through.
@@ -426,16 +424,16 @@ class ForecastModel:
         except ImportError:
             raise ValueError("forecast_gluon needs GluonTS but GluonTS is not available (not installed)!")
 
-        timeseries, meta = build_gluon_timeseries(gluonDataset, multivariate=multivariate, **data_kwargs)
+        timeseries, meta = build_gluon_timeseries(gluonDataset, multivariate=multivariate, **(data_kwargs or {}))
         return _gen_forecast(
             self.model,
             timeseries,
             meta,
             prediction_length,
-            output_type,
-            batch_size,
-            yield_per_batch,
-            self._quantile_levels(),
+            output_type=output_type,
+            batch_size=batch_size,
+            yield_per_batch=yield_per_batch,
+            quantile_levels=self._quantile_levels(),
             **predict_kwargs,
         )
 
@@ -450,8 +448,7 @@ class ForecastModel:
         past_covariates: "str | Sequence[str] | None" = None,
         future_covariates: "str | Sequence[str] | None" = None,
         future_df: "IntoDataFrame | None" = None,
-        multivariate: bool = True,
-        output_type: DataFrameOutputType = "dataframe",
+        output_type: Literal["dataframe", "pandas"] = "dataframe",
         batch_size: int = 512,
         yield_per_batch: bool = False,
         **predict_kwargs,
@@ -467,13 +464,9 @@ class ForecastModel:
         ``DatetimeIndex``. Target columns default to every numeric column that is not the id
         column, the timestamp column or a covariate column.
 
-        With ``multivariate=True`` (default) the target columns of a series are forecast jointly,
-        so the model can exploit their cross-variate structure; ``multivariate=False`` forecasts
-        every target column as an independent univariate series, which is what a wide frame of
-        unrelated series wants. With a single target column the two are equivalent. Note that
-        :meth:`forecast_gluon` has a same-named flag with a *different* meaning: there it only
-        selects the ``QuantileForecast`` output layout and defaults to ``False``, the GIFT-Eval
-        leaderboard protocol.
+        The target columns of a series are always forecast jointly, as one multivariate series, so
+        the model can exploit their cross-variate structure. To forecast columns independently,
+        reshape the frame into long format and name the series column with ``id_column``.
 
         Known-future covariates need their horizon values, supplied via ``future_df`` in the same
         layout as ``df``.
@@ -481,19 +474,27 @@ class ForecastModel:
         Every argument after ``prediction_length`` is keyword-only, so the signature can grow
         without breaking callers.
 
-        The default ``output_type="dataframe"`` returns one long-format frame *in the same
-        dataframe library as* ``df``: a row per series, target column and forecast step, with a
-        ``prediction`` column (the median) and one column per quantile level. Timestamps continue
-        the input's inferred frequency; when no usable time axis exists they are integer positions
-        relative to the series start. ``output_type="pandas"`` returns the same frame but always as
-        pandas; the other output types behave as in :meth:`forecast`.
+        A dataframe call returns a dataframe: ``output_type`` accepts only ``"dataframe"`` (the
+        default), which returns one long-format frame *in the same dataframe library as* ``df``,
+        and ``"pandas"``, which returns the same frame always as pandas. Anything else raises a
+        ``ValueError`` - use :meth:`forecast` for tensor, GluonTS or FEV output.
 
-        ``batch_size`` counts *series*, not rows or ids: with ``multivariate=False`` a frame of
-        100 ids and 4 target columns produces 400 series. See :meth:`forecast` for the rest.
+        The frame has a row per series, target column and forecast step, with a ``prediction``
+        column (the median) and one column per quantile level. Timestamps continue the input's
+        inferred frequency; when no usable time axis exists they are integer positions relative to
+        the series start.
+
+        ``batch_size`` counts *series*, not rows: a frame of 100 ids is 100 series however many
+        target columns it has. See :meth:`forecast` for the rest.
 
         Extra ``predict_kwargs`` are forwarded verbatim to :meth:`TiRex2.predict` (see
         :meth:`forecast`).
         """
+        if output_type not in ("dataframe", "pandas"):
+            raise ValueError(
+                f"Invalid output type: {output_type!r}; forecast_df returns a dataframe and accepts only "
+                "'dataframe' or 'pandas'. Use forecast() for torch, numpy, gluonts or fev output."
+            )
         timeseries, meta = build_df_timeseries(
             df,
             id_column=id_column,
@@ -502,18 +503,16 @@ class ForecastModel:
             past_covariates=past_covariates,
             future_covariates=future_covariates,
             future_df=future_df,
-            multivariate=multivariate,
         )
         return _gen_forecast(
             self.model,
             timeseries,
             meta,
             prediction_length,
-            output_type,
-            batch_size,
-            yield_per_batch,
-            self._quantile_levels(),
-            allowed_output_types=get_args(DataFrameOutputType),
+            output_type=output_type,
+            batch_size=batch_size,
+            yield_per_batch=yield_per_batch,
+            quantile_levels=self._quantile_levels(),
             **predict_kwargs,
         )
 
@@ -557,10 +556,10 @@ class ForecastModel:
             timeseries,
             meta,
             prediction_length,
-            output_type,
-            batch_size,
-            yield_per_batch,
-            self._quantile_levels(),
+            output_type=output_type,
+            batch_size=batch_size,
+            yield_per_batch=yield_per_batch,
+            quantile_levels=self._quantile_levels(),
             return_inference_time=return_inference_time,
             **predict_kwargs,
         )

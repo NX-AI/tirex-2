@@ -183,21 +183,15 @@ def test_build_df_timeseries_long_format_one_series_per_id(backend):
 
 @_needs_df_adapter
 @pytest.mark.parametrize("backend", BACKENDS)
-def test_build_df_timeseries_multiple_targets_univariate_vs_multivariate(backend):
+def test_build_df_timeseries_groups_every_target_column_into_one_series(backend):
     df = _as_backend(_long_df(), backend)
 
-    univariate, uni_meta = build_df_timeseries(
-        df, id_column="item_id", timestamp_column="timestamp", multivariate=False
-    )
-    assert len(univariate) == 4  # two ids x two numeric target columns
-    assert all(ts.target.shape == (1, 20) for ts in univariate)
-    assert [m["target_names"] for m in uni_meta] == [["sales"], ["price"]] * 2
-
-    # multivariate=True is the default: the two target columns of an id are forecast jointly.
+    # The two numeric target columns of an id are always forecast jointly, as one series.
     joint, joint_meta = build_df_timeseries(df, id_column="item_id", timestamp_column="timestamp")
-    assert len(joint) == 2
+
+    assert len(joint) == 2  # one per id, not one per (id, column)
     assert all(ts.target.shape == (2, 20) for ts in joint)
-    assert joint_meta[0]["target_names"] == ["sales", "price"]
+    assert [m["target_names"] for m in joint_meta] == [["sales", "price"]] * 2
 
 
 @_needs_df_adapter
@@ -346,7 +340,7 @@ def test_format_df_output_long_frame_with_quantiles_and_timestamps(backend):
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_format_df_output_multivariate_rows_per_target_column(backend):
     df = _as_backend(_long_df(), backend)
-    series, meta = build_df_timeseries(df, id_column="item_id", timestamp_column="timestamp", multivariate=True)
+    series, meta = build_df_timeseries(df, id_column="item_id", timestamp_column="timestamp")
     forecasts = [torch.randn(2, len(QUANTILES), H) for _ in series]
 
     result = format_df_output(forecasts, meta, QUANTILES)

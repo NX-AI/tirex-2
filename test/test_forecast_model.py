@@ -1,5 +1,6 @@
 """Quick stress tests for the public ForecastModel.forecast wrapper."""
 
+import inspect
 import logging
 from types import SimpleNamespace
 
@@ -848,7 +849,7 @@ def test_forecast_df_batches_series_and_returns_long_frame():
     assert result[result["item_id"] == "item_2"]["prediction"].iloc[0] == pytest.approx(2.0)
 
 
-def test_forecast_df_forwards_covariates_and_multivariate_targets():
+def test_forecast_df_forwards_covariates_and_forecasts_targets_jointly():
     model = RecordingForecastBackbone(future_len=16)
     adapter = ForecastModel(model)
     prediction_length = 3
@@ -874,7 +875,7 @@ def test_forecast_df_forwards_covariates_and_multivariate_targets():
     assert model.calls[0]["future_covariate_shapes"] == [(1, 12 + prediction_length)] * 2
     assert len(result) == 2 * prediction_length
 
-    # multivariate=True is the default: both target columns of an id go in as one series.
+    # Both target columns of an id always go in as one multivariate series.
     joint = adapter.forecast_df(
         df,
         prediction_length=prediction_length,
@@ -885,39 +886,24 @@ def test_forecast_df_forwards_covariates_and_multivariate_targets():
     assert joint["target"].unique().tolist() == ["sales", "price"]
     assert len(joint) == 2 * 2 * prediction_length
 
-    # multivariate=False opts back out: one univariate series per target column.
-    independent = adapter.forecast_df(
-        df,
-        prediction_length=prediction_length,
-        id_column="item_id",
-        timestamp_column="timestamp",
-        multivariate=False,
-    )
-    assert model.calls[-1]["target_shapes"] == [(1, 12)] * 4
-    assert len(independent) == 2 * 2 * prediction_length
+    # There is no opt-out: joint forecasting is the only behaviour forecast_df offers.
+    assert "multivariate" not in inspect.signature(adapter.forecast_df).parameters
 
 
-@pytest.mark.parametrize("output_type", ["torch", "numpy", pytest.param("gluonts", marks=_needs_gluonts)])
-def test_forecast_df_supports_other_output_types(output_type):
-    model = RecordingForecastBackbone(future_len=16)
-    adapter = ForecastModel(model)
+@pytest.mark.parametrize("output_type", ["torch", "numpy", "gluonts", "fev", "frame", None])
+def test_forecast_df_rejects_non_dataframe_output_types(output_type):
+    """A dataframe call returns a dataframe; anything else is a caller mistake, not a fallback."""
+    adapter = ForecastModel(RecordingForecastBackbone(future_len=16))
 
-    result = adapter.forecast_df(
-        _forecast_df(num_items=2),
-        prediction_length=5,
-        target="sales",
-        id_column="item_id",
-        timestamp_column="timestamp",
-        output_type=output_type,
-    )
-
-    assert len(result) == 2
-    if output_type == "torch":
-        assert all(f.shape == (1, len(model.quantiles), 5) for f in result)
-    elif output_type == "numpy":
-        assert all(isinstance(f, np.ndarray) for f in result)
-    else:
-        assert all(isinstance(f, QuantileForecast) for f in result)
+    with pytest.raises(ValueError, match="Invalid output type"):
+        adapter.forecast_df(
+            _forecast_df(num_items=2),
+            prediction_length=5,
+            target="sales",
+            id_column="item_id",
+            timestamp_column="timestamp",
+            output_type=output_type,
+        )
 
 
 def test_forecast_df_yield_per_batch_streams_frames():
@@ -940,34 +926,13 @@ def test_forecast_df_yield_per_batch_streams_frames():
     assert [len(frame) for frame in stream] == [2 * 4, 1 * 4]
 
 
-def test_forecast_df_is_keyword_only_and_rejects_fev_output():
+def test_forecast_df_is_keyword_only():
     adapter = ForecastModel(RecordingForecastBackbone(future_len=16))
     df = _forecast_df(num_items=1)
 
     # Everything after prediction_length is keyword-only, so the order can change safely.
     with pytest.raises(TypeError):
         adapter.forecast_df(df, 4, "item_id")
-
-    # "fev" needs FEV window metadata; forecast_df advertises the narrower output set.
-    with pytest.raises(ValueError, match="Invalid output type"):
-        adapter.forecast_df(df, prediction_length=4, target="sales", output_type="fev")
-
-
-@_needs_gluonts
-def test_forecast_df_gluonts_output_keeps_the_dataframe_time_axis():
-    adapter = ForecastModel(RecordingForecastBackbone(future_len=16))
-    result = adapter.forecast_df(
-        _forecast_df(num_items=1),
-        prediction_length=4,
-        target="sales",
-        id_column="item_id",
-        timestamp_column="timestamp",
-        output_type="gluonts",
-    )
-
-    # 12 hourly observations from 2020-01-01 00:00, so the forecast starts at 12:00.
-    assert result[0].start_date == pd.Period("2020-01-01 12:00", freq="h")
-    assert result[0].item_id == "item_0"
 
 
 @pytest.mark.parametrize("backend", ["polars", "pyarrow"])
