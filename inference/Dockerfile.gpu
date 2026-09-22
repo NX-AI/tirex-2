@@ -4,7 +4,7 @@
 # -------------------------
 # Builder (CUDA toolkit for JIT-compatible builds)
 # -------------------------
-FROM nvidia/cuda:12.8.1-cudnn-devel-ubuntu24.04 AS builder
+FROM nvidia/cuda:13.0.3-cudnn-devel-ubuntu24.04 AS builder
 
 ARG DEBIAN_FRONTEND=noninteractive
 
@@ -28,28 +28,10 @@ RUN python -m pip install --upgrade pip setuptools wheel
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Remove pythoch cache and test folders
-RUN find /opt/venv/lib/python3.12/site-packages -type d \
-        \( -name '__pycache__' -o -name tests -o -name test \) -prune -exec rm -rf {} +
-
-# Remove packagesd, which are not used. Still to be tested
-# Transformers paackage is in xlSTM, but runs without errors
-RUN pip uninstall -y \
-        ipykernel ipython jedi debugpy \
-        jupyter-client jupyter-core pyzmq tornado nest-asyncio comm \
-        prompt_toolkit pygments traitlets matplotlib-inline stack-data executing \
-        asttokens parso pexpect ptyprocess decorator wcwidth \
-        joypy seaborn \
-        matplotlib pillow fonttools contourpy kiwisolver cycler pyparsing \
-        scipy pandas pytz tzdata \
-        transformers tokenizers safetensors regex \
-    || true
-
 # -------------------------
 # Runtime (keep devel for JIT at runtime)
 # -------------------------
-# FROM nvidia/cuda:13.0.1-cudnn-runtime-ubuntu24.04 AS runtime
-FROM nvidia/cuda:12.8.1-cudnn-devel-ubuntu24.04 AS runtime
+FROM nvidia/cuda:13.0.3-cudnn-devel-ubuntu24.04 AS runtime
 
 ARG DEBIAN_FRONTEND=noninteractive
 
