@@ -2,6 +2,6 @@ fastapi[standard]==0.141.1
 paho-mqtt==2.1.0
 pydantic==2.13.5
 fastmcp==4.0.3
-pydantic-settings==2.14.2
+pydantic-settings==2.15.0
 requests==2.34.2
 tirex-2
