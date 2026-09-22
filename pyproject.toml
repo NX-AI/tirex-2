@@ -140,8 +140,10 @@ notebook = { cmd = "jupyter lab examples/getting_started.ipynb", default-environ
 # benchmarking tasks:
 # requires the path to the gifteval storage and a model type; examples/gifteval is added to PYTHONPATH for its local helper modules
 gifteval = { cmd = "python examples/gifteval/run_gifteval.py", default-environment = "examples" }
+gifteval-download = { cmd = "hf download Salesforce/GiftEval --repo-type=dataset --local-dir ", default-environment = "examples" }
 # requires the path to the fev-bench storage
 fevbench = { cmd = "python examples/fevbench/run_fevbench.py", default-environment = "examples" }
+fevbench-download = { cmd = "hf download autogluon/fev_datasets --repo-type=dataset --local-dir ", default-environment = "examples" }
 # docs tasks:
 # preview the docs site locally
 docs = { cmd = "mkdocs serve", default-environment = "docs" }

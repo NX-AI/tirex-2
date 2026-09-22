@@ -8,8 +8,7 @@ benchmark.
 Download the GiftEval datasets once:
 
 ```bash
-
-pixi run -e examples --platform linux-64-cuda huggingface-cli download Salesforce/GiftEval --repo-type=dataset --local-dir PATH_TO_SAVE
+pixi run gifteval-download PATH_TO_STORAGE
 ```
 
 ## Run
@@ -17,7 +16,7 @@ pixi run -e examples --platform linux-64-cuda huggingface-cli download Salesforc
 Script (required positional arguments: the GiftEval storage directory and model type):
 
 ```bash
-pixi run -e examples --platform linux-64-cuda python examples/gifteval/run_gifteval.py </path/to/gifteval_storage> pretrained
+pixi run gifteval PATH_TO_STORAGE MODEL_TYPE
 ```
 
 Model type options:
@@ -31,6 +30,11 @@ Optional arguments:
 - `--device` — device to run on (default: `cuda`).
 - `--eval-mode {univariate,multivariate}` — how multivariate datasets are scored
   (default: `multivariate`). See below.
+
+#### Tips: Platform Selection
+
+Pixi selects a compatible platform automatically (PyTorch w/ CUDA 13.0 for Linux/Windows, PyTorch w/ default for macOS), or you can choose one explicitly, for example `pixi run -p linux-64-cuda-126 ...`. Platforms are defined in
+[`pyproject.toml`](pyproject.toml).
 
 ## Univariate vs. multivariate evaluation
 
@@ -47,8 +51,7 @@ official leaderboard numbers but never exercises the model's cross-variate path.
 
 ```bash
 # univariate scoring (matches the public GIFT-Eval leaderboard protocol)
-pixi run -e examples --platform linux-64-cuda-126 python examples/gifteval/run_gifteval.py \
-    </path/to/gifteval_storage> <ckpt_dir> --eval-mode univariate
+pixi run gifteval PATH_TO_STORAGE MODEL_TYPE --eval-mode univariate
 ```
 
 Note: the default multivariate numbers are **not** comparable to the public GIFT-Eval
@@ -57,6 +60,6 @@ leaderboard, since the leaderboard baselines are computed in univariate mode —
 
 To run GIFT-Eval in an interactive manner, start jupyter lab
 ```bash
-pixi run --platform linux-64-cuda notebook
+pixi run notebook
 ```
 and then open `./examples/gifteval/gifteval.ipynb`.
