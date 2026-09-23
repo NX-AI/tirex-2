@@ -310,11 +310,11 @@ def _gen_forecast(
 
 
 class ForecastModel:
-    """High-level, batched forecasting interface around a :class:`TiRex2` backbone.
+    """High-level, batched forecasting interface around a ``TiRex2`` backbone.
 
     The wrapper takes ownership of the model only as a delegate: it batches the
-    :class:`~tirex.model.types.TimeseriesType` it is given (building them from a GluonTS
-    dataset in :meth:`forecast_gluon`), feeds them to :meth:`TiRex2.predict`, and formats the
+    ``TimeseriesType`` it is given (building them from a GluonTS
+    dataset in ``forecast_gluon``), feeds them to ``TiRex2.predict``, and formats the
     per-series quantile forecasts into the requested output type. Attribute access falls
     through to the wrapped model, so the backbone's own methods (e.g. ``predict``) remain
     reachable on the wrapper.
@@ -352,18 +352,9 @@ class ForecastModel:
         yield_per_batch: bool = False,
         **predict_kwargs,
     ):
-        """Forecast a list of :class:`TimeseriesType`, each carrying a target and optional covariates.
+        """Forecast a list of ``TimeseriesType`` objects, each with a target and optional covariates.
 
-        Series are processed in contiguous windows of at most ``batch_size``, one
-        :meth:`TiRex2.predict` call each. The window is packed into a single tensor whose rows are
-        every series' target variates plus its covariates, left-padded to the longest target in
-        the window, so ``batch_size`` sets peak device memory - and, on a panel of very uneven
-        lengths, how much padding is wasted. On a CUDA or MPS out-of-memory error the size is
-        halved and the failing window retried, for the remainder of the call; treat the argument
-        as a starting size rather than a hard one. With ``yield_per_batch=True`` one formatted
-        result is yielded per window, and the device memory behind each is released as it goes.
-
-        Extra ``predict_kwargs`` are forwarded verbatim to :meth:`TiRex2.predict`.
+        Extra ``predict_kwargs`` are forwarded verbatim to ``TiRex2.predict``.
         In particular ``tta_sign_flip`` controls sign-flip test-time augmentation
         (roughly doubles inference cost), and ``tta_diff`` controls postprocessor
         differencing; when omitted, the checkpoint's configured defaults
@@ -408,12 +399,9 @@ class ForecastModel:
         With ``multivariate=False`` (default) each target variate is rendered as its own
         univariate ``QuantileForecast``; with ``multivariate=True`` each series yields a single
         forecast retaining the variate axis, so a multivariate dataset is scored jointly rather
-        than channel-by-channel. The flag only affects ``output_type="gluonts"`` formatting - it
-        does not change what the model is fed, and ``False`` is the GIFT-Eval leaderboard
-        protocol. This is *not* the same flag as :meth:`forecast_df`'s ``multivariate``, which
-        does change how the frame's columns are grouped into series.
+        than channel-by-channel. The flag only affects ``output_type="gluonts"`` formatting.
 
-        Extra ``predict_kwargs`` are forwarded verbatim to :meth:`TiRex2.predict`.
+        Extra ``predict_kwargs`` are forwarded verbatim to ``TiRex2.predict``.
         In particular ``tta_sign_flip`` controls sign-flip test-time augmentation
         (roughly doubles inference cost), and ``tta_diff`` controls postprocessor
         differencing; when omitted, the checkpoint's configured defaults
@@ -453,42 +441,25 @@ class ForecastModel:
         yield_per_batch: bool = False,
         **predict_kwargs,
     ):
-        """Forecast the series held in a ``DataFrame``.
+        """Forecast one or more series from an eager dataframe.
 
-        ``df`` may be any eager dataframe `narwhals <https://narwhals-dev.github.io/narwhals/>`_
-        supports - pandas, polars, PyArrow, Modin, cuDF, ... - and no conversion to pandas happens
-        on the way in or out.
+        ``df`` can be any eager dataframe supported by
+        [narwhals](https://narwhals-dev.github.io/narwhals/). Use ``id_column`` for multiple
+        series and ``timestamp_column`` for the time axis. A pandas ``DatetimeIndex`` also works.
+        By default, all numeric columns except ids, timestamps and covariates are targets.
 
-        The frame may be long-format - many series stacked, identified by ``id_column`` - or a
-        single series, and its time axis may come from ``timestamp_column`` or from a pandas
-        ``DatetimeIndex``. Target columns default to every numeric column that is not the id
-        column, the timestamp column or a covariate column.
+        Targets within a series are forecast jointly. To forecast columns independently, reshape
+        them into long format and identify each series with ``id_column``. Supply known future
+        covariate values in ``future_df``, using the same layout as ``df``.
 
-        The target columns of a series are always forecast jointly, as one multivariate series, so
-        the model can exploit their cross-variate structure. To forecast columns independently,
-        reshape the frame into long format and name the series column with ``id_column``.
+        The result has one row per series, target and forecast step, with a median ``prediction``
+        and columns for each quantile. By default, it uses the same dataframe library as ``df``;
+        set ``output_type="pandas"`` to get pandas instead.
 
-        Known-future covariates need their horizon values, supplied via ``future_df`` in the same
-        layout as ``df``.
+        ``batch_size`` counts series, not rows. Set ``yield_per_batch=True`` to yield one result
+        per batch. Extra ``predict_kwargs`` are passed to ``TiRex2.predict``.
 
-        Every argument after ``prediction_length`` is keyword-only, so the signature can grow
-        without breaking callers.
-
-        A dataframe call returns a dataframe: ``output_type`` accepts only ``"dataframe"`` (the
-        default), which returns one long-format frame *in the same dataframe library as* ``df``,
-        and ``"pandas"``, which returns the same frame always as pandas. Anything else raises a
-        ``ValueError`` - use :meth:`forecast` for tensor, GluonTS or FEV output.
-
-        The frame has a row per series, target column and forecast step, with a ``prediction``
-        column (the median) and one column per quantile level. Timestamps continue the input's
-        inferred frequency; when no usable time axis exists they are integer positions relative to
-        the series start.
-
-        ``batch_size`` counts *series*, not rows: a frame of 100 ids is 100 series however many
-        target columns it has. See :meth:`forecast` for the rest.
-
-        Extra ``predict_kwargs`` are forwarded verbatim to :meth:`TiRex2.predict` (see
-        :meth:`forecast`).
+        See the [dataframe how-to guide](../how-to/dataframes.md) for usage.
         """
         if output_type not in ("dataframe", "pandas"):
             raise ValueError(
@@ -531,8 +502,8 @@ class ForecastModel:
     ):
         """Forecast a single FEV evaluation window.
 
-        The call mirrors :meth:`forecast_gluon`: convert the external dataset
-        representation into :class:`TimeseriesType`, then delegate batching,
+        The call mirrors ``forecast_gluon``: convert the external dataset
+        representation into ``TimeseriesType``, then delegate batching,
         prediction and output rendering to the common forecast path. Use
         ``output_type="fev"`` to return predictions in the format accepted by
         ``fev.Task.evaluation_summary``. Pass ``return_inference_time=True`` to
