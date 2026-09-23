@@ -13,8 +13,7 @@ dependencies = [
 	"torch>=2.10.0; python_version >= '3.14'",
 	"numpy>=2.1.3",
 	"numpy>=2.3.3; python_version >= '3.14'",
-	"einops~=0.8.1",
-	"flashrnn>=1.0.5",
+	"flashrnn>=1.0.8",
 	"xlstm~=2.0.3",
 	"PyYAML>=6",
 	"huggingface-hub>=0.35.3",
@@ -92,6 +91,10 @@ cuda-libraries-dev = "13.2.*"
 cuda-nvcc = "12.6.*"
 cuda-libraries-dev = "12.6.*"
 
+[tool.pixi.target."*-cuda".pypi-dependencies]
+# resolve torch (cuda) for the default CUDA platforms
+torch = { version = "*", index = "https://download.pytorch.org/whl/cu130" }
+
 [tool.pixi.target."*-cpu".pypi-dependencies]
 # resolve torch (cpu) for cpu platforms
 torch = { version = "*", index = "https://download.pytorch.org/whl/cpu" }
@@ -112,6 +115,7 @@ torch = { version = "*", index = "https://download.pytorch.org/whl/cpu" }
 default = []
 test = ["test"]
 examples = ["examples"]
+docs = ["docs"]
 pypi-build = ["pypi-build"]
 
 [tool.pixi.feature.test.pypi-dependencies]
@@ -127,6 +131,15 @@ tirex-2 = { path = ".", editable = true, extras = ["gluonts", "fev"] }
 tirex-2 = { path = ".", editable = true, extras = ["examples", "gluonts", "fev"] }
 toolz = ">=0.12.1"
 
+[tool.pixi.feature.docs.dependencies]
+python = ">=3.11,<3.14"
+
+[tool.pixi.feature.docs.pypi-dependencies]
+mkdocs = ">=1.6,<2"
+mkdocs-material = ">=9.5"
+mkdocstrings = { version = ">=0.26", extras = ["python"] }
+mkdocs-material-extensions = ">=1.3"
+
 [tool.pixi.tasks]
 test = { cmd = "pytest test/", default-environment = "test" }
 notebook = { cmd = "jupyter lab examples/getting_started.ipynb", default-environment = "examples" }
@@ -135,6 +148,11 @@ notebook = { cmd = "jupyter lab examples/getting_started.ipynb", default-environ
 gifteval = { cmd = "python examples/gifteval/run_gifteval.py", default-environment = "examples" }
 # requires the path to the fev-bench storage
 fevbench = { cmd = "python examples/fevbench/run_fevbench.py", default-environment = "examples" }
+# docs tasks:
+# preview the docs site locally
+docs = { cmd = "mkdocs serve", default-environment = "docs" }
+# build the docs site for deployment
+docs-build = { cmd = "mkdocs build --strict", default-environment = "docs" }
 
 [tool.pixi.feature.pypi-build.dependencies]
 python = ">=3.11,<3.14"
@@ -144,6 +162,9 @@ build = "*"
 
 [tool.pixi.feature.examples.activation.env]
 PYTHONPATH = "$PIXI_PROJECT_ROOT/examples/gifteval:$PYTHONPATH"
+
+[tool.pixi.target."*-cuda*".tasks]
+test = { cmd = "pytest test/ --require-cuda", default-environment = "test" }
 
 # ruff
 [tool.ruff]

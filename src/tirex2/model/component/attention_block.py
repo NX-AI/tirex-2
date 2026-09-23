@@ -6,7 +6,6 @@ import warnings
 from typing import Any
 
 import torch
-from einops import rearrange
 from torch.nn import functional as F
 
 from .mlp import MLP
@@ -195,11 +194,11 @@ class AttentionLayer(torch.nn.Module):
 
         def unpack(x):
             """Reshape from (B, L, D) to multi-head format (B, H, L, D_head)."""
-            return rearrange(x, "b l (h d) -> b h l d", h=self.n_heads, l=L, d=self.kv_proj_dim)
+            return x.reshape(x.shape[0], L, self.n_heads, self.kv_proj_dim).permute(0, 2, 1, 3)
 
         def pack(x):
             """Reshape from multi-head format (B, H, L, D_head) to (B, L, D)."""
-            return rearrange(x, "b h l d -> b l (h d)", h=self.n_heads, l=L, d=self.kv_proj_dim)
+            return x.permute(0, 2, 1, 3).reshape(x.shape[0], L, self.n_heads * self.kv_proj_dim)
 
         qk_norm = norm if self.use_qk_norm else (lambda t: t)
         Q = qk_norm(unpack(self.WQ(x)))  # [B, L, D_in] -> [B, L, D_embed] -> [B, H, L, D_head]
