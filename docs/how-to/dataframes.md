@@ -141,7 +141,7 @@ forecast = model.forecast_df(
 
 Use `future_covariates` for columns whose values you already know during the forecast period, such
 as calendar features, holidays, or promotions. Put those future values in `future_df`, using the
-same layout as the input dataframe:
+same layout as the input dataframe, and past values in the input dataframe:
 
 ```python
 df["quarter"] = df["timestamp"].dt.quarter.astype("float32")

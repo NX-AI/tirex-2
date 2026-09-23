@@ -890,6 +890,32 @@ def test_forecast_df_forwards_covariates_and_forecasts_targets_jointly():
     assert "multivariate" not in inspect.signature(adapter.forecast_df).parameters
 
 
+@pytest.mark.parametrize(
+    "future_dates",
+    [
+        ["2020-01-01 11:00", "2020-01-01 12:00", "2020-01-01 13:00"],  # overlaps history
+        ["2020-01-01 12:00", "2020-01-01 14:00", "2020-01-01 15:00"],  # skips a step
+        ["2020-01-01 12:00", "2020-01-01 13:00"],  # too short
+    ],
+)
+def test_forecast_df_rejects_misaligned_future_covariates(future_dates):
+    model = RecordingForecastBackbone(future_len=16)
+    adapter = ForecastModel(model)
+    future_df = pd.DataFrame({"timestamp": pd.to_datetime(future_dates), "price": 1.0})
+
+    with pytest.raises(ValueError, match="future_df (timestamps|needs at least)"):
+        adapter.forecast_df(
+            _forecast_df(num_items=1).drop(columns="item_id"),
+            prediction_length=3,
+            target="sales",
+            timestamp_column="timestamp",
+            future_covariates="price",
+            future_df=future_df,
+        )
+
+    assert model.calls == []
+
+
 @pytest.mark.parametrize("output_type", ["torch", "numpy", "gluonts", "fev", "frame", None])
 def test_forecast_df_rejects_non_dataframe_output_types(output_type):
     """A dataframe call returns a dataframe; anything else is a caller mistake, not a fallback."""

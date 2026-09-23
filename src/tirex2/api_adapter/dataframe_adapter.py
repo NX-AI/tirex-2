@@ -200,6 +200,7 @@ def _group_by_id(df: nw.DataFrame, id_column: str | None) -> list[tuple]:
 def build_df_timeseries(
     df: "IntoDataFrame",
     *,
+    prediction_length: int | None = None,
     id_column: str | None = None,
     timestamp_column: str | None = None,
     target: str | Sequence[str] | None = None,
@@ -220,6 +221,8 @@ def build_df_timeseries(
         Rows of one series must share the same ``id_column`` value; within a series, rows are
         ordered by ``timestamp_column`` (a pandas ``DatetimeIndex`` is used automatically when no
         timestamp column is given).
+    prediction_length
+        Forecast horizon. When given, ``future_df`` must cover at least this many steps per series.
     id_column
         Column identifying the series. When omitted the whole frame is a single series.
     timestamp_column
@@ -233,7 +236,8 @@ def build_df_timeseries(
         supplies their values over the forecast horizon.
     future_df
         Known-future covariate values, in the same layout as ``df`` (same id and timestamp
-        columns). Required when ``future_covariates`` is given.
+        columns). Its timestamps must match the forecast timeline. Required when
+        ``future_covariates`` is given.
     """
     past_cov_cols = _as_column_list(past_covariates)
     future_cov_cols = _as_column_list(future_covariates)
@@ -281,13 +285,25 @@ def build_df_timeseries(
         else:
             timestamps = None
 
+        last_timestamp = timestamps.to_numpy()[-1] if timestamps is not None and len(timestamps) else None
+        time_step = _infer_time_step(timestamps)
+
         past_cov = _values_2d(frame, past_cov_cols) if past_cov_cols else None
         future_cov = None
         if future_cov_cols:
             if key not in future_groups:
                 raise ValueError(f"future_df has no rows for series {key!r}")
+            future_frame = future_groups[key]
+            horizon = prediction_length if prediction_length is not None else len(future_frame)
+            if len(future_frame) < horizon or horizon < 1:
+                raise ValueError(f"future_df needs at least {horizon} rows for series {key!r}")
+            if timestamp_column is not None and time_step is not None:
+                expected = _future_timestamps({"last_timestamp": last_timestamp, "time_step": time_step}, horizon)
+                actual = future_frame[timestamp_column].to_numpy()[:horizon]
+                if not np.array_equal(actual, expected):
+                    raise ValueError(f"future_df timestamps for series {key!r} do not match the forecast timeline")
             future_cov = torch.cat(
-                (_values_2d(frame, future_cov_cols), _values_2d(future_groups[key], future_cov_cols)), dim=-1
+                (_values_2d(frame, future_cov_cols), _values_2d(future_frame, future_cov_cols)), dim=-1
             )
 
         series.append(
@@ -303,8 +319,8 @@ def build_df_timeseries(
                 "id_column": id_column,
                 "timestamp_column": timestamp_column or DEF_TIMESTAMP_COLUMN,
                 "length": len(frame),
-                "last_timestamp": timestamps.to_numpy()[-1] if timestamps is not None and len(timestamps) else None,
-                "time_step": _infer_time_step(timestamps),
+                "last_timestamp": last_timestamp,
+                "time_step": time_step,
                 "backend": backend,
                 "target_names": list(target_cols),
             }

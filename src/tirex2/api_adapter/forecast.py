@@ -450,7 +450,8 @@ class ForecastModel:
 
         Targets within a series are forecast jointly. To forecast columns independently, reshape
         them into long format and identify each series with ``id_column``. Supply known future
-        covariate values in ``future_df``, using the same layout as ``df``.
+        covariate values in ``future_df``, using the same layout as ``df`` and timestamps that match
+        the forecast steps. Past values of future covariates are taken from ``df``.
 
         The result has one row per series, target and forecast step, with a median ``prediction``
         and columns for each quantile. By default, it uses the same dataframe library as ``df``;
@@ -468,6 +469,7 @@ class ForecastModel:
             )
         timeseries, meta = build_df_timeseries(
             df,
+            prediction_length=prediction_length,
             id_column=id_column,
             timestamp_column=timestamp_column,
             target=target,
