@@ -1,32 +1,34 @@
 # Forecasting from a DataFrame
 
-[`ForecastModel.forecast_df`][tirex2.api_adapter.forecast.ForecastModel.forecast_df] forecasts a
-dataframe directly, with no need to build [`TimeseriesType`][tirex2.model.types.TimeseriesType]
-tensors by hand. Frames go through [narwhals](https://narwhals-dev.github.io/narwhals/), so any
-eager dataframe it supports — pandas, Polars, PyArrow, Modin, cuDF — works, and the forecast comes
-back **in the same library the input came from**.
+Use [`ForecastModel.forecast_df`][tirex2.api_adapter.forecast.ForecastModel.forecast_df] to forecast
+directly from a dataframe. You don't need to create
+[`TimeseriesType`][tirex2.model.types.TimeseriesType] tensors yourself. The method uses
+[narwhals](https://narwhals-dev.github.io/narwhals/) to work with eager dataframes from pandas,
+Polars, PyArrow, Modin, and cuDF. It returns the forecast in the same dataframe library you used
+for the input.
 
-narwhals is a core dependency, so `forecast_df` is always available. It brings no dataframe
-library of its own, though, so install whichever one you actually use: `pip install pandas`,
-`pip install polars`, `pip install pyarrow`.
+`narwhals` is installed with TiRex-2, so `forecast_df` is always available. Install the dataframe
+library you want to use separately, for example with `pip install pandas`, `pip install polars`, or
+`pip install pyarrow`.
 
-Every argument after `prediction_length` is keyword-only, so you always name what you pass.
 
-## Get the data
+## Downloading data
 
-`aus_production` from
-[Forecasting: Principles and Practice, the Pythonic Way](https://otexts.com/fpppy/data/) — 218
-quarterly observations (1956 Q1 – 2010 Q2) of Australian production: beer, cement, electricity and
-gas.
+We'll use the `aus_production` dataset from
+[Forecasting: Principles and Practice, the Pythonic Way](https://otexts.com/fpppy/data/). It has 218
+quarterly observations of Australian beer, cement, electricity, and gas production, from 1956 Q1 to
+2010 Q2.
+
+Run the following command to download the CSV file:
 
 ```bash
 curl -O https://otexts.com/fpppy/data/aus_production.csv
 ```
 
+Load it into a pandas frame and drop the two series that stop early:
+
 ```python
 import pandas as pd
-
-from tirex2 import load_model
 
 df = (
     pd.read_csv("aus_production.csv", parse_dates=["ds"])
@@ -34,13 +36,21 @@ df = (
     .drop(columns=["Tobacco", "Bricks"])  # these two series stop early
 )
 # columns: timestamp, Beer, Cement, Electricity, Gas
-
-model = load_model("NX-AI/TiRex-2", device="cpu")  # or device="cuda"
 ```
 
-## Forecast one column
+## Loading the model
 
-Point `target` at the column to forecast and `timestamp_column` at the time axis:
+```python
+from tirex2 import load_model
+
+model = load_model("NX-AI/TiRex-2", device="cpu")  # or device="cuda"/"mps"
+```
+
+## Forecasting from a DataFrame
+
+### Forecasting a single column
+
+Simply point `target` at the column to forecast and `timestamp_column` at the time axis:
 
 ```python
 forecast = model.forecast_df(
@@ -51,6 +61,9 @@ forecast = model.forecast_df(
 )
 ```
 
+!!! note
+    When calling `forecast_df`, pass every argument after `prediction_length` by name.
+
 You get a long-format frame — one row per target column and forecast step — with a `prediction`
 column (the median) and one column per quantile level:
 
@@ -60,14 +73,14 @@ column (the median) and one column per quantile level:
 | 1 | 2010-10-01 | Beer   | 479.12     | 458.42  | … | 500.15  |
 | 2 | 2011-01-01 | Beer   | 405.48     | 384.93  | … | 424.99  |
 
-The context ends in 2010 Q2 and the forecast timestamps continue the quarterly frequency inferred
-from the input — calendar offsets like quarters and month ends are understood, not just fixed
-timedeltas. Without a usable time axis, timestamps fall back to integer positions.
+The input ends in 2010 Q2, so the forecast starts in 2010 Q3. `forecast_df` picks up the quarterly
+schedule from the input timestamps and continues it. It also understands calendar schedules such as
+month ends. If there is no usable time axis, the forecast uses integer positions instead.
 
-A pandas frame with a `DatetimeIndex` needs no `timestamp_column` at all; the index is used
-automatically, on `future_df` too.
+If your pandas dataframe has a `DatetimeIndex`, you can leave out `timestamp_column`. The index is
+used automatically, including for `future_df`.
 
-## Forecast every column
+### Forecasting multiple columns
 
 Leave `target` unset and every numeric column that is not the id, timestamp or a covariate becomes
 a target. They are forecast **jointly**, so the model can use their cross-variate structure:
@@ -82,25 +95,14 @@ forecast["target"].unique().tolist()
 # ['Beer', 'Cement', 'Electricity', 'Gas']
 ```
 
-Joint forecasting is not optional here, because it is what TiRex-2 is built for — beer, cement,
-electricity and gas really are four channels of one economy, and the variate-mixing path can
-exploit that.
+Use separate columns in a wide dataframe when the series are related. If each column represents a
+different SKU, sensor, or customer, reshape the data into long format and give each series its own
+id, as shown next.
 
-That is not always the right reading of a wide frame. If your columns are unrelated series that
-merely share a time axis — one column per SKU, per sensor, per customer — they should not inform
-each other. Reshape them into long format so every column gets its own id, as the next section
-does — ids are forecast independently, with no cross-variate information flowing between them.
+### Forecasting many series in one frame
 
-!!! note
-    [`forecast_gluon`][tirex2.api_adapter.forecast.ForecastModel.forecast_gluon] does have a
-    `multivariate` argument, but it means something else: there it only picks the
-    `QuantileForecast` output layout and defaults to `False`, the GIFT-Eval leaderboard protocol.
-    It never changes how data is grouped into series.
-
-## Forecast many series in one frame
-
-Long-format panels — many series stacked, identified by an id column — are the common shape. Name
-that column with `id_column`:
+To forecast several series at once, stack them in one dataframe and give each series an id. Pass
+the name of that column as `id_column`:
 
 ```python
 long_df = df.melt(id_vars="timestamp", var_name="product", value_name="production")
@@ -114,13 +116,15 @@ forecast = model.forecast_df(
 )
 ```
 
-Each `product` becomes its own series and the id column is carried into the output. Series keep
-their first-appearance order and rows are sorted by timestamp, so the input need not be pre-sorted.
+Each `product` is forecast as its own series, and the output includes the `product` column. Products
+stay in the order they first appear in the input, while rows within each product are sorted by
+timestamp. You don't need to sort the input first.
 
-Joint forecasting only ever groups *target columns within an id*, never rows across ids — so a
-long frame with a single target column gives you fully independent series.
+If an id has multiple target columns, the model forecasts those columns together. It never combines
+data from different ids. Here, each id has just one target column, so the products are forecast
+independently.
 
-## Add covariates
+### Forecasting with covariates
 
 `past_covariates` names columns observed only over the context — see
 [Covariates](covariates.md) for what the model does with them:
@@ -135,9 +139,9 @@ forecast = model.forecast_df(
 )
 ```
 
-`future_covariates` names columns known ahead of time — calendar features, holidays, promotions.
-Because they must cover the horizon too, pass their future values in a second frame of the same
-layout via `future_df`:
+Use `future_covariates` for columns whose values you already know during the forecast period, such
+as calendar features, holidays, or promotions. Put those future values in `future_df`, using the
+same layout as the input dataframe:
 
 ```python
 df["quarter"] = df["timestamp"].dt.quarter.astype("float32")
@@ -158,19 +162,22 @@ forecast = model.forecast_df(
 `future_df` needs a row for every series you are forecasting. Series it contains that `df` never
 mentions are ignored, with a warning.
 
-## Scale up
+## Scaling up
 
-Series are grouped into batches of at most `batch_size` (default `512`), so a frame with thousands
-of series is one call rather than a Python loop. Each batch is a single model call: its series are
-packed into one tensor and left-padded to the longest context in the batch, which is what makes
-`batch_size` the knob for peak GPU memory. On a CUDA or MPS out-of-memory error the batch size is
-halved and the failing batch retried, so treat the number as a starting point rather than a limit.
+`forecast_df` processes up to `batch_size` series at a time (512 by default). You can pass thousands
+of series in one call; it handles the batches for you.
 
-`batch_size` counts **series, not rows**. A panel of 100 ids is 100 series, whether each id has
-one target column or four — worth remembering when you tune it.
+!!! note
+    For each batch, TiRex-2 packs the series into one tensor and pads shorter histories on the left
+    to match the longest one. This means a larger
+    `batch_size` can use more GPU memory. If CUDA or MPS runs out of memory, `forecast_df` halves the
+    batch size and retries, so the value you set is a starting point.
 
-For datasets too large to hold at once, `yield_per_batch=True` yields one frame per batch instead
-of concatenating them:
+`batch_size` counts **series, not rows**. For example, 100 ids count as 100 series whether each id
+has one target column or four.
+
+If the full forecast would be too large to hold in memory, set `yield_per_batch=True`. This yields
+one dataframe per batch instead of combining them all into one:
 
 ```python
 for batch in model.forecast_df(
@@ -188,9 +195,9 @@ for batch in model.forecast_df(
 Each yielded frame holds the ids of one batch, in input order, so you can write it straight out
 without waiting for the rest.
 
-## Switch dataframe library
+## Switching dataframe libraries
 
-The input library decides the output library — nothing else changes:
+For example, pass in a Polars dataframe and you get a Polars dataframe back:
 
 ```python
 import polars as pl
@@ -207,7 +214,7 @@ type(forecast)  # polars.DataFrame
 
 `pyarrow.csv.read_csv` works the same way and returns a `pyarrow.Table`.
 
-## Output type
+## Supported output types
 
 A dataframe call returns a dataframe. `output_type` accepts exactly two values:
 
@@ -216,8 +223,4 @@ A dataframe call returns a dataframe. `output_type` accepts exactly two values:
 | `"dataframe"` (default) | one long-format frame, in the input's dataframe library |
 | `"pandas"` | the same frame, always as pandas |
 
-Anything else raises a `ValueError`. Tensor, GluonTS and FEV output come from the calls that are
-built for them — [`forecast`][tirex2.api_adapter.forecast.ForecastModel.forecast],
-[`forecast_gluon`][tirex2.api_adapter.forecast.ForecastModel.forecast_gluon] and
-[`forecast_fev`][tirex2.api_adapter.forecast.ForecastModel.forecast_fev] — which carry the
-metadata those formats need. See [Forecasting](forecasting.md#output-types) for the full set.
+Anything else raises a `ValueError`.

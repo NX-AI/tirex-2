@@ -160,11 +160,11 @@ retried, without affecting the rest of the call.
 | `"dataframe"` | one long-format frame, in the input's dataframe library | a dataframe library |
 | `"pandas"` | the same frame, always as pandas | `pip install pandas` |
 
-`"dataframe"` and `"pandas"` are the natural fit for
-[`forecast_df`][tirex2.api_adapter.forecast.ForecastModel.forecast_df] (where `"dataframe"` is the
-default) — see [DataFrames](dataframes.md). They work from any forecast call, but without an input
-frame there is no id or time axis to carry over, so rows fall back to integer positions and
-generated target names.
+???+ tip "Tip: using dataframes with TiRex-2"
+    If you use pandas, Polars, or cuDF, you can pass a dataframe to
+    [`forecast_df`][tirex2.api_adapter.forecast.ForecastModel.forecast_df] and get a long-format
+    dataframe with the forecast quantiles. See the [dataframe guide](dataframes.md) for a full
+    walkthrough.
 
 The 9 quantiles are the levels `0.1, 0.2, ..., 0.9`, with index `4` being the median.
 
