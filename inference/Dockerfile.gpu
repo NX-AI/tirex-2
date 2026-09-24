@@ -4,50 +4,25 @@
 # -------------------------
 # Builder (CUDA toolkit for JIT-compatible builds)
 # -------------------------
-FROM nvidia/cuda:13.0.3-cudnn-devel-ubuntu24.04 AS builder
+FROM 2.14.0-cuda13.0-cudnn9-devel AS build
 
 ARG DEBIAN_FRONTEND=noninteractive
 
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3.12 python3.12-venv python3.12-dev python3-pip \
-    build-essential git ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
-
-# Isolated env
-RUN python3.12 -m venv /opt/venv
-ENV PATH="/opt/venv/bin:${PATH}"
-
-RUN python -m pip install --upgrade pip setuptools wheel
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 
 # WORKDIR /app
-COPY requirements.txt .
+COPY requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 # -------------------------
 # Runtime (keep devel for JIT at runtime)
 # -------------------------
-FROM nvidia/cuda:13.0.3-cudnn-devel-ubuntu24.04 AS runtime
+FROM 2.14.0-cuda13.0-cudnn9-devel AS runtime
 
 ARG DEBIAN_FRONTEND=noninteractive
 
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    CUDA_HOME=/usr/local/cuda \
-    PATH="/opt/venv/bin:/usr/local/cuda/bin:${PATH}" \
-    NVIDIA_VISIBLE_DEVICES=all \
-    NVIDIA_DRIVER_CAPABILITIES=compute,utility
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3.12 python3.12-dev build-essential ca-certificates curl \
-    && rm -rf /var/lib/apt/lists/*
-
-# Bring venv from builder
-COPY --from=builder /opt/venv /opt/venv
+# Bring venv from build stage
+COPY --from=build /opt/venv /opt/venv
 
 # IMPORTANT: create a writable workdir owned by ubuntu (fixes PermissionError)
 RUN install -d -o ubuntu -g ubuntu /home/ubuntu/app
