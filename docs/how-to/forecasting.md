@@ -157,6 +157,14 @@ retried, without affecting the rest of the call.
 | `"numpy"` | list of `numpy.ndarray`, shape `(V, 9, H)` | — |
 | `"gluonts"` | list of GluonTS `QuantileForecast` | `pip install "tirex-2[gluonts]"` |
 | `"fev"` | a `datasets.DatasetDict` for `fev.Task.evaluation_summary` | `pip install "tirex-2[fev]"` |
+| `"dataframe"` | one long-format frame, in the input's dataframe library | a dataframe library |
+| `"pandas"` | the same frame, always as pandas | `pip install pandas` |
+
+???+ tip "Tip: using dataframes with TiRex-2"
+    If you use pandas, Polars, or cuDF, you can pass a dataframe to
+    [`forecast_df`][tirex2.api_adapter.forecast.ForecastModel.forecast_df] and get a long-format
+    dataframe with the forecast quantiles. See the [dataframe guide](dataframes.md) for a full
+    walkthrough.
 
 The 9 quantiles are the levels `0.1, 0.2, ..., 0.9`, with index `4` being the median.
 

@@ -6,14 +6,19 @@ benchmark.
 ## Data
 Data can be downloaded beforehand using:
 ```bash
-pixi run -e examples --platform linux-64-cuda huggingface-cli download autogluon/fev_datasets --repo-type=dataset --local-dir </path/to/fevbench/store>
+pixi run fevbench-download PATH_TO_STORAGE
 ```
+
+#### Tips: Platform Selection
+
+Pixi selects a compatible platform automatically (PyTorch w/ CUDA 13.0 for Linux/Windows, PyTorch w/ default for macOS), or you can choose one explicitly, for example `pixi run -p linux-64-cuda-126 ...`. Platforms are defined in
+[`pyproject.toml`](pyproject.toml).
 
 ## Run
 The script always loads `NX-AI/TiRex-2-fevbench` from Hugging Face:
 
 ```bash
-pixi run --platform linux-64-cuda fevbench [/path/to/fevbench_storage] [--tasks examples/fevbench/tasks.yaml]
+pixi run fevbench [PATH_TO_STORAGE] [--tasks examples/fevbench/tasks.yaml]
 ```
 
-Note: if `/path/to/fevbench_storage` is not given, then the dataset is downloaded at runtime and stored in $HOME/.cache.
+Note: if `PATH_TO_STORAGE` is not given, then the dataset is downloaded at runtime and stored in `$HOME/.cache`.

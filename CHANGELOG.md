@@ -6,14 +6,16 @@ All notable changes to TiRex-2 are documented here.
 
 ### Improvements
 
-- Made the default Windows CUDA Pixi platform use the cu130 PyTorch index and fail CUDA tests early when CUDA is unavailable, in [#51](https://github.com/NX-AI/tirex-2/pull/51), contributed by [Yipeng Sun](https://github.com/sypsyp97).
-- Added opt-in recurrent-layer compilation with `load_model(..., compile=True)` for faster repeated forecasts (up to 1.82x on CPU), in [#47](https://github.com/NX-AI/tirex-2/pull/47), contributed by [Daniil Yefimov](https://github.com/DaniilYefimov).
+- ⭐️📊 Use [`forecast_df()`][tirex2.api_adapter.forecast.ForecastModel.forecast_df] to forecast directly from pandas, Polars, PyArrow, and other supported eager dataframes. It handles multiple series, covariates, and batching, and returns results in the input dataframe library by default. Contributed by [Suad0](https://github.com/Suad0) and [Zhihao Dai](https://github.com/daidahao).
+- ⭐️🚀 Added opt-in recurrent-layer compilation with `load_model(..., compile=True)` for faster repeated forecasts (up to 1.82x on CPU), in [#47](https://github.com/NX-AI/tirex-2/pull/47), contributed by [Daniil Yefimov](https://github.com/DaniilYefimov).
 - Replaced `einops` rearrangements with native PyTorch operations and removed the direct `einops` dependency in [#41](https://github.com/NX-AI/tirex-2/pull/41), contributed by [Copilot](https://github.com/apps/copilot-swe-agent) and [Zhihao Dai](https://github.com/daidahao).
 - Removed a redundant `torch.no_grad()` context from prediction code in [#42](https://github.com/NX-AI/tirex-2/pull/42), contributed by [Zhihao Dai](https://github.com/daidahao).
 
 ### Documentation and development
 
+- Added a [dataframe forecasting guide](./how-to/dataframes.md) for native dataframe forecasting via `forecast_df`, contributed by [Suad0](https://github.com/Suad0) and [Zhihao Dai](https://github.com/daidahao).
 - Corrected deployment examples and guidance for covariates, model caching, compilation, and the HTTP API, and added an Open Source vs PRO feature comparison table with consistent PRO naming in [#21](https://github.com/NX-AI/tirex-2/pull/21), contributed by [Lukas Fischer](https://github.com/lukfischer), Claude Sonnet 5, and [Zhihao Dai](https://github.com/daidahao).
+- Made the default Windows CUDA Pixi platform use the cu130 PyTorch index and fail CUDA tests early when CUDA is unavailable, in [#51](https://github.com/NX-AI/tirex-2/pull/51), contributed by [Yipeng Sun](https://github.com/sypsyp97).
 - Added FAQs covering CUDA setup, supported NVIDIA GPU architectures, and Windows MSVC compiler setup in [#19](https://github.com/NX-AI/tirex-2/pull/19), contributed by [Yipeng Sun](https://github.com/sypsyp97) and [Daniil Yefimov](https://github.com/DaniilYefimov).
 - Added a Pixi documentation environment and preview/build commands, migrated documentation deployment to GitHub Pages artifact actions, and updated contributor instructions in [#37](https://github.com/NX-AI/tirex-2/pull/37), contributed by [Zhihao Dai](https://github.com/daidahao).
 - Removed the unused root `requirements.txt` in [#40](https://github.com/NX-AI/tirex-2/pull/40), contributed by [Copilot](https://github.com/apps/copilot-swe-agent) and [Zhihao Dai](https://github.com/daidahao).

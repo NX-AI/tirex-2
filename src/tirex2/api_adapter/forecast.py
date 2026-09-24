@@ -5,16 +5,24 @@
 
 import logging
 import time
-from typing import Literal
+from typing import TYPE_CHECKING, Literal, get_args
 
 import numpy as np
 import torch
 
 from ..model.types import TimeseriesType
+from .dataframe_adapter import build_df_timeseries, format_df_output, validate_output_columns
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    import datasets
+    import fev
+    from narwhals.typing import IntoDataFrame
 
 logger = logging.getLogger(__file__)
 
-ForecastOutputType = Literal["torch", "numpy", "gluonts", "fev"]
+ForecastOutputType = Literal["torch", "numpy", "gluonts", "fev", "dataframe", "pandas"]
 
 
 def _is_oom_error(exc: BaseException) -> bool:
@@ -44,6 +52,9 @@ def _format_output(forecasts, meta, output_type, quantile_levels):
         return [f.cpu() for f in forecasts]
     elif output_type == "numpy":
         return [f.cpu().numpy() for f in forecasts]
+    elif output_type in ("dataframe", "pandas"):
+        # "dataframe" keeps the library the input came from; "pandas" always returns a pandas frame
+        return format_df_output(forecasts, meta, quantile_levels, backend="pandas" if output_type == "pandas" else None)
     elif output_type == "gluonts":
         try:
             from .gluon import format_gluonts_output
@@ -61,6 +72,7 @@ def _predict_adaptive(
     timeseries,
     meta,
     prediction_length,
+    *,
     output_type,
     batch_size,
     quantile_levels,
@@ -81,7 +93,6 @@ def _predict_adaptive(
     memory backing completed batches is released as we go rather than accumulating
     across the whole dataset.
     """
-    assert batch_size >= 1, "Batch size must be >= 1"
     num_items = len(timeseries)
     device = str(getattr(model, "device", "cpu"))
     start = 0
@@ -91,7 +102,7 @@ def _predict_adaptive(
         try:
             forecasts = model.predict(timeseries[start:end], prediction_length, **predict_kwargs)
             formatted = _format_output(forecasts, meta[start:end], output_type, quantile_levels)
-        except (torch.cuda.OutOfMemoryError, RuntimeError) as exc:
+        except RuntimeError as exc:  # torch.cuda.OutOfMemoryError is a RuntimeError subclass
             if not _is_oom_error(exc):
                 raise
             _empty_device_cache(device)
@@ -133,7 +144,6 @@ def build_fev_timeseries(
     """Convert a fev evaluation window into timeseries plus metadata for FEV formatting."""
     import datasets
     import fev
-    import torch
 
     if as_univariate:
         past_data, future_data = fev.convert_input_data(window, adapter="datasets", as_univariate=True)
@@ -241,6 +251,7 @@ def _gen_forecast(
     timeseries,
     meta,
     prediction_length,
+    *,
     output_type,
     batch_size,
     yield_per_batch,
@@ -256,23 +267,28 @@ def _gen_forecast(
     if meta is None:
         meta = [{} for _ in timeseries]
 
-    if output_type not in ["numpy", "torch", "gluonts", "fev"]:
-        raise ValueError("Invalid output type")
+    if batch_size < 1:
+        raise ValueError(f"batch_size must be >= 1, got {batch_size}.")
+    if output_type not in get_args(ForecastOutputType):
+        raise ValueError(f"Invalid output type: {output_type!r}; expected one of {list(get_args(ForecastOutputType))}.")
 
     if output_type == "fev" and yield_per_batch:
         raise ValueError("yield_per_batch=True is not supported with output_type='fev'.")
     if return_inference_time and yield_per_batch:
         raise ValueError("return_inference_time=True is not supported with yield_per_batch=True.")
 
-    adaptive_output_type = "torch" if output_type == "fev" else output_type
+    # 'fev' and the dataframe outputs render the whole dataset into a single object, so they must be
+    # formatted once at the end rather than per batch; with yield_per_batch they stream one frame per batch.
+    deferred_format = output_type == "fev" or (output_type in ("dataframe", "pandas") and not yield_per_batch)
+    adaptive_output_type = "torch" if deferred_format else output_type
     batch_outputs = _predict_adaptive(
         model,
         timeseries,
         meta,
         prediction_length,
-        adaptive_output_type,
-        batch_size,
-        quantile_levels,
+        output_type=adaptive_output_type,
+        batch_size=batch_size,
+        quantile_levels=quantile_levels,
         **predict_kwargs,
     )
 
@@ -284,7 +300,7 @@ def _gen_forecast(
     for formatted in batch_outputs:
         all_forecasts.extend(formatted)
     inference_time_s = time.monotonic() - inference_start if inference_start is not None else None
-    if output_type == "fev":
+    if deferred_format:
         result = _format_output(all_forecasts, meta, output_type, quantile_levels)
     else:
         result = all_forecasts
@@ -294,11 +310,11 @@ def _gen_forecast(
 
 
 class ForecastModel:
-    """High-level, batched forecasting interface around a :class:`TiRex2` backbone.
+    """High-level, batched forecasting interface around a ``TiRex2`` backbone.
 
     The wrapper takes ownership of the model only as a delegate: it batches the
-    :class:`~tirex.model.types.TimeseriesType` it is given (building them from a GluonTS
-    dataset in :meth:`forecast_gluon`), feeds them to :meth:`TiRex2.predict`, and formats the
+    ``TimeseriesType`` it is given (building them from a GluonTS
+    dataset in ``forecast_gluon``), feeds them to ``TiRex2.predict``, and formats the
     per-series quantile forecasts into the requested output type. Attribute access falls
     through to the wrapped model, so the backbone's own methods (e.g. ``predict``) remain
     reachable on the wrapper.
@@ -330,14 +346,15 @@ class ForecastModel:
         self,
         timeseries: list[TimeseriesType],
         prediction_length: int,
+        *,
         output_type: ForecastOutputType = "torch",
         batch_size: int = 512,
         yield_per_batch: bool = False,
         **predict_kwargs,
     ):
-        """Forecast a list of :class:`TimeseriesType`, each carrying a target and optional covariates.
+        """Forecast a list of ``TimeseriesType`` objects, each with a target and optional covariates.
 
-        Extra ``predict_kwargs`` are forwarded verbatim to :meth:`TiRex2.predict`.
+        Extra ``predict_kwargs`` are forwarded verbatim to ``TiRex2.predict``.
         In particular ``tta_sign_flip`` controls sign-flip test-time augmentation
         (roughly doubles inference cost), and ``tta_diff`` controls postprocessor
         differencing; when omitted, the checkpoint's configured defaults
@@ -353,16 +370,15 @@ class ForecastModel:
         >>> forecasts[0].shape
         (1, 9, 32)
         """
-        assert batch_size >= 1, "Batch size must be >= 1"
         return _gen_forecast(
             self.model,
             list(timeseries),
             None,
             prediction_length,
-            output_type,
-            batch_size,
-            yield_per_batch,
-            self._quantile_levels(),
+            output_type=output_type,
+            batch_size=batch_size,
+            yield_per_batch=yield_per_batch,
+            quantile_levels=self._quantile_levels(),
             **predict_kwargs,
         )
 
@@ -370,11 +386,12 @@ class ForecastModel:
         self,
         gluonDataset,
         prediction_length: int,
+        *,
         output_type: ForecastOutputType = "torch",
         batch_size: int = 512,
         yield_per_batch: bool = False,
         multivariate: bool = False,
-        data_kwargs: dict = {},
+        data_kwargs: dict | None = None,
         **predict_kwargs,
     ):
         """Forecast every entry of a GluonTS dataset, carrying its covariates and metadata through.
@@ -384,28 +401,139 @@ class ForecastModel:
         forecast retaining the variate axis, so a multivariate dataset is scored jointly rather
         than channel-by-channel. The flag only affects ``output_type="gluonts"`` formatting.
 
-        Extra ``predict_kwargs`` are forwarded verbatim to :meth:`TiRex2.predict`.
+        Extra ``predict_kwargs`` are forwarded verbatim to ``TiRex2.predict``.
         In particular ``tta_sign_flip`` controls sign-flip test-time augmentation
         (roughly doubles inference cost), and ``tta_diff`` controls postprocessor
         differencing; when omitted, the checkpoint's configured defaults
         (``model-config.yaml``) are used. Pass ``True``/``False`` to override.
         """
-        assert batch_size >= 1, "Batch size must be >= 1"
         try:
             from .gluon import build_gluon_timeseries
         except ImportError:
             raise ValueError("forecast_gluon needs GluonTS but GluonTS is not available (not installed)!")
 
-        timeseries, meta = build_gluon_timeseries(gluonDataset, multivariate=multivariate, **data_kwargs)
+        timeseries, meta = build_gluon_timeseries(gluonDataset, multivariate=multivariate, **(data_kwargs or {}))
         return _gen_forecast(
             self.model,
             timeseries,
             meta,
             prediction_length,
-            output_type,
-            batch_size,
-            yield_per_batch,
-            self._quantile_levels(),
+            output_type=output_type,
+            batch_size=batch_size,
+            yield_per_batch=yield_per_batch,
+            quantile_levels=self._quantile_levels(),
+            **predict_kwargs,
+        )
+
+    def forecast_df(
+        self,
+        df: "IntoDataFrame",
+        prediction_length: int,
+        *,
+        id_column: str | None = None,
+        timestamp_column: str | None = None,
+        target: "str | Sequence[str] | None" = None,
+        past_covariates: "str | Sequence[str] | None" = None,
+        future_covariates: "str | Sequence[str] | None" = None,
+        future_df: "IntoDataFrame | None" = None,
+        output_type: Literal["dataframe", "pandas"] = "dataframe",
+        batch_size: int = 512,
+        yield_per_batch: bool = False,
+        **predict_kwargs,
+    ):
+        """Forecast one or more series from an eager dataframe.
+
+        ``df`` can be any eager dataframe supported by
+        [narwhals](https://narwhals-dev.github.io/narwhals/). Use ``id_column`` for multiple
+        series and ``timestamp_column`` or a pandas ``DatetimeIndex`` for the time axis.
+        By default, all numeric columns except ids, timestamps and covariates are targets.
+
+        **Joint Forecasting**: Targets within a series are forecast jointly. To forecast columns
+        independently, reshape them into long format and identify each series with ``id_column``.
+
+        **Future Covariates**: Supply known future covariate values in ``future_df``, using the same
+        layout as ``df`` and timestamps that match the forecast steps. Past values of future
+        covariates are taken from ``df``.
+
+        **Output**: The result has one row per series, target and forecast step, with a median
+        ``prediction`` and columns for each quantile. By default, it uses the same dataframe library
+        as ``df``; set ``output_type="pandas"`` to get pandas instead.
+
+        **Batching**: ``batch_size`` counts series, not rows. Set ``yield_per_batch=True`` to yield
+        one result per batch. Extra ``predict_kwargs`` are passed to ``TiRex2.predict``.
+
+        Examples
+        --------
+        Forecast monthly sales from a pandas dataframe:
+
+        >>> import pandas as pd
+        >>> from tirex2 import load_model
+        >>> df = pd.DataFrame({
+        ...     "timestamp": pd.date_range("2020-01-01", periods=24, freq="MS"),
+        ...     "sales": range(24),
+        ... })
+        >>> model = load_model("NX-AI/TiRex-2", device="cpu")
+        >>> forecast = model.forecast_df(df, 4, target="sales", timestamp_column="timestamp")
+        >>> forecast
+           timestamp target  prediction  ...        0.7        0.8        0.9
+        0 2022-01-01  sales   23.985064  ...  24.005989  24.018473  24.036558
+        1 2022-02-01  sales   24.975126  ...  25.003880  25.020775  25.046469
+        2 2022-03-01  sales   25.964767  ...  26.000420  26.020782  26.051968
+        3 2022-04-01  sales   26.956121  ...  26.995924  27.018373  27.053928
+        [4 rows x 12 columns]
+
+        Add a calendar feature whose future values are already known:
+
+        >>> df["month"] = df["timestamp"].dt.month.astype("float32")
+        >>> future_df = pd.DataFrame({"timestamp": pd.date_range("2022-01-01", periods=4, freq="MS")})
+        >>> future_df["month"] = future_df["timestamp"].dt.month.astype("float32")
+        >>> forecast = model.forecast_df(
+        ...     df, 4, target="sales", timestamp_column="timestamp",
+        ...     future_covariates="month", future_df=future_df,
+        ... )
+        >>> forecast
+           timestamp target  prediction  ...        0.7        0.8        0.9
+        0 2022-01-01  sales   23.984356  ...  24.001610  24.012691  24.030060
+        1 2022-02-01  sales   24.972900  ...  24.998695  25.014589  25.039955
+        2 2022-03-01  sales   25.958410  ...  25.990089  26.009071  26.039722
+        3 2022-04-01  sales   26.944197  ...  26.980700  27.002466  27.038290
+        [4 rows x 12 columns]
+
+        See the [dataframe how-to guide](../how-to/dataframes.md) for more examples.
+
+        ???+ warning "Calendar-aware inference"
+            Without ``pandas`` installed, the forecast time step is estimated from the most common
+            gap between input timestamps. Calendar schedules such as month starts and local times
+            across daylight-saving changes may drift. Install ``pandas`` for calendar-aware inference.
+
+        """
+        if output_type not in ("dataframe", "pandas"):
+            raise ValueError(
+                f"Invalid output type: {output_type!r}; forecast_df returns a dataframe and accepts only "
+                "'dataframe' or 'pandas'. Use forecast() for torch, numpy, gluonts or fev output."
+            )
+        quantile_levels = self._quantile_levels()
+        timeseries, meta = build_df_timeseries(
+            df,
+            prediction_length=prediction_length,
+            id_column=id_column,
+            timestamp_column=timestamp_column,
+            target=target,
+            past_covariates=past_covariates,
+            future_covariates=future_covariates,
+            future_df=future_df,
+        )
+        if meta:
+            validate_output_columns(id_column, meta[0]["timestamp_column"], quantile_levels)
+        return _gen_forecast(
+            self.model,
+            timeseries,
+            meta,
+            prediction_length,
+            output_type=output_type,
+            batch_size=batch_size,
+            yield_per_batch=yield_per_batch,
+            quantile_levels=quantile_levels,
             **predict_kwargs,
         )
 
@@ -413,6 +541,7 @@ class ForecastModel:
         self,
         window: "fev.EvaluationWindow",
         prediction_length: int,
+        *,
         output_type: ForecastOutputType = "torch",
         batch_size: int = 512,
         yield_per_batch: bool = False,
@@ -423,15 +552,14 @@ class ForecastModel:
     ):
         """Forecast a single FEV evaluation window.
 
-        The call mirrors :meth:`forecast_gluon`: convert the external dataset
-        representation into :class:`TimeseriesType`, then delegate batching,
+        The call mirrors ``forecast_gluon``: convert the external dataset
+        representation into ``TimeseriesType``, then delegate batching,
         prediction and output rendering to the common forecast path. Use
         ``output_type="fev"`` to return predictions in the format accepted by
         ``fev.Task.evaluation_summary``. Pass ``return_inference_time=True`` to
         also return the model-only prediction time, excluding FEV input
         conversion and final ``DatasetDict`` construction.
         """
-        assert batch_size >= 1, "Batch size must be >= 1"
         try:
             import fev  # noqa: F401
         except ImportError:
@@ -449,10 +577,10 @@ class ForecastModel:
             timeseries,
             meta,
             prediction_length,
-            output_type,
-            batch_size,
-            yield_per_batch,
-            self._quantile_levels(),
+            output_type=output_type,
+            batch_size=batch_size,
+            yield_per_batch=yield_per_batch,
+            quantile_levels=self._quantile_levels(),
             return_inference_time=return_inference_time,
             **predict_kwargs,
         )

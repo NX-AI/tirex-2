@@ -49,6 +49,7 @@ nav:
       - Forecasting: how-to/forecasting.md
       - Covariates: how-to/covariates.md
       - Streaming: how-to/streaming.md
+      - Dataframes: how-to/dataframes.md
   - FAQ: faq.md
   - Benchmarks: benchmarks.md
   - Deployment: deployment.md
