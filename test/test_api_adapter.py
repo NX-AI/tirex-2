@@ -222,6 +222,39 @@ def test_build_df_timeseries_uses_a_pandas_datetime_index_as_the_time_axis():
 
 @_needs_df_adapter
 @pytest.mark.parametrize("backend", BACKENDS)
+@pytest.mark.parametrize(
+    ("start", "freq", "expected_start"),
+    [
+        ("2020-01-01", "MS", "2020-05-01"),
+        ("2020-03-25", "D", "2020-03-29"),
+    ],
+)
+def test_forecast_timestamps_preserve_timezone_and_local_frequency(backend, start, freq, expected_start):
+    timezone = "Europe/Vienna"
+    dates = pd.date_range(start, periods=4, freq=freq, tz=timezone)
+    expected = pd.date_range(expected_start, periods=2, freq=freq, tz=timezone)
+    df = _as_backend(
+        pd.DataFrame({"timestamp": dates, "sales": [1.0, 2.0, 3.0, 4.0], "season": [1.0] * 4}), backend
+    )
+    future_df = _as_backend(pd.DataFrame({"timestamp": expected, "season": [1.0] * 2}), backend)
+
+    _, meta = build_df_timeseries(
+        df,
+        prediction_length=2,
+        target="sales",
+        timestamp_column="timestamp",
+        future_covariates="season",
+        future_df=future_df,
+    )
+    result = format_df_output([torch.ones(1, len(QUANTILES), 2)], meta, QUANTILES)
+    timestamps = nw.from_native(result, eager_only=True)["timestamp"]
+
+    assert timestamps.dtype.time_zone == timezone
+    np.testing.assert_array_equal(pd.DatetimeIndex(timestamps.to_list()).asi8, expected.asi8)
+
+
+@_needs_df_adapter
+@pytest.mark.parametrize("backend", BACKENDS)
 def test_build_df_timeseries_covariates_extend_over_horizon(backend):
     df = _as_backend(_long_df(), backend)
     future_df = _as_backend(

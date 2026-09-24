@@ -461,6 +461,12 @@ class ForecastModel:
         per batch. Extra ``predict_kwargs`` are passed to ``TiRex2.predict``.
 
         See the [dataframe how-to guide](../how-to/dataframes.md) for usage.
+
+        ???+ warning "Calendar-aware inference"
+            Without ``pandas`` installed, the forecast time step is estimated from the most common
+            gap between input timestamps. Calendar schedules such as month starts and local times
+            across daylight-saving changes may drift. Install ``pandas`` for calendar-aware inference.
+
         """
         if output_type not in ("dataframe", "pandas"):
             raise ValueError(

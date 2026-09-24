@@ -85,7 +85,9 @@ def _infer_time_step(timestamps: nw.Series | None):
     values = timestamps.to_numpy()
     pd = _pandas()
     if dtype.is_temporal() and pd is not None:
-        index = pd.DatetimeIndex(values)
+        # to_numpy() converts timezone-aware values to naive UTC, which can turn
+        # local month starts into month ends and hide daylight-saving changes.
+        index = pd.DatetimeIndex(timestamps.to_list())
         try:
             inferred = pd.infer_freq(index)
         except ValueError:  # infer_freq needs at least 3 timestamps
@@ -107,7 +109,10 @@ def _future_timestamps(meta: dict, horizon: int) -> np.ndarray:
     pd = _pandas()
     if pd is not None and isinstance(last, np.datetime64):
         # a pandas offset knows calendar arithmetic (month ends, DST); plain multiplication does not
-        return pd.date_range(start=pd.Timestamp(last) + step, periods=horizon, freq=step).to_numpy()
+        timestamp = pd.Timestamp(last)
+        if time_zone := meta.get("time_zone"):
+            timestamp = timestamp.tz_localize("UTC").tz_convert(time_zone)
+        return pd.date_range(start=timestamp + step, periods=horizon, freq=step).to_numpy(dtype="datetime64[ns]")
     return last + step * np.arange(1, horizon + 1)
 
 
@@ -287,6 +292,7 @@ def build_df_timeseries(
 
         last_timestamp = timestamps.to_numpy()[-1] if timestamps is not None and len(timestamps) else None
         time_step = _infer_time_step(timestamps)
+        time_zone = getattr(timestamps.dtype, "time_zone", None) if timestamps is not None else None
 
         past_cov = _values_2d(frame, past_cov_cols) if past_cov_cols else None
         future_cov = None
@@ -298,7 +304,9 @@ def build_df_timeseries(
             if len(future_frame) < horizon or horizon < 1:
                 raise ValueError(f"future_df needs at least {horizon} rows for series {key!r}")
             if timestamp_column is not None and time_step is not None:
-                expected = _future_timestamps({"last_timestamp": last_timestamp, "time_step": time_step}, horizon)
+                expected = _future_timestamps(
+                    {"last_timestamp": last_timestamp, "time_step": time_step, "time_zone": time_zone}, horizon
+                )
                 actual = future_frame[timestamp_column].to_numpy()[:horizon]
                 if not np.array_equal(actual, expected):
                     raise ValueError(f"future_df timestamps for series {key!r} do not match the forecast timeline")
@@ -321,6 +329,7 @@ def build_df_timeseries(
                 "length": len(frame),
                 "last_timestamp": last_timestamp,
                 "time_step": time_step,
+                "time_zone": time_zone,
                 "backend": backend,
                 "target_names": list(target_cols),
             }
@@ -383,4 +392,7 @@ def format_df_output(
     for level, parts in zip(quantile_levels, quantiles):
         columns[str(level)] = np.concatenate(parts)
 
-    return nw.from_dict(columns, backend=backend).to_native()
+    result = nw.from_dict(columns, backend=backend)
+    if time_zone := meta[0].get("time_zone"):
+        result = result.with_columns(nw.col(timestamp_column).dt.replace_time_zone("UTC").dt.convert_time_zone(time_zone))
+    return result.to_native()
