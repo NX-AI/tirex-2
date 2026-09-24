@@ -233,9 +233,7 @@ def test_forecast_timestamps_preserve_timezone_and_local_frequency(backend, star
     timezone = "Europe/Vienna"
     dates = pd.date_range(start, periods=4, freq=freq, tz=timezone)
     expected = pd.date_range(expected_start, periods=2, freq=freq, tz=timezone)
-    df = _as_backend(
-        pd.DataFrame({"timestamp": dates, "sales": [1.0, 2.0, 3.0, 4.0], "season": [1.0] * 4}), backend
-    )
+    df = _as_backend(pd.DataFrame({"timestamp": dates, "sales": [1.0, 2.0, 3.0, 4.0], "season": [1.0] * 4}), backend)
     future_df = _as_backend(pd.DataFrame({"timestamp": expected, "season": [1.0] * 2}), backend)
 
     _, meta = build_df_timeseries(

@@ -408,5 +408,7 @@ def format_df_output(
 
     result = nw.from_dict(columns, backend=backend)
     if time_zone := meta[0].get("time_zone"):
-        result = result.with_columns(nw.col(timestamp_column).dt.replace_time_zone("UTC").dt.convert_time_zone(time_zone))
+        result = result.with_columns(
+            nw.col(timestamp_column).dt.replace_time_zone("UTC").dt.convert_time_zone(time_zone)
+        )
     return result.to_native()
