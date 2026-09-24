@@ -1,5 +1,6 @@
 """Quick stress tests for the public ForecastModel.forecast wrapper."""
 
+import inspect
 import logging
 from types import SimpleNamespace
 
@@ -804,3 +805,222 @@ def test_forecast_gluon_delegates_mismatched_past_covariate_length_to_backbone(b
         )
 
     assert predict_was_called
+
+
+def _forecast_df(num_items: int = 3, length: int = 12) -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "item_id": np.repeat([f"item_{i}" for i in range(num_items)], length),
+            "timestamp": np.tile(pd.date_range("2020-01-01", periods=length, freq="h"), num_items),
+            # A per-item constant target so the fake backbone's traceable sample id is the item index.
+            "sales": np.repeat(np.arange(num_items, dtype=np.float32), length),
+            "price": np.tile(np.linspace(0.0, 1.0, length, dtype=np.float32), num_items),
+        }
+    )
+
+
+def test_forecast_df_batches_series_and_returns_long_frame():
+    model = RecordingForecastBackbone(future_len=16)
+    adapter = ForecastModel(model)
+    prediction_length = 4
+
+    result = adapter.forecast_df(
+        _forecast_df(),
+        prediction_length=prediction_length,
+        target="sales",
+        id_column="item_id",
+        timestamp_column="timestamp",
+        batch_size=2,
+        stress_flag=True,
+    )
+
+    assert [call["batch_size"] for call in model.calls] == [2, 1]
+    assert all(call["kwargs"] == {"stress_flag": True} for call in model.calls)
+    assert all(call["target_shapes"] == [(1, 12)] * call["batch_size"] for call in model.calls)
+
+    quantile_columns = [str(round(float(q), 6)) for q in model.quantiles]
+    assert list(result.columns) == ["item_id", "timestamp", "target", "prediction"] + quantile_columns
+    assert len(result) == 3 * prediction_length
+    assert result["item_id"].unique().tolist() == ["item_0", "item_1", "item_2"]
+    # Timestamps continue the hourly context, which ends at 2020-01-01 11:00.
+    assert result["timestamp"].iloc[0] == pd.Timestamp("2020-01-01 12:00")
+    assert result["timestamp"].iloc[prediction_length - 1] == pd.Timestamp("2020-01-01 15:00")
+    # The fake backbone encodes the series' first target value into every forecast entry.
+    assert result[result["item_id"] == "item_2"]["prediction"].iloc[0] == pytest.approx(2.0)
+
+
+def test_forecast_df_forwards_covariates_and_forecasts_targets_jointly():
+    model = RecordingForecastBackbone(future_len=16)
+    adapter = ForecastModel(model)
+    prediction_length = 3
+    df = _forecast_df(num_items=2)
+    future_df = pd.DataFrame(
+        {
+            "item_id": np.repeat(["item_0", "item_1"], prediction_length),
+            "timestamp": np.tile(pd.date_range("2020-01-01 12:00", periods=prediction_length, freq="h"), 2),
+            "price": np.zeros(2 * prediction_length, dtype=np.float32),
+        }
+    )
+
+    result = adapter.forecast_df(
+        df,
+        prediction_length=prediction_length,
+        target="sales",
+        id_column="item_id",
+        timestamp_column="timestamp",
+        future_covariates="price",
+        future_df=future_df,
+    )
+
+    assert model.calls[0]["future_covariate_shapes"] == [(1, 12 + prediction_length)] * 2
+    assert len(result) == 2 * prediction_length
+
+    # Both target columns of an id always go in as one multivariate series.
+    joint = adapter.forecast_df(
+        df,
+        prediction_length=prediction_length,
+        id_column="item_id",
+        timestamp_column="timestamp",
+    )
+    assert model.calls[-1]["target_shapes"] == [(2, 12)] * 2
+    assert joint["target"].unique().tolist() == ["sales", "price"]
+    assert len(joint) == 2 * 2 * prediction_length
+
+    # There is no opt-out: joint forecasting is the only behaviour forecast_df offers.
+    assert "multivariate" not in inspect.signature(adapter.forecast_df).parameters
+
+
+@pytest.mark.parametrize(
+    "future_dates",
+    [
+        ["2020-01-01 11:00", "2020-01-01 12:00", "2020-01-01 13:00"],  # overlaps history
+        ["2020-01-01 12:00", "2020-01-01 14:00", "2020-01-01 15:00"],  # skips a step
+        ["2020-01-01 12:00", "2020-01-01 13:00"],  # too short
+    ],
+)
+def test_forecast_df_rejects_misaligned_future_covariates(future_dates):
+    model = RecordingForecastBackbone(future_len=16)
+    adapter = ForecastModel(model)
+    future_df = pd.DataFrame({"timestamp": pd.to_datetime(future_dates), "price": 1.0})
+
+    with pytest.raises(ValueError, match="future_df (timestamps|needs at least)"):
+        adapter.forecast_df(
+            _forecast_df(num_items=1).drop(columns="item_id"),
+            prediction_length=3,
+            target="sales",
+            timestamp_column="timestamp",
+            future_covariates="price",
+            future_df=future_df,
+        )
+
+    assert model.calls == []
+
+
+@pytest.mark.parametrize("id_column", ["target", "prediction", "timestamp", "0.1"])
+def test_forecast_df_rejects_id_names_that_collide_with_output(id_column):
+    model = RecordingForecastBackbone(future_len=16)
+    adapter = ForecastModel(model)
+    df = pd.DataFrame({id_column: ["item_0"] * 4, "sales": [1.0, 2.0, 3.0, 4.0]})
+
+    with pytest.raises(ValueError, match="Forecast output column name"):
+        adapter.forecast_df(df, prediction_length=2, target="sales", id_column=id_column)
+
+    assert model.calls == []
+
+
+def test_forecast_df_allows_timestamp_id_with_a_differently_named_datetime_index():
+    adapter = ForecastModel(RecordingForecastBackbone(future_len=16))
+    df = pd.DataFrame(
+        {"timestamp": ["item_0"] * 4, "sales": [1.0, 2.0, 3.0, 4.0]},
+        index=pd.date_range("2020-01-01", periods=4, freq="D", name="date"),
+    )
+
+    result = adapter.forecast_df(df, prediction_length=2, target="sales", id_column="timestamp")
+
+    assert result["timestamp"].tolist() == ["item_0"] * 2
+    assert result["date"].tolist() == list(pd.date_range("2020-01-05", periods=2, freq="D"))
+
+
+@pytest.mark.parametrize("output_type", ["torch", "numpy", "gluonts", "fev", "frame", None])
+def test_forecast_df_rejects_non_dataframe_output_types(output_type):
+    """A dataframe call returns a dataframe; anything else is a caller mistake, not a fallback."""
+    adapter = ForecastModel(RecordingForecastBackbone(future_len=16))
+
+    with pytest.raises(ValueError, match="Invalid output type"):
+        adapter.forecast_df(
+            _forecast_df(num_items=2),
+            prediction_length=5,
+            target="sales",
+            id_column="item_id",
+            timestamp_column="timestamp",
+            output_type=output_type,
+        )
+
+
+def test_forecast_df_yield_per_batch_streams_frames():
+    model = RecordingForecastBackbone(future_len=16)
+    adapter = ForecastModel(model)
+    stream = adapter.forecast_df(
+        _forecast_df(num_items=5),
+        prediction_length=4,
+        target="sales",
+        id_column="item_id",
+        timestamp_column="timestamp",
+        batch_size=2,
+        yield_per_batch=True,
+    )
+
+    assert model.calls == []
+    first_batch = next(stream)
+    assert isinstance(first_batch, pd.DataFrame)
+    assert first_batch["item_id"].unique().tolist() == ["item_0", "item_1"]
+    assert [len(frame) for frame in stream] == [2 * 4, 1 * 4]
+
+
+def test_forecast_df_is_keyword_only():
+    adapter = ForecastModel(RecordingForecastBackbone(future_len=16))
+    df = _forecast_df(num_items=1)
+
+    # Everything after prediction_length is keyword-only, so the order can change safely.
+    with pytest.raises(TypeError):
+        adapter.forecast_df(df, 4, "item_id")
+
+
+@pytest.mark.parametrize("backend", ["polars", "pyarrow"])
+def test_forecast_df_returns_the_input_dataframe_backend(backend):
+    pytest.importorskip(backend)
+    import narwhals as nw
+
+    df = _forecast_df(num_items=2)
+    native = (
+        __import__("polars").from_pandas(df)
+        if backend == "polars"
+        else __import__("pyarrow").Table.from_pandas(df, preserve_index=False)
+    )
+    adapter = ForecastModel(RecordingForecastBackbone(future_len=16))
+
+    result = adapter.forecast_df(
+        native,
+        prediction_length=4,
+        target="sales",
+        id_column="item_id",
+        timestamp_column="timestamp",
+        batch_size=1,
+    )
+
+    frame = nw.from_native(result, eager_only=True)
+    assert str(frame.implementation) == backend
+    assert len(frame) == 2 * 4
+    assert frame["item_id"].to_list() == ["item_0"] * 4 + ["item_1"] * 4
+    assert pd.Timestamp(frame["timestamp"].to_list()[0]) == pd.Timestamp("2020-01-01 12:00")
+
+    # output_type="pandas" converts, whatever the input library was.
+    as_pandas = adapter.forecast_df(
+        native,
+        prediction_length=4,
+        target="sales",
+        id_column="item_id",
+        timestamp_column="timestamp",
+        output_type="pandas",
+    )
+    assert isinstance(as_pandas, pd.DataFrame)
