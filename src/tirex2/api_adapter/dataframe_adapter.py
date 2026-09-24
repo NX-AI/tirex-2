@@ -59,6 +59,19 @@ def _require_columns(df: nw.DataFrame, columns: Sequence[str], role: str) -> Non
         raise ValueError(f"{role} column(s) {missing} not found in the DataFrame (columns: {list(df.columns)})")
 
 
+def validate_output_columns(id_column: str | None, timestamp_column: str, quantile_levels: Sequence[float]) -> None:
+    """Reject input column names that would overwrite fields in a forecast frame."""
+    names = [timestamp_column, DEF_TARGET_NAME_COLUMN, DEF_PREDICTION_COLUMN]
+    if id_column is not None:
+        names.append(id_column)
+    names.extend(str(level) for level in quantile_levels)
+    duplicates = sorted({name for name in names if names.count(name) > 1})
+    if duplicates:
+        raise ValueError(
+            f"Forecast output column name(s) {duplicates} would collide; rename the id or timestamp column."
+        )
+
+
 def _modal_diff(values: np.ndarray):
     """Return the most common difference between consecutive ``values`` (smallest on a tie)."""
     diffs = np.diff(values)
@@ -361,6 +374,7 @@ def format_df_output(
     median_idx = min(range(len(quantile_levels)), key=lambda i: abs(quantile_levels[i] - 0.5))
     id_column = meta[0].get("id_column")
     timestamp_column = meta[0].get("timestamp_column", DEF_TIMESTAMP_COLUMN)
+    validate_output_columns(id_column, timestamp_column, quantile_levels)
 
     ids: list = []
     timestamps: list[np.ndarray] = []

@@ -398,6 +398,15 @@ def test_format_df_output_can_be_forced_to_pandas(backend):
 
 
 @_needs_df_adapter
+def test_format_df_output_rejects_timestamp_name_that_collides_with_output():
+    df = pd.DataFrame({"target": pd.date_range("2020-01-01", periods=4, freq="D"), "sales": [1.0] * 4})
+    _, meta = build_df_timeseries(df, target="sales", timestamp_column="target")
+
+    with pytest.raises(ValueError, match="Forecast output column name"):
+        format_df_output([torch.ones(1, len(QUANTILES), 2)], meta, QUANTILES)
+
+
+@_needs_df_adapter
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_format_df_output_falls_back_to_integer_positions(backend):
     df = _as_backend(pd.DataFrame({"sales": np.random.randn(12)}), backend)

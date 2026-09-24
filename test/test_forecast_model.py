@@ -916,6 +916,31 @@ def test_forecast_df_rejects_misaligned_future_covariates(future_dates):
     assert model.calls == []
 
 
+@pytest.mark.parametrize("id_column", ["target", "prediction", "timestamp", "0.1"])
+def test_forecast_df_rejects_id_names_that_collide_with_output(id_column):
+    model = RecordingForecastBackbone(future_len=16)
+    adapter = ForecastModel(model)
+    df = pd.DataFrame({id_column: ["item_0"] * 4, "sales": [1.0, 2.0, 3.0, 4.0]})
+
+    with pytest.raises(ValueError, match="Forecast output column name"):
+        adapter.forecast_df(df, prediction_length=2, target="sales", id_column=id_column)
+
+    assert model.calls == []
+
+
+def test_forecast_df_allows_timestamp_id_with_a_differently_named_datetime_index():
+    adapter = ForecastModel(RecordingForecastBackbone(future_len=16))
+    df = pd.DataFrame(
+        {"timestamp": ["item_0"] * 4, "sales": [1.0, 2.0, 3.0, 4.0]},
+        index=pd.date_range("2020-01-01", periods=4, freq="D", name="date"),
+    )
+
+    result = adapter.forecast_df(df, prediction_length=2, target="sales", id_column="timestamp")
+
+    assert result["timestamp"].tolist() == ["item_0"] * 2
+    assert result["date"].tolist() == list(pd.date_range("2020-01-05", periods=2, freq="D"))
+
+
 @pytest.mark.parametrize("output_type", ["torch", "numpy", "gluonts", "fev", "frame", None])
 def test_forecast_df_rejects_non_dataframe_output_types(output_type):
     """A dataframe call returns a dataframe; anything else is a caller mistake, not a fallback."""

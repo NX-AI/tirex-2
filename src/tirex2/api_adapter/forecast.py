@@ -11,7 +11,7 @@ import numpy as np
 import torch
 
 from ..model.types import TimeseriesType
-from .dataframe_adapter import build_df_timeseries, format_df_output
+from .dataframe_adapter import build_df_timeseries, format_df_output, validate_output_columns
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -473,6 +473,7 @@ class ForecastModel:
                 f"Invalid output type: {output_type!r}; forecast_df returns a dataframe and accepts only "
                 "'dataframe' or 'pandas'. Use forecast() for torch, numpy, gluonts or fev output."
             )
+        quantile_levels = self._quantile_levels()
         timeseries, meta = build_df_timeseries(
             df,
             prediction_length=prediction_length,
@@ -483,6 +484,8 @@ class ForecastModel:
             future_covariates=future_covariates,
             future_df=future_df,
         )
+        if meta:
+            validate_output_columns(id_column, meta[0]["timestamp_column"], quantile_levels)
         return _gen_forecast(
             self.model,
             timeseries,
@@ -491,7 +494,7 @@ class ForecastModel:
             output_type=output_type,
             batch_size=batch_size,
             yield_per_batch=yield_per_batch,
-            quantile_levels=self._quantile_levels(),
+            quantile_levels=quantile_levels,
             **predict_kwargs,
         )
 
