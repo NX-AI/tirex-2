@@ -445,22 +445,61 @@ class ForecastModel:
 
         ``df`` can be any eager dataframe supported by
         [narwhals](https://narwhals-dev.github.io/narwhals/). Use ``id_column`` for multiple
-        series and ``timestamp_column`` for the time axis. A pandas ``DatetimeIndex`` also works.
+        series and ``timestamp_column`` or a pandas ``DatetimeIndex`` for the time axis.
         By default, all numeric columns except ids, timestamps and covariates are targets.
 
-        Targets within a series are forecast jointly. To forecast columns independently, reshape
-        them into long format and identify each series with ``id_column``. Supply known future
-        covariate values in ``future_df``, using the same layout as ``df`` and timestamps that match
-        the forecast steps. Past values of future covariates are taken from ``df``.
+        **Joint Forecasting**: Targets within a series are forecast jointly. To forecast columns
+        independently, reshape them into long format and identify each series with ``id_column``.
 
-        The result has one row per series, target and forecast step, with a median ``prediction``
-        and columns for each quantile. By default, it uses the same dataframe library as ``df``;
-        set ``output_type="pandas"`` to get pandas instead.
+        **Future Covariates**: Supply known future covariate values in ``future_df``, using the same
+        layout as ``df`` and timestamps that match the forecast steps. Past values of future
+        covariates are taken from ``df``.
 
-        ``batch_size`` counts series, not rows. Set ``yield_per_batch=True`` to yield one result
-        per batch. Extra ``predict_kwargs`` are passed to ``TiRex2.predict``.
+        **Output**: The result has one row per series, target and forecast step, with a median
+        ``prediction`` and columns for each quantile. By default, it uses the same dataframe library
+        as ``df``; set ``output_type="pandas"`` to get pandas instead.
 
-        See the [dataframe how-to guide](../how-to/dataframes.md) for usage.
+        **Batching**: ``batch_size`` counts series, not rows. Set ``yield_per_batch=True`` to yield
+        one result per batch. Extra ``predict_kwargs`` are passed to ``TiRex2.predict``.
+
+        Examples
+        --------
+        Forecast monthly sales from a pandas dataframe:
+
+        >>> import pandas as pd
+        >>> from tirex2 import load_model
+        >>> df = pd.DataFrame({
+        ...     "timestamp": pd.date_range("2020-01-01", periods=24, freq="MS"),
+        ...     "sales": range(24),
+        ... })
+        >>> model = load_model("NX-AI/TiRex-2", device="cpu")
+        >>> forecast = model.forecast_df(df, 4, target="sales", timestamp_column="timestamp")
+        >>> forecast
+           timestamp target  prediction  ...        0.7        0.8        0.9
+        0 2022-01-01  sales   23.985064  ...  24.005989  24.018473  24.036558
+        1 2022-02-01  sales   24.975126  ...  25.003880  25.020775  25.046469
+        2 2022-03-01  sales   25.964767  ...  26.000420  26.020782  26.051968
+        3 2022-04-01  sales   26.956121  ...  26.995924  27.018373  27.053928
+        [4 rows x 12 columns]
+
+        Add a calendar feature whose future values are already known:
+
+        >>> df["month"] = df["timestamp"].dt.month.astype("float32")
+        >>> future_df = pd.DataFrame({"timestamp": pd.date_range("2022-01-01", periods=4, freq="MS")})
+        >>> future_df["month"] = future_df["timestamp"].dt.month.astype("float32")
+        >>> forecast = model.forecast_df(
+        ...     df, 4, target="sales", timestamp_column="timestamp",
+        ...     future_covariates="month", future_df=future_df,
+        ... )
+        >>> forecast
+           timestamp target  prediction  ...        0.7        0.8        0.9
+        0 2022-01-01  sales   23.984356  ...  24.001610  24.012691  24.030060
+        1 2022-02-01  sales   24.972900  ...  24.998695  25.014589  25.039955
+        2 2022-03-01  sales   25.958410  ...  25.990089  26.009071  26.039722
+        3 2022-04-01  sales   26.944197  ...  26.980700  27.002466  27.038290
+        [4 rows x 12 columns]
+
+        See the [dataframe how-to guide](../how-to/dataframes.md) for more examples.
 
         ???+ warning "Calendar-aware inference"
             Without ``pandas`` installed, the forecast time step is estimated from the most common
