@@ -310,6 +310,12 @@ class TiRex2(nn.Module):
             (the default) to use the checkpoint's configured setting
             (``self.tta_diff``, from ``model-config.yaml``); pass an explicit
             ``True``/``False`` to override trend differencing for this call.
+        pad_context : bool, optional
+            If ``True`` (the default), contexts shorter than ``context_len`` are
+            left-padded with NaN up to the full model length. Pass ``False`` to
+            run on the unpadded context, which reduces the number of input
+            patches and thus inference time, at the cost of a small loss in
+            forecast accuracy.
         """
         if tta_sign_flip is None:
             tta_sign_flip = self.tta_sign_flip
@@ -337,6 +343,7 @@ class TiRex2(nn.Module):
         prediction_length: int,
         *args,
         tta_diff: bool = True,
+        pad_context: bool = True,
         **kwargs,
     ):
         """Run a single (un-augmented) forecast pass over the batch of series."""
@@ -382,7 +389,7 @@ class TiRex2(nn.Module):
         )
         batch = {k: v.to(device) for k, v in batch.items()}
 
-        output = self._predict(batch, prediction_length, *args, **kwargs)
+        output = self._predict(batch, prediction_length, *args, pad_context=pad_context, **kwargs)
         output = self.postprocessor.transform_output(output, prediction_length, *args, **kwargs)  # type: ignore
         result = []
         for ctx, out in zip(context, output):
@@ -435,6 +442,7 @@ class TiRex2(nn.Module):
         *args,
         prediction_window_is_padded: bool = False,
         single_pass: bool = False,
+        pad_context: bool = True,
         **kwargs,
     ):
         """Run the model on all series inside context in parallel."""
@@ -449,7 +457,7 @@ class TiRex2(nn.Module):
         context = nn.functional.pad(context, (0, right_pad), value=torch.nan)
 
         max_ts_len = self.context_len + self.future_len
-        if context.shape[-1] < max_ts_len:
+        if context.shape[-1] < max_ts_len and pad_context:
             pad_len = max_ts_len - context.shape[-1]
             context = nn.functional.pad(context, (pad_len, 0), value=torch.nan)
         elif context.shape[-1] > max_ts_len:

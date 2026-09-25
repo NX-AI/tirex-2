@@ -183,6 +183,19 @@ Extra keyword arguments passed to `forecast(...)` are forwarded to the backbone'
 forecast = model.forecast([ts], prediction_length=64, tta_sign_flip=True)
 ```
 
+## Context padding
+
+By default (`pad_context=True`), contexts shorter than the model's context length are
+left-padded with NaN, as in training. `pad_context=False` runs the model on the context at
+its own length, which reduces the number of input patches and thus inference time, at the
+cost of a small loss in forecast accuracy.
+
+```python
+forecast = model.forecast([ts], prediction_length=64, pad_context=False)
+```
+
+See [#57](https://github.com/NX-AI/tirex-2/pull/57) for speed and accuracy benchmarks.
+
 ## GluonTS and FEV integration
 
 For GluonTS datasets, use
