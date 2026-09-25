@@ -313,7 +313,9 @@ class TiRex2(nn.Module):
         pad_context : bool, optional
             If ``True`` (the default), contexts shorter than ``context_len`` are
             left-padded with NaN up to the full model length. Pass ``False`` to
-            run on the unpadded context.
+            run on the unpadded context, which reduces the number of input
+            patches and thus inference time, at the cost of a small loss in
+            forecast accuracy.
         """
         if tta_sign_flip is None:
             tta_sign_flip = self.tta_sign_flip
