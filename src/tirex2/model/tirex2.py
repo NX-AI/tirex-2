@@ -337,6 +337,7 @@ class TiRex2(nn.Module):
         prediction_length: int,
         *args,
         tta_diff: bool = True,
+        preserve_grad: bool = False,
         **kwargs,
     ):
         """Run a single (un-augmented) forecast pass over the batch of series."""
@@ -383,7 +384,9 @@ class TiRex2(nn.Module):
         batch = {k: v.to(device) for k, v in batch.items()}
 
         output = self._predict(batch, prediction_length, *args, **kwargs)
-        output = self.postprocessor.transform_output(output, prediction_length, *args, **kwargs)  # type: ignore
+        output = self.postprocessor.transform_output(  # type: ignore
+            output, prediction_length, *args, preserve_grad=preserve_grad, **kwargs
+        )
         result = []
         for ctx, out in zip(context, output):
             result.append(out.to(ctx))

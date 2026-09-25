@@ -157,6 +157,26 @@ def test_predict_uses_tta_diff_checkpoint_default_and_override(build_small_model
     assert calls == [False, True]
 
 
+def test_predict_once_preserves_gradients_when_requested(build_small_model):
+    model = build_small_model("cpu", recipe=["small_mlstm"])
+    timeseries = [
+        TimeseriesType(
+            target=torch.arange(16, dtype=torch.float32).unsqueeze(0),
+            past_covariates=None,
+            future_covariates=None,
+        )
+    ]
+
+    forecast = model._predict_once(timeseries, prediction_length=4, preserve_grad=True)[0]
+    assert forecast.requires_grad
+
+    forecast.sum().backward()
+    grad = model.output_patch_embedding.hidden_layer.weight.grad
+    assert grad is not None
+    assert torch.isfinite(grad).all()
+    assert grad.abs().sum() > 0
+
+
 # The compute paths below exercise the CUDA device, so they still need a GPU.
 _gpu_only = pytest.mark.skipif(not torch.cuda.is_available(), reason="forward requires a GPU")
 
