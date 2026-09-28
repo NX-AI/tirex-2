@@ -4,6 +4,8 @@ All notable changes to TiRex-2 are documented here.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-09-28
+
 ### Improvements
 
 - ⭐️📊 Use [`forecast_df()`][tirex2.api_adapter.forecast.ForecastModel.forecast_df] to forecast directly from pandas, Polars, PyArrow, and other supported eager dataframes. It handles multiple series, covariates, and batching, and returns results in the input dataframe library by default, in [#18](https://github.com/NX-AI/tirex-2/pull/18), contributed by [Suad0](https://github.com/Suad0) and [Zhihao Dai](https://github.com/daidahao).
@@ -48,6 +50,7 @@ All notable changes to TiRex-2 are documented here.
 
 Initial TiRex-2 release, contributed by [martinloretzzz](https://github.com/martinloretzzz) in the [initial commit](https://github.com/NX-AI/tirex-2/commit/abdf2898162482cc5c862905a406fc1134fbae67).
 
-[Unreleased]: https://github.com/NX-AI/tirex-2/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/NX-AI/tirex-2/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/NX-AI/tirex-2/releases/tag/v0.3.0
 [0.2.1]: https://github.com/NX-AI/tirex-2/releases/tag/v0.2.1
 [0.1.1]: https://github.com/NX-AI/tirex-2/releases/tag/v0.1.1
