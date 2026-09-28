@@ -6,9 +6,10 @@ All notable changes to TiRex-2 are documented here.
 
 ### Improvements
 
+- ⭐️📊 Use [`forecast_df()`][tirex2.api_adapter.forecast.ForecastModel.forecast_df] to forecast directly from pandas, Polars, PyArrow, and other supported eager dataframes. It handles multiple series, covariates, and batching, and returns results in the input dataframe library by default, in [#18](https://github.com/NX-AI/tirex-2/pull/18), contributed by [Suad0](https://github.com/Suad0) and [Zhihao Dai](https://github.com/daidahao).
 - ⭐️🚀 Added a `pad_context=False` option to `forecast(...)` to skip padding to the default context length, enabling much faster inference for short contexts at a small accuracy cost, in [#57](https://github.com/NX-AI/tirex-2/pull/57), contributed by [Daniil Yefimov](https://github.com/DaniilYefimov).
-- ⭐️📊 Use [`forecast_df()`][tirex2.api_adapter.forecast.ForecastModel.forecast_df] to forecast directly from pandas, Polars, PyArrow, and other supported eager dataframes. It handles multiple series, covariates, and batching, and returns results in the input dataframe library by default. Contributed by [Suad0](https://github.com/Suad0) and [Zhihao Dai](https://github.com/daidahao).
 - ⭐️🚀 Added opt-in recurrent-layer compilation with `load_model(..., compile=True)` for faster repeated forecasts (up to 1.82x on CPU), in [#47](https://github.com/NX-AI/tirex-2/pull/47), contributed by [Daniil Yefimov](https://github.com/DaniilYefimov).
+- Added a `preserve_grad=True` option to `_predict_once(...)` and postprocessing for fine-tuning, preserving finite gradients through inverse differencing, in [#58](https://github.com/NX-AI/tirex-2/pull/58), contributed by [Zhihao Dai](https://github.com/daidahao).
 - Replaced `einops` rearrangements with native PyTorch operations and removed the direct `einops` dependency in [#41](https://github.com/NX-AI/tirex-2/pull/41), contributed by [Copilot](https://github.com/apps/copilot-swe-agent) and [Zhihao Dai](https://github.com/daidahao).
 - Removed a redundant `torch.no_grad()` context from prediction code in [#42](https://github.com/NX-AI/tirex-2/pull/42), contributed by [Zhihao Dai](https://github.com/daidahao).
 
