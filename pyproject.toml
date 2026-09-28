@@ -1,6 +1,6 @@
 [project]
 name = "tirex-2"
-version = "0.2.1"
+version = "0.3.0"
 description = "TiRex-2 time series forecasting inference"
 authors = [
 	{ name = "NXAI" }
