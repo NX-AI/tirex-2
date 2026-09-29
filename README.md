@@ -18,6 +18,9 @@
 
 </div>
 
+> [!NOTE]
+> 🎉 **News (Sep 2026):** TiRex-2 has been accepted as an **Oral** presentation at **NeurIPS 2026**!
+
 This repository provides the pre-trained multivariate forecasting model TiRex-2 introduced in the paper [TiRex-2: Generalizing TiRex to Multivariate Data and Streaming](https://arxiv.org/pdf/2607.01204).
 
 > **TiRex-2 PRO:** This repository is our open-source release. TiRex-2 PRO extends it with dedicated support, streaming, hardware-optimized inference (edge, embedded, and industrial PCs, among others), fine-tuning, and classification & regression support — see [TiRex-2 PRO](#tirex-2-pro) below or contact us at [contact@nx-ai.com](mailto:contact@nx-ai.com).
