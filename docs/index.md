@@ -10,6 +10,9 @@
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/NX-AI/tirex-2/blob/main/examples/getting_started.ipynb)
 [![TiRex-2 Demo](https://img.shields.io/badge/HuggingFace-TiRex--2%20Demo-yellow?logo=huggingface)](https://huggingface.co/spaces/NX-AI/TiRex-2-demo)
 
+!!! note "🎉 News (Sep 2026)"
+    TiRex-2 has been accepted as an **Oral** presentation (0.36%) at **NeurIPS 2026**!
+
 TiRex-2 is a **pretrained time series foundation model** that forecasts one or many target
 variates directly from their history, optionally conditioned on past and future-known
 covariates. A single checkpoint serves both univariate and multivariate forecasting, built
