@@ -224,11 +224,11 @@ class TiRex2(nn.Module):
         """Forward pass producing quantile predictions for all variates in batch."""
         x, group_vector, target_mask, known_covariate_mask, scaler_state, tokenizer_state = self._prepare_forward(batch)
 
-        # forward through actual mLSTM/sLSTM layers, we select only the output of the last layer; 
+        # forward through actual mLSTM/sLSTM layers, we select only the output of the last layer;
         # hidden representations are not relevant for forecasting
         for x in self._forward_layerwise(x, group_vector, target_mask, known_covariate_mask):
             pass
-        
+
         # Normalise at the end of the stack
         x = self.stack_out_norm(x)
         x = nn.functional.dropout(x, self.dropout, training=self.training)
