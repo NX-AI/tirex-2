@@ -14,7 +14,7 @@ observations since your last call:
 
 - `TiRex2.forward` initializes fresh block state on every call
   (`state = {i: None for i in range(len(self.stack))}`) — nothing carries over between calls.
-- `TiRex2._predict_once` pads/truncates its input to the model's fixed
+- `TiRex2._predict` pads/truncates its input to the model's fixed
   `context_len + future_len` window and runs the full stack over it every time.
 
 So to get an updated forecast as new data points arrive, you re-call `forecast` with the
