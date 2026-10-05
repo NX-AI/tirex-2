@@ -474,13 +474,6 @@ class TiRex2(nn.Module):
             pad_context=pad_context,
             **kwargs,
         )
-            *args,
-            timeseries=timeseries,
-            prediction_length=prediction_length,
-            tta_diff=tta_diff,
-            pad_context=pad_context,
-            **kwargs,
-        )
 
         pred = self(batch)
         # Drop the last token (predicts beyond sequence end); the remaining
@@ -495,13 +488,6 @@ class TiRex2(nn.Module):
             pred,
             prediction_length,
             *args,
-            preserve_grad=preserve_grad,
-            **kwargs,
-        )
-            *args,
-            original_timeseries=timeseries,
-            pred=pred,
-            prediction_length=prediction_length,
             preserve_grad=preserve_grad,
             **kwargs,
         )
