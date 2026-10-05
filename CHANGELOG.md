@@ -4,6 +4,8 @@ All notable changes to TiRex-2 are documented here.
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-10-05
+
 - Refactored internal prediction pipeline, and renamed `_predict_once(...)` to `_predict(...)` for clarity in [#62](https://github.com/NX-AI/tirex-2/pull/62), contributed by [Christian Ganhör](https://github.com/Tigxy).
 
 ## [0.3.0] - 2026-09-28
@@ -52,7 +54,8 @@ All notable changes to TiRex-2 are documented here.
 
 Initial TiRex-2 release, contributed by [martinloretzzz](https://github.com/martinloretzzz) in the [initial commit](https://github.com/NX-AI/tirex-2/commit/abdf2898162482cc5c862905a406fc1134fbae67).
 
-[Unreleased]: https://github.com/NX-AI/tirex-2/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/NX-AI/tirex-2/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/NX-AI/tirex-2/releases/tag/v0.3.1
 [0.3.0]: https://github.com/NX-AI/tirex-2/releases/tag/v0.3.0
 [0.2.1]: https://github.com/NX-AI/tirex-2/releases/tag/v0.2.1
 [0.1.1]: https://github.com/NX-AI/tirex-2/releases/tag/v0.1.1
