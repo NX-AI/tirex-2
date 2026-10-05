@@ -4,6 +4,8 @@ All notable changes to TiRex-2 are documented here.
 
 ## [Unreleased]
 
+- Refactored internal prediction pipeline, and renamed `_predict_once(...)` to `_predict(...)` for clarity in [#62](https://github.com/NX-AI/tirex-2/pull/62), contributed by [Christian Ganhör](https://github.com/Tigxy).
+
 ## [0.3.0] - 2026-09-28
 
 ### Improvements
