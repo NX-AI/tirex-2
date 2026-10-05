@@ -6,6 +6,7 @@ All notable changes to TiRex-2 are documented here.
 
 ### Improvements
 
+- Moved checkpoints to the Hugging Face file layout: `load_model` now reads the model config from `config.json` and the weights from `model.safetensors`, which is parsed without running Python's pickle. Hugging Face downloads fetch only the new files when a repo carries them. The legacy `model-config.yaml` and torch-pickle `model.ckpt` still load when their replacement is missing, but are deprecated and emit a `FutureWarning`; support will be removed in a future release. Added `scripts/convert_checkpoint.py` to convert legacy checkpoints in [#NN](https://github.com/NX-AI/tirex-2/pull/NN), contributed by [Suad0](https://github.com/Suad0).
 - Replaced `einops` rearrangements with native PyTorch operations and removed the direct `einops` dependency in [#41](https://github.com/NX-AI/tirex-2/pull/41), contributed by [Copilot](https://github.com/apps/copilot-swe-agent) and [Zhihao Dai](https://github.com/daidahao).
 - Removed a redundant `torch.no_grad()` context from prediction code in [#42](https://github.com/NX-AI/tirex-2/pull/42), contributed by [Zhihao Dai](https://github.com/daidahao).
 

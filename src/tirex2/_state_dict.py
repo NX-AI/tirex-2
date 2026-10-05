@@ -10,11 +10,11 @@ exposes ``recurrent_kernel``/``bias`` as ``ParameterProxy`` aliases of
 ``_recurrent_kernel_``/``_bias_``.
 
 ``safetensors`` deliberately refuses to serialize tensors that share storage,
-so a checkpoint can only store one name per alias group. This module is the
-single place that decides which name survives (:func:`drop_shared_duplicates`,
-used when writing) and how the remaining names are restored
-(:func:`expand_shared_duplicates`, used when loading), so the two directions
-cannot drift apart.
+so a checkpoint can only store one name per alias group. Both directions are
+driven by :func:`shared_tensor_groups`: ``scripts/convert_checkpoint.py``
+writes one name per group, and :func:`expand_shared_duplicates` restores the
+others when loading, so the writer and the reader cannot drift apart. Only the
+reading side ships with the package.
 
 Alias groups are derived from the live module graph by tensor identity rather
 than from name patterns, so a newly shared module is handled automatically.
@@ -25,7 +25,7 @@ from collections import defaultdict
 import torch
 from torch import nn
 
-__all__ = ["shared_tensor_groups", "drop_shared_duplicates", "expand_shared_duplicates"]
+__all__ = ["shared_tensor_groups", "expand_shared_duplicates"]
 
 
 def shared_tensor_groups(model: nn.Module) -> list[tuple[str, ...]]:
@@ -54,60 +54,11 @@ def shared_tensor_groups(model: nn.Module) -> list[tuple[str, ...]]:
     return sorted(tuple(sorted(names)) for names in by_identity.values() if len(names) > 1)
 
 
-def drop_shared_duplicates(
-    model: nn.Module,
-    state_dict: dict[str, torch.Tensor],
-) -> tuple[dict[str, torch.Tensor], list[str]]:
-    """Reduce every alias group in ``state_dict`` to its single canonical name.
-
-    The surviving name is the alphabetically first one of its group. That
-    choice is a convention of the writer only: :func:`expand_shared_duplicates`
-    restores from whichever group member a checkpoint happens to carry.
-
-    Parameters
-    ----------
-    model : torch.nn.Module
-        Model defining the alias groups, see :func:`shared_tensor_groups`.
-    state_dict : dict[str, torch.Tensor]
-        State dict to reduce. It is not modified.
-
-    Returns
-    -------
-    kept : dict[str, torch.Tensor]
-        ``state_dict`` without the redundant names, insertion order preserved.
-    dropped : list[str]
-        The removed names, sorted.
-
-    Raises
-    ------
-    ValueError
-        If two names of one alias group hold different values. That means the
-        state dict was not produced by this model wiring, and dropping either
-        name would silently lose information.
-    """
-    redundant: set[str] = set()
-    for group in shared_tensor_groups(model):
-        present = [name for name in group if name in state_dict]
-        if not present:
-            continue
-        canonical, *duplicates = present
-        for name in duplicates:
-            if not torch.equal(state_dict[canonical], state_dict[name]):
-                raise ValueError(
-                    f"{name!r} and {canonical!r} alias the same tensor in the model but hold "
-                    f"different values in the state dict; deduplication would lose information."
-                )
-        redundant.update(duplicates)
-
-    kept = {name: tensor for name, tensor in state_dict.items() if name not in redundant}
-    return kept, sorted(redundant)
-
-
 def expand_shared_duplicates(
     model: nn.Module,
     state_dict: dict[str, torch.Tensor],
 ) -> dict[str, torch.Tensor]:
-    """Restore the alias names that :func:`drop_shared_duplicates` removed.
+    """Restore the alias names that the checkpoint writer stored only once.
 
     Every name of an alias group with at least one entry in ``state_dict`` is
     filled in from that entry, so the result can be loaded with ``strict=True``

@@ -181,7 +181,7 @@ class TiRexGiftEvalWrapper:
         against the multivariate ``[V, H]`` label. With ``eval_multivariate=False`` each variate
         is rendered as an independent univariate ``QuantileForecast`` -- the standard GIFT-Eval
         protocol. In both cases the model's configured ``tta_sign_flip`` / ``tta_diff`` defaults
-        (from ``model-config.yaml``) apply.
+        (from ``config.json``) apply.
         """
         return self.model.forecast_gluon(
             test_data_input,
