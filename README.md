@@ -173,6 +173,10 @@ If you use TiRex in your research, please cite our work:
 }
 ```
 
+## Intended use and limitations
+
+This release supports time-series forecasting as [documented](https://nx-ai.github.io/tirex-2/). High-risk applications under EU AI Act Article 6 are outside NXAI's intended purpose. NXAI has not validated this release for high-risk compliance. Users and integrators must assess suitability and meet their legal obligations. Unlawful uses, including those prohibited by EU AI Act Article 5, are not permitted. See the [Intended Use Notice](./INTENDED_USE.md) for details. It does not change the licence or statutory obligations.
+
 ## License
 
 TiRex-2 is licensed under the [Apache License 2.0](./LICENSE).
