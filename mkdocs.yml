@@ -40,7 +40,9 @@ theme:
     - toc.follow
 
 nav:
-  - Home: index.md
+  - Overview:
+      - TiRex-2: index.md
+      - Intended use: intended-use.md
   - Introduction: introduction.md
   - Getting started:
       - Installation: getting-started/install.md
@@ -53,7 +55,6 @@ nav:
   - FAQ: faq.md
   - Benchmarks: benchmarks.md
   - Deployment: deployment.md
-  - Intended use: intended-use.md
   - TiRex-2 PRO: pro.md
   - Changelog: changelog.md
   - Contributing: contributing.md
