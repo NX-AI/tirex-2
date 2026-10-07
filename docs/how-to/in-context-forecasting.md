@@ -5,10 +5,10 @@ TiRex-2 forecasts zero-shot, so on some series it simply does not recognise the 
 ???+ info "Key terms"
     | Term | Meaning |
     | :--- | :------ |
-    | **Cycle** | One 60s run of the rig's load profile, stored as 200 points (0.3 s resolution). |
-    | **PS1 / EPS1** | PS1 = Hydraulic pressure sensor (bar). EPS1 = motor power usage(W). |
+    | **Cycle** | One 60s run of the rig's load profile, stored as 200 points (0.3s resolution). |
+    | **PS1 / EPS1** | PS1 = Hydraulic pressure sensor (bar). EPS1 = motor power usage (W). |
     | **Context** | The history given to the model before making the prediction. Here: cycle 1787, repeated *n* times back to back. |
-    | **Forecast horizon** | What the model predicts: the next full cycle (200 points = 60 s), compared with the real cycle 1788. |
+    | **Forecast horizon** | What the model predicts: the next full cycle (200 points = 60s), compared with the real cycle 1788. |
     | **10–90% band** | The range between the 0.1 and 0.9 quantile forecasts. The model expects the truth to fall inside it 80% of the time. |
     | **Covariate** | An extra series (here EPS1) given alongside the target (PS1) as additional context. |
     | **MAE** | Mean absolute error, `mean(|forecast - truth|)`, in bar. Lower is better. |
@@ -92,7 +92,7 @@ The chart shows the **MAE of the forecast of cycle 1788** for each context lengt
         loading="lazy" style="width:100%; height:520px; border:0;"></iframe>
 
 The MAE drops from 11.02 bar (1 cycle) to 5.58, 2.45, 1.64 and 1.29 bar (5 cycles). Most of
-the gain comes in the first 3/4 cycles.
+the gain comes in the first 3–4 cycles.
 
 ## Adding a covariate
 
@@ -148,6 +148,6 @@ MAE in bar of the forecast of cycle 1788 (lower is better):
 
 ## Next steps
 
-- [Forecasting](forecasting.md):  the `TimeseriesType` input and forecast options.
-- [Covariates](covariates.md):  past and future-known covariates.
-- [API reference](../api/index.md):  full signatures and parameters.
+- [Forecasting](forecasting.md): the `TimeseriesType` input and forecast options.
+- [Covariates](covariates.md): past and future-known covariates.
+- [API reference](../api/index.md): full signatures and parameters.
