@@ -173,7 +173,6 @@ class _FlashRNNLayer(nn.Module, ABC):
 
         return flashrnn(Wx=Wx, R=R, b=b, states=states, config=config.flashrnn_config())
 
-
     def get_state(self, init_state, batch_dim, input_):
         """Return ``init_state`` when provided, else allocate zeros."""
         if init_state is not None:
