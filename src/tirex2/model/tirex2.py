@@ -9,7 +9,7 @@ from typing import Any, Literal
 import torch
 from torch import nn
 
-from .component.layernorm import LayerNorm
+from .component.norm import LayerNorm
 from .component.patch_tokenizer import Tokenizer
 from .component.postprocessor import PostProcessor
 from .component.residual_block import ResidualBlock
