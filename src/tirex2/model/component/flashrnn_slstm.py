@@ -15,86 +15,18 @@ from torch import nn
 from .norm import MultiHeadLayerNorm
 from .xlstm_mixed_config import xLSTMMixedConfig
 
-# LinearHeadwiseExpand and small_init_init_ are copied from xlstm.components.
+class HeadwiseLinear(nn.Module):
+    """Per-head linear projections for all gates at once: [..., H, E] -> [..., G, H, O]."""
 
-
-@dataclass
-class LinearHeadwiseExpandConfig:
-    in_features: int = 0
-    # this is the number of heads that the in_features are split into
-    # if num_heads=1, this is a normal linear layer
-    # if num_heads>1, the in_features are split into num_heads and each head is projected separately
-    # if num_heads=in_features, each feature is projected separately
-    num_heads: int = -1
-    expand_factor_up: float = 1
-
-    # this is internally computed
-    # but can be overwritten if you want to use a different output dimension
-    # if > 0 the expand factor is ignored
-    _out_features: int = -1
-
-    bias: bool = True
-    trainable_weight: bool = True
-    trainable_bias: bool = True
-
-    def __post_init__(self):
-        assert self.num_heads > 0, "num_heads must be set"
-        assert self.num_heads <= self.in_features, "num_heads must be <= in_features"
-        assert self.in_features % self.num_heads == 0, "in_features must be a multiple of num_heads"
-
-        if self._out_features < 0:
-            self._out_features = round(self.expand_factor_up * self.in_features)
-
-
-class LinearHeadwiseExpand(nn.Module):
-    """This is a structured projection layer that projects the input to a higher dimension.
-    It only allows integer up-projection factors, i.e. the output dimension is a multiple of the input dimension.
-    """
-
-    config_class = LinearHeadwiseExpandConfig
-
-    def __init__(self, config: LinearHeadwiseExpandConfig):
+    def __init__(self, num_heads: int, head_dim: int, num_gates=4):
         super().__init__()
-        self.config = config
-        in_features = self.config.in_features
-        num_heads = self.config.num_heads
-        out_features_per_head = config._out_features // num_heads
-        self.weight = nn.Parameter(
-            torch.empty(num_heads, out_features_per_head, in_features // num_heads),
-            requires_grad=config.trainable_weight,
-        )
-        if config.bias:
-            self.bias = nn.Parameter(torch.empty(config._out_features), requires_grad=config.trainable_bias)
-        else:
-            self.bias = None
-        self.reset_parameters()
-
-    def reset_parameters(self, **kwargs):
-        # small init
-        nn.init.normal_(self.weight.data, mean=0.0, std=sqrt(2 / 5 / self.weight.shape[-1]))
-        if self.bias is not None:
-            nn.init.zeros_(self.bias.data)
+        self.weight = nn.Parameter(torch.empty(num_gates, num_heads, head_dim, head_dim))
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        shape = x.shape
-        x = x.view(*shape[:-1], self.config.num_heads, -1)
-        x = torch.einsum("...hd,hod->...ho", x, self.weight)
-        x = x.reshape(*shape[:-1], -1)
-        if self.bias is not None:
-            x = x + self.bias
-        return x
-
-    def extra_repr(self):
-        return (
-            f"in_features={self.config.in_features}, "
-            f"num_heads={self.config.num_heads}, "
-            f"expand_factor_up={self.config.expand_factor_up}, "
-            f"bias={self.config.bias}, "
-            f"trainable_weight={self.config.trainable_weight}, "
-            f"trainable_bias={self.config.trainable_bias}, "
-        )
+        return torch.einsum("...HE,GHEO->...GHO", x, self.weight.transpose(-1, -2))
 
 
+# Copied from xlstm.components.init.
 def small_init_init_(param: torch.Tensor, dim: int) -> torch.Tensor:
     """Fills the input Tensor with values according to the method described in Transformers without Tears: Improving
     the Normalization of Self-Attention - Nguyen, T. & Salazar, J. (2019), using a normal distribution.
@@ -182,34 +114,8 @@ class _FlashRNNLayer(nn.Module, ABC):
                 "The sLSTM layer no longer supports a causal convolution (conv1d_kernel_size > 0)."
             )
 
-        self.fgate = LinearHeadwiseExpand(
-            config=LinearHeadwiseExpandConfig(
-                in_features=self.config.embedding_dim,
-                num_heads=self.config.num_heads,
-                bias=False,
-            )
-        )
-        self.igate = LinearHeadwiseExpand(
-            config=LinearHeadwiseExpandConfig(
-                in_features=self.config.embedding_dim,
-                num_heads=self.config.num_heads,
-                bias=False,
-            )
-        )
-        self.zgate = LinearHeadwiseExpand(
-            config=LinearHeadwiseExpandConfig(
-                in_features=self.config.embedding_dim,
-                num_heads=self.config.num_heads,
-                bias=False,
-            )
-        )
-        self.ogate = LinearHeadwiseExpand(
-            config=LinearHeadwiseExpandConfig(
-                in_features=self.config.embedding_dim,
-                num_heads=self.config.num_heads,
-                bias=False,
-            )
-        )
+        # Input projections of the f, i, z and o gates, in that order
+        self.gate_proj = HeadwiseLinear(self.config.num_heads, self.config.head_dim, self.config.num_gates_i)
 
         self.group_norm = MultiHeadLayerNorm(
             num_heads=self.config.num_heads,
@@ -220,6 +126,13 @@ class _FlashRNNLayer(nn.Module, ABC):
             force_float32_reductions=True,
         )
         self.dropout = nn.Dropout(self.config.dropout)
+
+    def _load_from_state_dict(self, state_dict, prefix, *args, **kwargs):
+        # Older checkpoints store one [H, D_out, D_in] weight per gate
+        legacy_keys = [f"{prefix}{gate}.weight" for gate in ("fgate", "igate", "zgate", "ogate")]
+        if all(key in state_dict for key in legacy_keys):
+            state_dict[f"{prefix}gate_proj.weight"] = torch.stack([state_dict.pop(key) for key in legacy_keys])
+        super()._load_from_state_dict(state_dict, prefix, *args, **kwargs)
 
     @abstractmethod
     def get_R(self):
@@ -256,10 +169,11 @@ class _FlashRNNLayer(nn.Module, ABC):
 
     def reset_parameters(self):
         """Reset parameters."""
-        small_init_init_(self.igate.weight, dim=self.config.embedding_dim)
-        small_init_init_(self.fgate.weight, dim=self.config.embedding_dim)
-        small_init_init_(self.zgate.weight, dim=self.config.embedding_dim)
-        small_init_init_(self.ogate.weight, dim=self.config.embedding_dim)
+        small_init_init_(self.gate_proj.weight, dim=self.config.embedding_dim)
+
+    def gate_preacts(self, x: torch.Tensor) -> torch.Tensor:
+        """Project [B, T, H * D] inputs to the gate pre-activations [B, T, G, H, D]."""
+        return self.gate_proj(x.unflatten(-1, (self.config.num_heads, self.config.head_dim)))
 
     def step(
         self,
@@ -270,19 +184,7 @@ class _FlashRNNLayer(nn.Module, ABC):
         """Perform a single recurrent update."""
         batch_size, _, _ = x.shape
 
-        f_gate = self.fgate(x)
-        i_gate = self.igate(x)
-        zgate = self.zgate(x)
-        ogate = self.ogate(x)
-        gates = (
-            f_gate,
-            i_gate,
-            zgate,
-            ogate,
-        )
-        Wx = torch.stack(gates, dim=2)
-        Wx = Wx.reshape(*Wx.shape[:-1], self.config.num_heads, -1)
-
+        Wx = self.gate_preacts(x)
         y, slstm_state = self.recurrence(Wx, states=self.get_state(slstm_state, batch_size, x))
         y = y[0]
 
@@ -298,19 +200,7 @@ class _FlashRNNLayer(nn.Module, ABC):
         **kwargs,
     ) -> torch.Tensor:
         """Process a full sequence through the FlashRNN backend."""
-        f_gate = self.fgate(x)
-        i_gate = self.igate(x)
-        zgate = self.zgate(x)
-        ogate = self.ogate(x)
-        gates = (
-            f_gate,
-            i_gate,
-            zgate,
-            ogate,
-        )
-
-        Wx = torch.stack(gates, dim=2)
-        Wx = Wx.reshape(*Wx.shape[:-1], self.config.num_heads, -1)
+        Wx = self.gate_preacts(x)
         y, _ = self.recurrence(Wx)
         y = y[0]
 

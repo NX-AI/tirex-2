@@ -63,37 +63,19 @@ class mLSTMLayer(nn.Module):
         self.v_dim = int(config.embedding_dim * config.v_dim_factor)
         self.qk_dim = int(config.embedding_dim * config.qk_dim_factor)
 
-        self.q = nn.Linear(
-            in_features=self.config.embedding_dim,
-            out_features=self.qk_dim,
-            bias=self.config.use_bias,
+        # Fused input projection of q, k, v and the o, i, f gate pre-activations, in that order.
+        # The i and f gates always have a bias; without use_bias the rest of the bias starts at zero.
+        self.in_proj_split = (
+            self.qk_dim,
+            self.qk_dim,
+            self.v_dim,
+            self.v_dim,
+            self.config.num_heads,
+            self.config.num_heads,
         )
-        self.k = nn.Linear(
-            in_features=self.config.embedding_dim,
-            out_features=self.qk_dim,
-            bias=self.config.use_bias,
-        )
-        self.v = nn.Linear(
-            in_features=self.config.embedding_dim,
-            out_features=self.v_dim,
-            bias=self.config.use_bias,
-        )
-
-        self.ogate_preact = nn.Linear(
-            in_features=self.config.embedding_dim,
-            out_features=self.v_dim,
-            bias=self.config.use_bias,
-        )
-        self.igate_preact = nn.Linear(
-            in_features=self.config.embedding_dim,
-            out_features=self.config.num_heads,
-            bias=True,
-        )
-        self.fgate_preact = nn.Linear(
-            in_features=self.config.embedding_dim,
-            out_features=self.config.num_heads,
-            bias=True,
-        )
+        self.in_proj = nn.Linear(self.config.embedding_dim, sum(self.in_proj_split), bias=True)
+        if not self.config.use_bias:
+            nn.init.zeros_(self.in_proj.bias)
 
         if self.config.conv1d_kernel_size > 0:
             raise NotImplementedError(
@@ -117,17 +99,25 @@ class mLSTMLayer(nn.Module):
             bias=self.config.use_bias,
         )
 
+    def _load_from_state_dict(self, state_dict, prefix, *args, **kwargs):
+        # Older checkpoints store a separate linear layer per projection
+        legacy = ("q", "k", "v", "ogate_preact", "igate_preact", "fgate_preact")
+        if all(f"{prefix}{name}.weight" in state_dict for name in legacy):
+            weights = [state_dict.pop(f"{prefix}{name}.weight") for name in legacy]
+            biases = [state_dict.pop(f"{prefix}{name}.bias", None) for name in legacy]
+            biases = [w.new_zeros(w.shape[0]) if b is None else b for w, b in zip(weights, biases)]
+            state_dict[f"{prefix}in_proj.weight"] = torch.cat(weights)
+            state_dict[f"{prefix}in_proj.bias"] = torch.cat(biases)
+        super()._load_from_state_dict(state_dict, prefix, *args, **kwargs)
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Process a full sequence through the mlstm."""
         assert x.ndim == 3, f"Input must have shape [B, S, D], got {x.shape}"
         B, S, _ = x.shape
 
-        q = self.q(x)
-        k = self.k(x)
-        v = self.v(x)
-        o_preact = self.ogate_preact(x)
-        i_preact = soft_cap(self.igate_preact(x), cap_value=self.config.gate_soft_cap)
-        f_preact = soft_cap(self.fgate_preact(x), cap_value=self.config.gate_soft_cap)
+        q, k, v, o_preact, i_preact, f_preact = self.in_proj(x).split(self.in_proj_split, dim=-1)
+        i_preact = soft_cap(i_preact, cap_value=self.config.gate_soft_cap)
+        f_preact = soft_cap(f_preact, cap_value=self.config.gate_soft_cap)
 
         q = q.reshape(B, S, self.config.num_heads, -1).transpose(1, 2)
         k = k.reshape(B, S, self.config.num_heads, -1).transpose(1, 2)
@@ -213,9 +203,13 @@ def init_cell(config: xLSTMMixedConfig, device: Literal["cpu", "cuda", "mps"]) -
             mlstm_backend=_mlstm_backend_config(config, device),
         )
     )
-    # Match mLSTMBlock.reset_parameters gate initialisation.
-    torch.nn.init.zeros_(layer.fgate_preact.weight)
-    bias_linspace_init_(layer.fgate_preact.bias, start=3.0, end=6.0)
-    torch.nn.init.zeros_(layer.igate_preact.weight)
-    torch.nn.init.normal_(layer.igate_preact.bias, mean=0.0, std=0.1)
+    # Match mLSTMBlock.reset_parameters gate initialisation; i and f are the last rows of in_proj.
+    num_heads = layer.config.num_heads
+    i_rows = slice(-2 * num_heads, -num_heads)
+    f_rows = slice(-num_heads, None)
+    with torch.no_grad():
+        torch.nn.init.zeros_(layer.in_proj.weight[f_rows])
+        bias_linspace_init_(layer.in_proj.bias[f_rows], start=3.0, end=6.0)
+        torch.nn.init.zeros_(layer.in_proj.weight[i_rows])
+        torch.nn.init.normal_(layer.in_proj.bias[i_rows], mean=0.0, std=0.1)
     return layer
