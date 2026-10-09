@@ -4,12 +4,11 @@
 """FlashRNN-backed sLSTM layers and configuration helpers."""
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from math import sqrt
 from typing import Literal
 
 import torch
-from flashrnn import FlashRNNConfig, flashrnn
 from torch import nn
 from xlstm.components.conv import CausalConv1d, CausalConv1dConfig
 from xlstm.components.init import small_init_init_
@@ -28,7 +27,7 @@ from .xlstm_mixed_config import xLSTMMixedConfig
 
 
 @dataclass
-class FlashRNNLayerConfig(FlashRNNConfig):
+class FlashRNNLayerConfig:
     """Configuration for FlashRNN-based sLSTM layers used inside TiRex."""
 
     embedding_dim: int = -1
@@ -41,12 +40,53 @@ class FlashRNNLayerConfig(FlashRNNConfig):
     recurrent_weight_init: str = "standard"
     bias_init: str = "powerlaw_blockdependent"
 
+    # Forwarded to FlashRNNConfig, with FlashRNN's defaults
+    backend: str = "cuda_fused"
+    function: str = "slstm"
+    recurrent_shape: str = "GHDP"
+    bias_shape: str = "GHD"
+    dtype: str = "bfloat16"
+    enable_automatic_mixed_precision: bool = True
+
+    # The sLSTM has 4 gates and 4 states (y, c, n, m)
+    num_gates_i: int = field(default=4, init=False)
+    num_states: int = field(default=4, init=False)
+    _flashrnn_config: object = field(default=None, init=False, repr=False, compare=False)
+
     def __post_init__(self):
         """Validate dimensions and derive head information."""
-        self.hidden_dim = self.embedding_dim
+        assert self.function == "slstm", f"FlashRNNLayerConfig only supports the slstm function, got {self.function!r}"
         assert self.embedding_dim % self.num_heads == 0
+        self.hidden_dim = self.embedding_dim
         self.head_dim = self.embedding_dim // self.num_heads
-        FlashRNNConfig.__post_init__(self)
+
+    @property
+    def torch_dtype_r(self) -> torch.dtype:
+        """Recurrent kernel dtype, as FlashRNN derives it from ``dtype``."""
+        return getattr(torch, self.dtype)
+
+    @property
+    def torch_dtype_b(self) -> torch.dtype:
+        """Bias dtype, as FlashRNN derives it from ``dtype``."""
+        return getattr(torch, self.dtype)
+
+    def flashrnn_config(self):
+        """Return the equivalent ``FlashRNNConfig``, importing FlashRNN on first use."""
+        if self._flashrnn_config is None:
+            from flashrnn import FlashRNNConfig
+
+            self._flashrnn_config = FlashRNNConfig(
+                hidden_dim=self.hidden_dim,
+                num_heads=self.num_heads,
+                head_dim=self.head_dim,
+                backend=self.backend,
+                function=self.function,
+                recurrent_shape=self.recurrent_shape,
+                bias_shape=self.bias_shape,
+                dtype=self.dtype,
+                enable_automatic_mixed_precision=self.enable_automatic_mixed_precision,
+            )
+        return self._flashrnn_config
 
 
 class _FlashRNNLayer(nn.Module, ABC):
@@ -118,6 +158,21 @@ class _FlashRNNLayer(nn.Module, ABC):
     def zero_state(self, batch_dim, input_):
         """Allocate an initial state matching the backend expectations."""
 
+    def recurrence(self, Wx: torch.Tensor, states: torch.Tensor | None = None):
+        return self.slstm_flashrnn(Wx, self.get_R(), self.get_bias(), self.config, states)
+
+    def slstm_flashrnn(
+        self,
+        Wx: torch.Tensor,  # [B, T, G, H, D]
+        R: torch.Tensor,  # [H, D_in, G, D_out] ("HPGD")
+        b: torch.Tensor,  # [H, G, D]
+        config: FlashRNNLayerConfig,
+        states: torch.Tensor | None = None,  # [4, B, 1, H, D]
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        from flashrnn import flashrnn
+
+        return flashrnn(Wx=Wx, R=R, b=b, states=states, config=config.flashrnn_config())
+
     def get_state(self, init_state, batch_dim, input_):
         """Return ``init_state`` when provided, else allocate zeros."""
         if init_state is not None:
@@ -159,13 +214,7 @@ class _FlashRNNLayer(nn.Module, ABC):
         Wx = torch.stack(gates, dim=2)
         Wx = Wx.reshape(*Wx.shape[:-1], self.config.num_heads, -1)
 
-        y, slstm_state = flashrnn(
-            Wx=Wx,
-            R=self.get_R(),
-            b=self.get_bias(),
-            states=self.get_state(slstm_state, batch_size, x),
-            config=self.config,
-        )
+        y, slstm_state = self.recurrence(Wx, states=self.get_state(slstm_state, batch_size, x))
         y = y[0]
 
         y = self.dropout(y)
@@ -200,12 +249,7 @@ class _FlashRNNLayer(nn.Module, ABC):
 
         Wx = torch.stack(gates, dim=2)
         Wx = Wx.reshape(*Wx.shape[:-1], self.config.num_heads, -1)
-        y, _ = flashrnn(
-            Wx=Wx,
-            R=self.get_R(),
-            b=self.get_bias(),
-            config=self.config,
-        )
+        y, _ = self.recurrence(Wx)
         y = y[0]
 
         y = self.dropout(y)
