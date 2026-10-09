@@ -15,6 +15,7 @@ from torch import nn
 from .norm import MultiHeadLayerNorm
 from .xlstm_mixed_config import xLSTMMixedConfig
 
+
 class HeadwiseLinear(nn.Module):
     """Per-head linear projections for all gates at once: [..., H, E] -> [..., G, H, O]."""
 
