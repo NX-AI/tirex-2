@@ -5,6 +5,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 import pytest
+import torch
 from torch import nn
 
 from tirex2.model.component.variate_mixing_block import (
@@ -26,6 +27,19 @@ H_EXPAND = 4
 DROPOUT = 0.1
 EPS = 1e-7
 RECIPE = ["mlstm_attn", "slstm_attn"] * (NUM_BLOCKS // 2)
+
+
+def pytest_addoption(parser):
+    parser.addoption(
+        "--require-cuda",
+        action="store_true",
+        help="fail at pytest startup when CUDA is unavailable",
+    )
+
+
+def pytest_sessionstart(session):
+    if session.config.getoption("--require-cuda") and not torch.cuda.is_available():
+        raise pytest.UsageError("CUDA is required for this test run, but it is unavailable.")
 
 
 def _build_block(model_type: str, act_fn: nn.Module, device: str) -> MultivariateBlockConfig:

@@ -1,0 +1,414 @@
+# Copyright (c) NXAI GmbH.
+# Licensed under the Apache License, Version 2.0; see LICENSE for details.
+
+"""Backend-agnostic ``DataFrame`` data extraction and forecast formatting.
+
+Frames are handled through `narwhals <https://narwhals-dev.github.io/narwhals/>`_, so any eager
+dataframe it supports - pandas, polars, PyArrow, Modin, cuDF, ... - can be forecast, and the
+resulting forecast frame is built with the same library the input came from.
+
+pandas is used opportunistically: when it is installed, the time axis of a datetime column is
+inferred with ``pandas.infer_freq``, which understands calendar frequencies (month end, quarter,
+year) that a plain timedelta cannot express. Without pandas the step falls back to the most common
+consecutive difference.
+"""
+
+import warnings
+from collections.abc import Sequence
+from functools import lru_cache
+from types import ModuleType
+from typing import TYPE_CHECKING
+
+import narwhals as nw
+import numpy as np
+import torch
+
+from ..model.types import TimeseriesType
+
+if TYPE_CHECKING:
+    from narwhals.typing import IntoDataFrame
+
+DEF_TIMESTAMP_COLUMN = "timestamp"
+DEF_TARGET_NAME_COLUMN = "target"
+DEF_PREDICTION_COLUMN = "prediction"
+
+
+@lru_cache(maxsize=1)
+def _pandas() -> ModuleType | None:
+    """Return the pandas module, or ``None`` when pandas is not installed."""
+    try:
+        import pandas as pd
+    except ImportError:
+        return None
+    return pd
+
+
+def _as_column_list(columns: str | Sequence[str] | None) -> list[str]:
+    """Normalize a single column name / sequence of names / ``None`` into a list."""
+    if columns is None:
+        return []
+    if isinstance(columns, str):
+        return [columns]
+    return list(columns)
+
+
+def _require_columns(df: nw.DataFrame, columns: Sequence[str], role: str) -> None:
+    """Raise when any of ``columns`` is missing from ``df``."""
+    missing = [c for c in columns if c not in df.columns]
+    if missing:
+        raise ValueError(f"{role} column(s) {missing} not found in the DataFrame (columns: {list(df.columns)})")
+
+
+def validate_output_columns(id_column: str | None, timestamp_column: str, quantile_levels: Sequence[float]) -> None:
+    """Reject input column names that would overwrite fields in a forecast frame."""
+    names = [timestamp_column, DEF_TARGET_NAME_COLUMN, DEF_PREDICTION_COLUMN]
+    if id_column is not None:
+        names.append(id_column)
+    names.extend(str(level) for level in quantile_levels)
+    duplicates = sorted({name for name in names if names.count(name) > 1})
+    if duplicates:
+        raise ValueError(
+            f"Forecast output column name(s) {duplicates} would collide; rename the id or timestamp column."
+        )
+
+
+def _modal_diff(values: np.ndarray):
+    """Return the most common difference between consecutive ``values`` (smallest on a tie)."""
+    diffs = np.diff(values)
+    if not diffs.size:
+        return None
+    unique, counts = np.unique(diffs, return_counts=True)
+    return unique[int(counts.argmax())]
+
+
+def _infer_time_step(timestamps: nw.Series | None):
+    """Return the sampling interval of a sorted timestamp series, or ``None`` if undeterminable.
+
+    Datetime timestamps yield a pandas offset when pandas is installed (inferred by
+    ``pd.infer_freq``, falling back to the most common consecutive difference) and a
+    ``numpy.timedelta64`` otherwise; numeric timestamps yield the most common numeric difference.
+    Series that are neither datetime nor numeric - or that hold a single point - yield ``None``, in
+    which case forecasts are stamped with integer positions instead of timestamps.
+    """
+    if timestamps is None or len(timestamps) < 2:
+        return None
+    dtype = timestamps.dtype
+    if not dtype.is_temporal() and not dtype.is_numeric():
+        return None
+    values = timestamps.to_numpy()
+    pd = _pandas()
+    if dtype.is_temporal() and pd is not None:
+        # to_numpy() converts timezone-aware values to naive UTC, which can turn
+        # local month starts into month ends and hide daylight-saving changes.
+        index = pd.DatetimeIndex(timestamps.to_list())
+        try:
+            inferred = pd.infer_freq(index)
+        except ValueError:  # infer_freq needs at least 3 timestamps
+            inferred = None
+        if inferred is None:
+            step = _modal_diff(values)
+            return pd.tseries.frequencies.to_offset(step) if step is not None else None
+        return pd.tseries.frequencies.to_offset(inferred)
+    return _modal_diff(values)
+
+
+def _future_timestamps(meta: dict, horizon: int) -> np.ndarray:
+    """Continue a series' time axis for ``horizon`` steps beyond its last observed timestamp."""
+    last = meta.get("last_timestamp")
+    step = meta.get("time_step")
+    if last is None or step is None:
+        start = meta.get("length", 0)
+        return np.arange(start, start + horizon)
+    pd = _pandas()
+    if pd is not None and isinstance(last, np.datetime64):
+        # a pandas offset knows calendar arithmetic (month ends, DST); plain multiplication does not
+        timestamp = pd.Timestamp(last)
+        if time_zone := meta.get("time_zone"):
+            timestamp = timestamp.tz_localize("UTC").tz_convert(time_zone)
+        return pd.date_range(start=timestamp + step, periods=horizon, freq=step).to_numpy(dtype="datetime64[ns]")
+    return last + step * np.arange(1, horizon + 1)
+
+
+def _select_target_columns(
+    df: nw.DataFrame,
+    target: str | Sequence[str] | None,
+    reserved: Sequence[str],
+) -> list[str]:
+    """Resolve the target columns, defaulting to every numeric column that is not reserved."""
+    schema = df.schema
+    if target is not None:
+        targets = _as_column_list(target)
+        _require_columns(df, targets, "Target")
+        non_numeric = [c for c in targets if not schema[c].is_numeric()]
+        if non_numeric:
+            raise ValueError(
+                f"Target column(s) {non_numeric} are not numeric "
+                f"({ {c: str(schema[c]) for c in non_numeric} }); a target must hold numbers."
+            )
+        return targets
+    reserved_set = set(reserved)
+    targets = [c for c in df.columns if c not in reserved_set and schema[c].is_numeric()]
+    if not targets:
+        raise ValueError("Could not infer any numeric target column; pass target=... explicitly.")
+    return targets
+
+
+def _values_2d(frame: nw.DataFrame, columns: Sequence[str]) -> torch.Tensor:
+    """Extract ``columns`` of ``frame`` as a float32 ``[num_variates, T]`` tensor."""
+    # transpose first, so astype's copy lands contiguous; it also lifts the read-only flag
+    # some backends put on their arrays
+    return torch.as_tensor(frame[list(columns)].to_numpy().T.astype(np.float32))
+
+
+def _to_narwhals(df, promote_index: bool) -> tuple[nw.DataFrame, str | None]:
+    """Wrap any supported eager dataframe, promoting a pandas ``DatetimeIndex`` to a real column.
+
+    Returns the narwhals frame plus the name of the promoted index column (``None`` when there was
+    nothing to promote); only pandas-like backends carry an index at all.
+    """
+    pd = _pandas()
+    index_column = None
+    if promote_index and pd is not None and isinstance(df, pd.DataFrame) and isinstance(df.index, pd.DatetimeIndex):
+        index_column = df.index.name or DEF_TIMESTAMP_COLUMN
+        df = df.reset_index(names=index_column)
+    return nw.from_native(df, eager_only=True), index_column
+
+
+def _with_timestamp_column(df: nw.DataFrame, timestamp_column: str | None) -> tuple[nw.DataFrame, str | None]:
+    """Validate the timestamp column and parse string timestamps into datetimes.
+
+    Parsing lets a frame read straight from a CSV keep a real time axis; a column that does not
+    parse (e.g. free-form labels) is left untouched and is then only used for ordering.
+    """
+    if timestamp_column is None:
+        return df, None
+
+    _require_columns(df, [timestamp_column], "Timestamp")
+    dtype = df.schema[timestamp_column]
+    if not dtype.is_temporal() and not dtype.is_numeric():
+        try:
+            with warnings.catch_warnings():  # the format-inference warning is noise for a best-effort parse
+                warnings.simplefilter("ignore", UserWarning)
+                df = df.with_columns(nw.col(timestamp_column).str.to_datetime())
+        except Exception:  # noqa: BLE001 - each backend raises its own parse error; a label column is fine as-is
+            pass
+    return df, timestamp_column
+
+
+def _sort_by_time(frame: nw.DataFrame, timestamp_column: str) -> nw.DataFrame:
+    """Sort by timestamp, keeping the input order of ties (not every backend sorts stably)."""
+    order = nw.generate_temporary_column_name(8, frame.columns)
+    return frame.with_row_index(order).sort(timestamp_column, order).drop(order)
+
+
+def _group_by_id(df: nw.DataFrame, id_column: str | None) -> list[tuple]:
+    """Split ``df`` into ``(id, frame)`` pairs, ordered by where each id first appears."""
+    if id_column is None:
+        return [(None, df)]
+    groups = [(key[0] if isinstance(key, tuple) else key, frame) for key, frame in df.group_by(id_column)]
+    # group_by makes no ordering promise (polars in particular does not), so restore the order the
+    # ids first appear in - the same order pandas' groupby(sort=False) would have produced.
+    ids = df[id_column].to_list()
+    first_position: dict = {}
+    for position, value in enumerate(ids):
+        first_position.setdefault(value, position)
+    return sorted(groups, key=lambda item: first_position.get(item[0], len(ids)))
+
+
+def build_df_timeseries(
+    df: "IntoDataFrame",
+    *,
+    prediction_length: int | None = None,
+    id_column: str | None = None,
+    timestamp_column: str | None = None,
+    target: str | Sequence[str] | None = None,
+    past_covariates: str | Sequence[str] | None = None,
+    future_covariates: str | Sequence[str] | None = None,
+    future_df: "IntoDataFrame | None" = None,
+) -> tuple[list[TimeseriesType], list[dict]]:
+    """Extract the series of a ``DataFrame`` into timeseries plus formatting metadata.
+
+    The target columns of one series always become a single multivariate series, so the model can
+    use their cross-variate structure. Columns that are unrelated series rather than channels of
+    one system belong in long format, split by ``id_column``.
+
+    Parameters
+    ----------
+    df
+        Observed history, as any eager dataframe narwhals supports (pandas, polars, PyArrow, ...).
+        Rows of one series must share the same ``id_column`` value; within a series, rows are
+        ordered by ``timestamp_column`` (a pandas ``DatetimeIndex`` is used automatically when no
+        timestamp column is given).
+    prediction_length
+        Forecast horizon. When given, ``future_df`` must cover at least this many steps per series.
+    id_column
+        Column identifying the series. When omitted the whole frame is a single series.
+    timestamp_column
+        Column holding the time axis. When omitted a pandas ``DatetimeIndex`` is promoted and
+        used automatically, on ``df`` and ``future_df`` alike.
+    target
+        Target column(s). Defaults to every numeric column that is not the id column, the
+        timestamp column or a covariate column.
+    past_covariates, future_covariates
+        Covariate columns. ``future_covariates`` must also be present in ``future_df``, which
+        supplies their values over the forecast horizon.
+    future_df
+        Known-future covariate values, in the same layout as ``df`` (same id and timestamp
+        columns). Its timestamps must match the forecast timeline. Required when
+        ``future_covariates`` is given.
+    """
+    past_cov_cols = _as_column_list(past_covariates)
+    future_cov_cols = _as_column_list(future_covariates)
+
+    # the caller's own argument, before it is resolved against df's index below: future_df carries
+    # its own index and must be promoted on the same terms df was, not on the resolved name
+    requested_timestamp_column = timestamp_column
+    df, index_column = _to_narwhals(df, promote_index=timestamp_column is None)
+    backend = df.implementation
+    df, timestamp_column = _with_timestamp_column(df, timestamp_column or index_column)
+    if id_column is not None:
+        _require_columns(df, [id_column], "Id")
+    _require_columns(df, past_cov_cols, "Past covariate")
+    _require_columns(df, future_cov_cols, "Future covariate")
+
+    reserved = [c for c in (id_column, timestamp_column) if c is not None] + past_cov_cols + future_cov_cols
+    target_cols = _select_target_columns(df, target, reserved)
+
+    if future_cov_cols and future_df is None:
+        raise ValueError("future_covariates need their future values; pass future_df=...")
+    future_groups: dict = {}
+    if future_cov_cols:
+        future_df, future_index_column = _to_narwhals(future_df, promote_index=requested_timestamp_column is None)
+        future_df, future_ts_column = _with_timestamp_column(future_df, timestamp_column or future_index_column)
+        _require_columns(future_df, future_cov_cols, "Future covariate")
+        if id_column is not None:
+            _require_columns(future_df, [id_column], "Id")
+        future_groups = dict(_group_by_id(future_df, id_column))
+        if future_ts_column is not None:
+            future_groups = {key: _sort_by_time(frame, future_ts_column) for key, frame in future_groups.items()}
+        if id_column is not None:
+            unmatched = [key for key in future_groups if key not in set(df[id_column].to_list())]
+            if unmatched:
+                warnings.warn(
+                    f"future_df holds series {unmatched} that are absent from df; their rows are ignored.",
+                    stacklevel=2,
+                )
+
+    series: list[TimeseriesType] = []
+    meta: list[dict] = []
+    for key, frame in _group_by_id(df, id_column):
+        if timestamp_column is not None:
+            frame = _sort_by_time(frame, timestamp_column)
+            timestamps = frame[timestamp_column]
+        else:
+            timestamps = None
+
+        last_timestamp = timestamps.to_numpy()[-1] if timestamps is not None and len(timestamps) else None
+        time_step = _infer_time_step(timestamps)
+        time_zone = getattr(timestamps.dtype, "time_zone", None) if timestamps is not None else None
+
+        past_cov = _values_2d(frame, past_cov_cols) if past_cov_cols else None
+        future_cov = None
+        if future_cov_cols:
+            if key not in future_groups:
+                raise ValueError(f"future_df has no rows for series {key!r}")
+            future_frame = future_groups[key]
+            horizon = prediction_length if prediction_length is not None else len(future_frame)
+            if len(future_frame) < horizon or horizon < 1:
+                raise ValueError(f"future_df needs at least {horizon} rows for series {key!r}")
+            if timestamp_column is not None and time_step is not None:
+                expected = _future_timestamps(
+                    {"last_timestamp": last_timestamp, "time_step": time_step, "time_zone": time_zone}, horizon
+                )
+                actual = future_frame[timestamp_column].to_numpy()[:horizon]
+                if not np.array_equal(actual, expected):
+                    raise ValueError(f"future_df timestamps for series {key!r} do not match the forecast timeline")
+            future_cov = torch.cat(
+                (_values_2d(frame, future_cov_cols), _values_2d(future_frame, future_cov_cols)), dim=-1
+            )
+
+        series.append(
+            TimeseriesType(
+                target=_values_2d(frame, target_cols),
+                past_covariates=past_cov,
+                future_covariates=future_cov,
+            )
+        )
+        meta.append(
+            {
+                "item_id": key,
+                "id_column": id_column,
+                "timestamp_column": timestamp_column or DEF_TIMESTAMP_COLUMN,
+                "length": len(frame),
+                "last_timestamp": last_timestamp,
+                "time_step": time_step,
+                "time_zone": time_zone,
+                "backend": backend,
+                "target_names": list(target_cols),
+            }
+        )
+
+    return series, meta
+
+
+def format_df_output(
+    forecasts: list[torch.Tensor],
+    meta: list[dict],
+    quantile_levels: list[float],
+    backend=None,
+) -> "IntoDataFrame":
+    """Convert per-series ``[V_t, Q, H]`` quantile tensors into one long-format dataframe.
+
+    Each row is a single forecast step of a single target variate and carries the series id (when
+    the input had an id column), the forecast timestamp, the target name, the median prediction
+    and one column per quantile level (named by its level, e.g. ``"0.1"``).
+
+    The frame is built with ``backend`` when given (e.g. ``"pandas"``), otherwise with the
+    dataframe library the forecast input came from, defaulting to pandas.
+    """
+    if backend is None:
+        backend = meta[0].get("backend", "pandas") if meta else "pandas"
+    if not forecasts:
+        return nw.from_dict({}, backend=backend).to_native()
+
+    median_idx = min(range(len(quantile_levels)), key=lambda i: abs(quantile_levels[i] - 0.5))
+    id_column = meta[0].get("id_column")
+    timestamp_column = meta[0].get("timestamp_column", DEF_TIMESTAMP_COLUMN)
+    validate_output_columns(id_column, timestamp_column, quantile_levels)
+
+    ids: list = []
+    timestamps: list[np.ndarray] = []
+    names: list[str] = []
+    predictions: list[np.ndarray] = []
+    quantiles: list[list[np.ndarray]] = [[] for _ in quantile_levels]
+
+    for series_forecast, m in zip(forecasts, meta):
+        values = series_forecast.cpu().numpy()  # [V, Q, H]
+        horizon = values.shape[-1]
+        series_timestamps = _future_timestamps(m, horizon)
+        target_names = m.get("target_names") or [f"{DEF_TARGET_NAME_COLUMN}_{v}" for v in range(values.shape[0])]
+
+        for v, name in enumerate(target_names):
+            if id_column is not None:
+                ids.extend([m.get("item_id")] * horizon)
+            timestamps.append(series_timestamps)
+            names.extend([name] * horizon)
+            predictions.append(values[v, median_idx])
+            for q_idx in range(len(quantile_levels)):
+                quantiles[q_idx].append(values[v, q_idx])
+
+    columns: dict = {}
+    if id_column is not None:
+        columns[id_column] = ids
+    columns[timestamp_column] = np.concatenate(timestamps)
+    columns[DEF_TARGET_NAME_COLUMN] = names
+    columns[DEF_PREDICTION_COLUMN] = np.concatenate(predictions)
+    for level, parts in zip(quantile_levels, quantiles):
+        columns[str(level)] = np.concatenate(parts)
+
+    result = nw.from_dict(columns, backend=backend)
+    if time_zone := meta[0].get("time_zone"):
+        result = result.with_columns(
+            nw.col(timestamp_column).dt.replace_time_zone("UTC").dt.convert_time_zone(time_zone)
+        )
+    return result.to_native()

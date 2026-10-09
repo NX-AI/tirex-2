@@ -10,6 +10,9 @@
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/NX-AI/tirex-2/blob/main/examples/getting_started.ipynb)
 [![TiRex-2 Demo](https://img.shields.io/badge/HuggingFace-TiRex--2%20Demo-yellow?logo=huggingface)](https://huggingface.co/spaces/NX-AI/TiRex-2-demo)
 
+!!! note "🎉 News (Sep 2026)"
+    TiRex-2 has been accepted as an **Oral** presentation (0.36%) at **NeurIPS 2026**!
+
 TiRex-2 is a **pretrained time series foundation model** that forecasts one or many target
 variates directly from their history, optionally conditioned on past and future-known
 covariates. A single checkpoint serves both univariate and multivariate forecasting, built
@@ -76,3 +79,11 @@ If you use TiRex-2 in your research, please cite our work:
       url={https://arxiv.org/abs/2607.01204},
 }
 ```
+
+## Intended use and limitations
+
+This release supports time-series forecasting as documented on this site. High-risk applications under EU AI Act Article 6 are outside NXAI's intended purpose. NXAI has not validated this release for high-risk compliance. Users and integrators must assess suitability and meet their legal obligations. Unlawful uses, including those prohibited by EU AI Act Article 5, are not permitted. See the [Intended Use Notice](intended-use.md) for details. It does not change the licence or statutory obligations.
+
+## License
+
+TiRex-2 is licensed under the [Apache License 2.0](https://github.com/NX-AI/tirex-2/blob/main/LICENSE).

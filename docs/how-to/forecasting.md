@@ -33,6 +33,15 @@ the backbone; unknown attributes fall through to the underlying model, so
 model = load_model("NX-AI/TiRex-2", device="cuda", use_flex_attention=True)
 ```
 
+`compile` applies `torch.compile` to the mLSTM on every device, and sLSTM
+on CPU/MPS only. Compilation happens on the first forecast per input shape, so it pays off for repeated calls rather than one-shot use. It applies per model instance.
+
+```python
+model = load_model("NX-AI/TiRex-2", device="cpu", compile=True)
+```
+
+See [#47](https://github.com/NX-AI/tirex-2/pull/47) for the change and its CPU/CUDA benchmarks.
+
 ## Univariate forecasting
 
 ```python
@@ -148,6 +157,14 @@ retried, without affecting the rest of the call.
 | `"numpy"` | list of `numpy.ndarray`, shape `(V, 9, H)` | — |
 | `"gluonts"` | list of GluonTS `QuantileForecast` | `pip install "tirex-2[gluonts]"` |
 | `"fev"` | a `datasets.DatasetDict` for `fev.Task.evaluation_summary` | `pip install "tirex-2[fev]"` |
+| `"dataframe"` | one long-format frame, in the input's dataframe library | a dataframe library |
+| `"pandas"` | the same frame, always as pandas | `pip install pandas` |
+
+???+ tip "Tip: using dataframes with TiRex-2"
+    If you use pandas, Polars, or cuDF, you can pass a dataframe to
+    [`forecast_df`][tirex2.api_adapter.forecast.ForecastModel.forecast_df] and get a long-format
+    dataframe with the forecast quantiles. See the [dataframe guide](dataframes.md) for a full
+    walkthrough.
 
 The 9 quantiles are the levels `0.1, 0.2, ..., 0.9`, with index `4` being the median.
 
@@ -165,6 +182,21 @@ Extra keyword arguments passed to `forecast(...)` are forwarded to the backbone'
 ```python
 forecast = model.forecast([ts], prediction_length=64, tta_sign_flip=True)
 ```
+
+## Context padding
+
+By default (`pad_context=True` in `forecast(...)`), contexts shorter than the model's default
+context length (2,048) are left-padded with NaN, as in training. Setting `pad_context=False`
+skips padding to the model's full context length, reducing the number of input patches and
+speeding up inference for short contexts at the cost of a small loss in forecast accuracy.
+Shorter series are still left-padded with NaN to the longest context in their batch, and
+the tokenizer adds any left-padding needed to form whole patches.
+
+```python
+forecast = model.forecast([ts], prediction_length=64, pad_context=False)
+```
+
+See [#57](https://github.com/NX-AI/tirex-2/pull/57) for speed and accuracy benchmarks.
 
 ## GluonTS and FEV integration
 

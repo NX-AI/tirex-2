@@ -1,6 +1,6 @@
 [project]
 name = "tirex-2"
-version = "0.2.1"
+version = "0.3.1"
 description = "TiRex-2 time series forecasting inference"
 authors = [
 	{ name = "NXAI" }
@@ -13,11 +13,12 @@ dependencies = [
 	"torch>=2.10.0; python_version >= '3.14'",
 	"numpy>=2.1.3",
 	"numpy>=2.3.3; python_version >= '3.14'",
-	"flashrnn>=1.0.5",
+	"flashrnn>=1.0.8",
 	"xlstm~=2.0.3",
 	"PyYAML>=6",
 	"huggingface-hub>=0.35.3",
 	"safetensors>=0.6",
+	"narwhals>=2.0",
 ]
 
 [project.optional-dependencies]
@@ -91,6 +92,10 @@ cuda-libraries-dev = "13.2.*"
 cuda-nvcc = "12.6.*"
 cuda-libraries-dev = "12.6.*"
 
+[tool.pixi.target."*-cuda".pypi-dependencies]
+# resolve torch (cuda) for the default CUDA platforms
+torch = { version = "*", index = "https://download.pytorch.org/whl/cu130" }
+
 [tool.pixi.target."*-cpu".pypi-dependencies]
 # resolve torch (cpu) for cpu platforms
 torch = { version = "*", index = "https://download.pytorch.org/whl/cpu" }
@@ -117,6 +122,11 @@ pypi-build = ["pypi-build"]
 [tool.pixi.feature.test.pypi-dependencies]
 tirex-2 = { path = ".", editable = true, extras = ["gluonts", "fev"] }
 pytest = "*"
+# The dataframe adapter is backend-agnostic (narwhals is a core dependency), so the concrete
+# dataframe libraries are a test-only concern
+pandas = "*"
+polars = ">=1.0"
+pyarrow = ">=15.0"
 
 [tool.pixi.feature.examples.pypi-dependencies]
 tirex-2 = { path = ".", editable = true, extras = ["examples", "gluonts", "fev"] }
@@ -130,6 +140,7 @@ mkdocs = ">=1.6,<2"
 mkdocs-material = ">=9.5"
 mkdocstrings = { version = ">=0.26", extras = ["python"] }
 mkdocs-material-extensions = ">=1.3"
+ruff = ">=0.11"
 
 [tool.pixi.tasks]
 test = { cmd = "pytest test/", default-environment = "test" }
@@ -137,8 +148,10 @@ notebook = { cmd = "jupyter lab examples/getting_started.ipynb", default-environ
 # benchmarking tasks:
 # requires the path to the gifteval storage and a model type; examples/gifteval is added to PYTHONPATH for its local helper modules
 gifteval = { cmd = "python examples/gifteval/run_gifteval.py", default-environment = "examples" }
+gifteval-download = { cmd = "hf download Salesforce/GiftEval --repo-type=dataset --local-dir ", default-environment = "examples" }
 # requires the path to the fev-bench storage
 fevbench = { cmd = "python examples/fevbench/run_fevbench.py", default-environment = "examples" }
+fevbench-download = { cmd = "hf download autogluon/fev_datasets --repo-type=dataset --local-dir ", default-environment = "examples" }
 # docs tasks:
 # preview the docs site locally
 docs = { cmd = "mkdocs serve", default-environment = "docs" }
@@ -153,6 +166,9 @@ build = "*"
 
 [tool.pixi.feature.examples.activation.env]
 PYTHONPATH = "$PIXI_PROJECT_ROOT/examples/gifteval:$PYTHONPATH"
+
+[tool.pixi.target."*-cuda*".tasks]
+test = { cmd = "pytest test/ --require-cuda", default-environment = "test" }
 
 # ruff
 [tool.ruff]

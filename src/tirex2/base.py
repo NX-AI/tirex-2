@@ -16,6 +16,8 @@ from safetensors.torch import load_file as load_safetensors
 from ._state_dict import expand_shared_duplicates
 from .api_adapter import ForecastModel
 from .model import TiRex2
+from .model.component.flashrnn_slstm import _FlashRNNLayer
+from .model.component.mlstm_block import mLSTMLayer
 
 CONFIG_FILENAME = "config.json"
 WEIGHTS_FILENAME = "model.safetensors"
@@ -147,6 +149,7 @@ def load_model(
     *,
     hf_kwargs: dict[str, Any] | None = None,
     use_flex_attention: bool | None = None,
+    compile: bool = False,
 ) -> ForecastModel:
     """Load an inference-ready :class:`TiRex2` from a checkpoint directory or HF repo.
 
@@ -171,6 +174,9 @@ def load_model(
         multivariate batches on CUDA but adds first-call compilation overhead.
         ``False`` forces dense attention. Leave as ``None`` to preserve the
         checkpoint configuration and package defaults.
+    compile : bool
+        If True, ``torch.compile`` the recurrent layers: mLSTM always, and sLSTM
+        only on CPU/MPS.
 
     Returns
     -------
@@ -203,8 +209,17 @@ def load_model(
     if use_flex_attention is not None:
         for template in config["stack_config"]["templates"].values():
             template["variate_mixer"]["use_flex_attention"] = use_flex_attention
+
     model = TiRex2(**config)
 
     model.load_state_dict(_load_state_dict(model, weights_file), strict=True)
+    model.eval()
+    if compile:
+        # slSTM compiled on cpu/mps only.
+        targets = (mLSTMLayer,) if device == "cuda" else (mLSTMLayer, _FlashRNNLayer)
+        for module in model.modules():
+            if isinstance(module, targets):
+                module.compile()
 
-    return ForecastModel(model.eval())
+    return ForecastModel(model)
+

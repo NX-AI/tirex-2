@@ -146,15 +146,54 @@ def test_predict_uses_tta_diff_checkpoint_default_and_override(build_small_model
     model.tta_diff = False
     calls = []
 
-    def fake_predict_once(timeseries, prediction_length, *args, tta_diff=True, **kwargs):
+    def fake_predict(timeseries, prediction_length, *args, tta_diff=True, **kwargs):
         calls.append(tta_diff)
         return []
 
-    model._predict_once = fake_predict_once
+    model._predict = fake_predict
 
     assert model.predict([], prediction_length=1) == []
     assert model.predict([], prediction_length=1, tta_diff=True) == []
     assert calls == [False, True]
+
+
+def test_predict_preserves_gradients_when_requested(build_small_model):
+    model = build_small_model("cpu", recipe=["small_mlstm"])
+    timeseries = [
+        TimeseriesType(
+            target=torch.arange(16, dtype=torch.float32).unsqueeze(0),
+            past_covariates=None,
+            future_covariates=None,
+        )
+    ]
+
+    forecast = model._predict(timeseries, prediction_length=4, preserve_grad=True)[0]
+    assert forecast.requires_grad
+
+    forecast.sum().backward()
+    grad = model.output_patch_embedding.hidden_layer.weight.grad
+    assert grad is not None
+    assert torch.isfinite(grad).all()
+    assert grad.abs().sum() > 0
+
+
+@pytest.mark.parametrize(
+    ("model_device", "input_device"),
+    [
+        ("cpu", "cpu"),
+        pytest.param("cuda", "cpu", marks=_needs_gpu),
+        pytest.param("cuda", "cuda", marks=_needs_gpu),
+    ],
+)
+def test_predict_returns_forecast_on_input_device_and_dtype(model_device, input_device, build_small_model):
+    model = build_small_model(model_device, recipe=["small_mlstm"]).eval()
+    target = torch.arange(16, dtype=torch.float32, device=input_device).unsqueeze(0)
+    timeseries = [TimeseriesType(target=target, past_covariates=None, future_covariates=None)]
+
+    forecast = model.predict(timeseries, prediction_length=4)[0]
+
+    assert forecast.device == target.device
+    assert forecast.dtype == target.dtype
 
 
 # The compute paths below exercise the CUDA device, so they still need a GPU.

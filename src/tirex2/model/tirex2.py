@@ -222,6 +222,45 @@ class TiRex2(nn.Module):
 
     def forward(self, batch: dict[str, Any]) -> torch.Tensor | tuple[torch.Tensor, dict[str, torch.Tensor]]:
         """Forward pass producing quantile predictions for all variates in batch."""
+        x, group_vector, target_mask, known_covariate_mask, scaler_state, tokenizer_state = self._prepare_forward(batch)
+
+        # forward through actual mLSTM/sLSTM layers, we select only the output of the last layer;
+        # hidden representations are not relevant for forecasting
+        for x in self._forward_layerwise(x, group_vector, target_mask, known_covariate_mask):
+            pass
+
+        # Normalise at the end of the stack
+        x = self.stack_out_norm(x)
+        x = nn.functional.dropout(x, self.dropout, training=self.training)
+
+        x = self.output_patch_embedding(x)  # [B*V, L, D] -> [B*V, L, D_out]
+        x = torch.unflatten(x, -1, (self.num_quantiles, self.output_patch_size))  # [B*V, L, D_out] -> [B*V, L, Q, P]
+        x = torch.transpose(x, 1, 2)  # switch quantile and num_token_dimension  [B*V, L, Q, P] -> [B*V, Q, L, P]
+
+        # reverse tokenization and scaling
+        x = self.tokenizer.output_transform(x, tokenizer_state)  # [B*V, Q, L, P] -> [B*V, Q, T'], T' = T + padding
+        x = self.scaler.re_scale(x, scaler_state)
+
+        return x
+
+    def _forward_layerwise(self, x, group_vector, target_mask, known_covariate_mask):
+        # Run the input through the stack.
+        state = {i: None for i in range(len(self.stack))}
+        for i, block in enumerate(self.stack):  # type: ignore[reportArgumentType]
+            block_state = state[i]
+            x, new_block_state = block(
+                x,
+                group_vector=group_vector,
+                target_mask=target_mask,
+                known_covariate_mask=known_covariate_mask,
+                state=block_state,
+            )
+
+            if block_state is None:
+                state[i] = new_block_state
+            yield x
+
+    def _prepare_forward(self, batch):
         x: torch.Tensor = batch["x"]
         group_vector: torch.Tensor | None = batch.get("group_vector", None)
         target_mask: torch.Tensor | None = batch.get("target_mask", None)
@@ -243,35 +282,7 @@ class TiRex2(nn.Module):
         x = torch.nan_to_num(x, nan=self.nan_mask_value)
         x = torch.cat((x, x_mask), dim=-1)
         x = self.input_patch_embedding(x)
-
-        # Run the input through the stack.
-        state = {i: None for i in range(len(self.stack))}
-        for i, block in enumerate(self.stack):  # type: ignore[reportArgumentType]
-            block_state = state[i]
-            x, new_block_state = block(
-                x,
-                group_vector=group_vector,
-                target_mask=target_mask,
-                known_covariate_mask=known_covariate_mask,
-                state=block_state,
-            )
-
-            if block_state is None:
-                state[i] = new_block_state
-
-        # Normalise at the end of the stack
-        x = self.stack_out_norm(x)
-        x = nn.functional.dropout(x, self.dropout, training=self.training)
-
-        x = self.output_patch_embedding(x)  # [B*V, L, D] -> [B*V, L, D_out]
-        x = torch.unflatten(x, -1, (self.num_quantiles, self.output_patch_size))  # [B*V, L, D_out] -> [B*V, L, Q, P]
-        x = torch.transpose(x, 1, 2)  # switch quantile and num_token_dimension  [B*V, L, Q, P] -> [B*V, Q, L, P]
-
-        # reverse tokenization and scaling
-        x = self.tokenizer.output_transform(x, tokenizer_state)  # [B*V, Q, L, P] -> [B*V, Q, T'], T' = T + padding
-        x = self.scaler.re_scale(x, scaler_state)
-
-        return x
+        return x, group_vector, target_mask, known_covariate_mask, scaler_state, tokenizer_state
 
     @torch.no_grad
     def predict(
@@ -310,13 +321,20 @@ class TiRex2(nn.Module):
             (the default) to use the checkpoint's configured setting
             (``self.tta_diff``, from ``config.json``); pass an explicit
             ``True``/``False`` to override trend differencing for this call.
+        pad_context : bool, optional
+            If ``True`` (the default), contexts shorter than ``context_len`` are
+            left-padded with NaN up to the full model length. Pass ``False`` to
+            skip padding to the full model length, reducing the number of input
+            patches and inference time for short contexts at the cost of a small
+            loss in forecast accuracy. Padding to the longest context in each
+            batch and to whole patches still applies.
         """
         if tta_sign_flip is None:
             tta_sign_flip = self.tta_sign_flip
         if tta_diff is None:
             tta_diff = self.tta_diff
 
-        forecasts = self._predict_once(timeseries, prediction_length, *args, tta_diff=tta_diff, **kwargs)
+        forecasts = self._predict(timeseries, prediction_length, *args, tta_diff=tta_diff, **kwargs)
         # An empty batch has nothing to average (and no tensor to read a device
         # off of below), so short-circuit before the augmentation pass.
         if not tta_sign_flip or not forecasts:
@@ -325,18 +343,19 @@ class TiRex2(nn.Module):
         # Treat predict end-to-end as a black box run twice: a second pass on
         # the sign-flipped series, mapped back to level space, then averaged.
         flipped = [self._sign_flip(ts) for ts in timeseries]
-        forecasts_flip = self._predict_once(flipped, prediction_length, *args, tta_diff=tta_diff, **kwargs)
+        forecasts_flip = self._predict(flipped, prediction_length, *args, tta_diff=tta_diff, **kwargs)
 
         complement = self._complement_indices().to(forecasts_flip[0].device)
         forecasts_flip = [-f.index_select(1, complement) for f in forecasts_flip]
         return [(a + b) / 2 for a, b in zip(forecasts, forecasts_flip)]
 
-    def _predict_once(
+    def _prepare_input(
         self,
-        timeseries: list[TimeseriesType],
-        prediction_length: int,
+        timeseries,
+        prediction_length,
+        tta_diff,
         *args,
-        tta_diff: bool = True,
+        pad_context: bool = True,
         **kwargs,
     ):
         """Run a single (un-augmented) forecast pass over the batch of series."""
@@ -380,15 +399,23 @@ class TiRex2(nn.Module):
             tta_diff=tta_diff,
             **kwargs,
         )
+
         batch = {k: v.to(device) for k, v in batch.items()}
+        # ensure that context size matches the model's expectations
+        batch["x"] = self._fix_context_size(prediction_length, batch["x"], pad_context)
+        return prediction_length, batch, args, kwargs
 
-        output = self._predict(batch, prediction_length, *args, **kwargs)
-        output = self.postprocessor.transform_output(output, prediction_length, *args, **kwargs)  # type: ignore
-        result = []
-        for ctx, out in zip(context, output):
-            result.append(out.to(ctx))
+    def _fix_context_size(self, prediction_length, context, pad_context):
+        right_pad = self.future_len - prediction_length
+        context = nn.functional.pad(context, (0, right_pad), value=torch.nan)
 
-        return result
+        max_ts_len = self.context_len + self.future_len
+        if context.shape[-1] < max_ts_len and pad_context:
+            pad_len = max_ts_len - context.shape[-1]
+            context = nn.functional.pad(context, (pad_len, 0), value=torch.nan)
+        elif context.shape[-1] > max_ts_len:
+            context = context[..., -max_ts_len:]
+        return context
 
     @staticmethod
     def _sign_flip(ts: TimeseriesType) -> TimeseriesType:
@@ -430,40 +457,56 @@ class TiRex2(nn.Module):
 
     def _predict(
         self,
-        batch: dict[str, Any],
+        timeseries: list[TimeseriesType],
         prediction_length: int,
         *args,
-        prediction_window_is_padded: bool = False,
-        single_pass: bool = False,
+        tta_diff: bool = True,
+        preserve_grad: bool = False,
+        pad_context: bool = True,
         **kwargs,
     ):
         """Run the model on all series inside context in parallel."""
-        if not prediction_window_is_padded:
-            raise ValueError("single_pass=True requires prediction_window_is_padded=True")
+        prediction_length, batch, args, kwargs = self._prepare_input(
+            timeseries,
+            prediction_length,
+            tta_diff,
+            *args,
+            pad_context=pad_context,
+            **kwargs,
+        )
 
-        context = batch["x"]
-        group_vector = batch["group_vector"]
-        target_mask = batch["target_mask"]
-
-        right_pad = self.future_len - prediction_length
-        context = nn.functional.pad(context, (0, right_pad), value=torch.nan)
-
-        max_ts_len = self.context_len + self.future_len
-        if context.shape[-1] < max_ts_len:
-            pad_len = max_ts_len - context.shape[-1]
-            context = nn.functional.pad(context, (pad_len, 0), value=torch.nan)
-        elif context.shape[-1] > max_ts_len:
-            context = context[..., -max_ts_len:]
-
-        batch = {"x": context, "group_vector": group_vector, "target_mask": target_mask}
         pred = self(batch)
         # Drop the last token (predicts beyond sequence end); the remaining
         # tail of length future_len covers exactly the 10 future patches
         # that were directly supervised during training.
         pred = pred[..., : -self.output_patch_size]
         pred = pred[:, :, -self.future_len :]
+        pred = pred[:, :, :prediction_length]
 
-        return pred[:, :, :prediction_length]
+        result = self._prepare_output(
+            timeseries,
+            pred,
+            prediction_length,
+            *args,
+            preserve_grad=preserve_grad,
+            **kwargs,
+        )
+
+        return result
+
+    def _prepare_output(self, original_timeseries, pred, prediction_length, *args, preserve_grad, **kwargs):
+
+        output = self.postprocessor.transform_output(
+            pred,
+            prediction_length,
+            *args,
+            preserve_grad=preserve_grad,
+            **kwargs,
+        )  # type: ignore
+        result = []
+        for ts, out in zip(original_timeseries, output):
+            result.append(out.to(ts.target))
+        return result
 
     def _create_stack(
         self,

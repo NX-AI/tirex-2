@@ -6,13 +6,36 @@ All notable changes to TiRex-2 are documented here.
 
 ### Improvements
 
-- Moved checkpoints to the Hugging Face file layout: `load_model` now reads the model config from `config.json` and the weights from `model.safetensors`, which is parsed without running Python's pickle. Hugging Face downloads fetch only the new files when a repo carries them. The legacy `model-config.yaml` and torch-pickle `model.ckpt` still load when their replacement is missing, but are deprecated and emit a `FutureWarning`; support will be removed in a future release. Added `scripts/convert_checkpoint.py` to convert legacy checkpoints in [#NN](https://github.com/NX-AI/tirex-2/pull/NN), contributed by [Suad0](https://github.com/Suad0).
+- Moved checkpoints to the Hugging Face file layout: `load_model` now reads the model config from `config.json` and the weights from `model.safetensors`, which is parsed without running Python's pickle. Hugging Face downloads fetch only the new files when a repo carries them. The legacy `model-config.yaml` and torch-pickle `model.ckpt` still load when their replacement is missing, but are deprecated and emit a `FutureWarning`; support will be removed in a future release. Added `scripts/convert_checkpoint.py` to convert legacy checkpoints in [#55](https://github.com/NX-AI/tirex-2/pull/55), contributed by [Suad0](https://github.com/Suad0).
+
+### Documentation and development
+
+- Added the Intended Use, Limitations and EU AI Act Notice (`INTENDED_USE.md`), linked from the README and the documentation, in [#67](https://github.com/NX-AI/tirex-2/pull/67), contributed by [Lukas Fischer](https://github.com/lukfischer) and [Yipeng Sun](https://github.com/sypsyp97).
+
+### Security and CI
+
+## [0.3.1] - 2026-10-05
+
+### Documentation and development
+
+- Refactored internal prediction pipeline, and renamed `_predict_once(...)` to `_predict(...)` for clarity in [#62](https://github.com/NX-AI/tirex-2/pull/62), contributed by [Christian Ganhör](https://github.com/Tigxy).
+
+## [0.3.0] - 2026-09-28
+
+### Improvements
+
+- ⭐️📊 Use [`forecast_df()`][tirex2.api_adapter.forecast.ForecastModel.forecast_df] to forecast directly from pandas, Polars, PyArrow, and other supported eager dataframes. It handles multiple series, covariates, and batching, and returns results in the input dataframe library by default, in [#18](https://github.com/NX-AI/tirex-2/pull/18), contributed by [Suad0](https://github.com/Suad0) and [Zhihao Dai](https://github.com/daidahao).
+- ⭐️🚀 Added a `pad_context=False` option to `forecast(...)` to skip padding to the default context length, enabling much faster inference for short contexts at a small accuracy cost, in [#57](https://github.com/NX-AI/tirex-2/pull/57), contributed by [Daniil Yefimov](https://github.com/DaniilYefimov).
+- ⭐️🚀 Added opt-in recurrent-layer compilation with `load_model(..., compile=True)` for faster repeated forecasts (up to 1.82x on CPU), in [#47](https://github.com/NX-AI/tirex-2/pull/47), contributed by [Daniil Yefimov](https://github.com/DaniilYefimov).
+- Added a `preserve_grad=True` option to `_predict_once(...)` and postprocessing for fine-tuning, preserving finite gradients through inverse differencing, in [#58](https://github.com/NX-AI/tirex-2/pull/58), contributed by [Zhihao Dai](https://github.com/daidahao).
 - Replaced `einops` rearrangements with native PyTorch operations and removed the direct `einops` dependency in [#41](https://github.com/NX-AI/tirex-2/pull/41), contributed by [Copilot](https://github.com/apps/copilot-swe-agent) and [Zhihao Dai](https://github.com/daidahao).
 - Removed a redundant `torch.no_grad()` context from prediction code in [#42](https://github.com/NX-AI/tirex-2/pull/42), contributed by [Zhihao Dai](https://github.com/daidahao).
 
 ### Documentation and development
 
+- Added a [dataframe forecasting guide](./how-to/dataframes.md) for native dataframe forecasting via `forecast_df`, contributed by [Suad0](https://github.com/Suad0) and [Zhihao Dai](https://github.com/daidahao).
 - Corrected deployment examples and guidance for covariates, model caching, compilation, and the HTTP API, and added an Open Source vs PRO feature comparison table with consistent PRO naming in [#21](https://github.com/NX-AI/tirex-2/pull/21), contributed by [Lukas Fischer](https://github.com/lukfischer), Claude Sonnet 5, and [Zhihao Dai](https://github.com/daidahao).
+- Made the default Windows CUDA Pixi platform use the cu130 PyTorch index and fail CUDA tests early when CUDA is unavailable, in [#51](https://github.com/NX-AI/tirex-2/pull/51), contributed by [Yipeng Sun](https://github.com/sypsyp97).
 - Added FAQs covering CUDA setup, supported NVIDIA GPU architectures, and Windows MSVC compiler setup in [#19](https://github.com/NX-AI/tirex-2/pull/19), contributed by [Yipeng Sun](https://github.com/sypsyp97) and [Daniil Yefimov](https://github.com/DaniilYefimov).
 - Added a Pixi documentation environment and preview/build commands, migrated documentation deployment to GitHub Pages artifact actions, and updated contributor instructions in [#37](https://github.com/NX-AI/tirex-2/pull/37), contributed by [Zhihao Dai](https://github.com/daidahao).
 - Removed the unused root `requirements.txt` in [#40](https://github.com/NX-AI/tirex-2/pull/40), contributed by [Copilot](https://github.com/apps/copilot-swe-agent) and [Zhihao Dai](https://github.com/daidahao).
@@ -43,6 +66,8 @@ All notable changes to TiRex-2 are documented here.
 
 Initial TiRex-2 release, contributed by [martinloretzzz](https://github.com/martinloretzzz) in the [initial commit](https://github.com/NX-AI/tirex-2/commit/abdf2898162482cc5c862905a406fc1134fbae67).
 
-[Unreleased]: https://github.com/NX-AI/tirex-2/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/NX-AI/tirex-2/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/NX-AI/tirex-2/releases/tag/v0.3.1
+[0.3.0]: https://github.com/NX-AI/tirex-2/releases/tag/v0.3.0
 [0.2.1]: https://github.com/NX-AI/tirex-2/releases/tag/v0.2.1
 [0.1.1]: https://github.com/NX-AI/tirex-2/releases/tag/v0.1.1

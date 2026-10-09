@@ -14,6 +14,7 @@ Development and documentation contribution guidelines.
   `python -m venv .venv && source .venv/bin/activate && pip install -e ".[examples,fev,gluonts]"`
 - **Tooling**: run `pre-commit install` once, then `pre-commit run --all-files` and `pixi run --platform linux-64-cuda test`
   (or `pytest test/` in a pip environment) before opening a PR.
+  CUDA Pixi test platforms require an available CUDA runtime; use a named CPU platform for CPU-only checks.
 
 ## Workflow Overview
 
