@@ -6,6 +6,8 @@ All notable changes to TiRex-2 are documented here.
 
 ### Improvements
 
+- Moved checkpoints to the Hugging Face file layout: `load_model` now reads the model config from `config.json` and the weights from `model.safetensors`, which is parsed without running Python's pickle. Hugging Face downloads fetch only the new files when a repo carries them. The legacy `model-config.yaml` and torch-pickle `model.ckpt` still load when their replacement is missing, but are deprecated and emit a `FutureWarning`; support will be removed in a future release. Added `scripts/convert_checkpoint.py` to convert legacy checkpoints in [#55](https://github.com/NX-AI/tirex-2/pull/55), contributed by [Suad0](https://github.com/Suad0).
+
 ### Documentation and development
 
 - Added the Intended Use, Limitations and EU AI Act Notice (`INTENDED_USE.md`), linked from the README and the documentation, in [#67](https://github.com/NX-AI/tirex-2/pull/67), contributed by [Lukas Fischer](https://github.com/lukfischer) and [Yipeng Sun](https://github.com/sypsyp97).
