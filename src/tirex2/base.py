@@ -222,4 +222,3 @@ def load_model(
                 module.compile()
 
     return ForecastModel(model)
-
