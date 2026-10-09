@@ -1,29 +1,52 @@
 # Copyright (c) NXAI GmbH.
 # Licensed under the Apache License, Version 2.0; see LICENSE for details.
 
-"""Wrapper around xlstm mLSTM blocks with TiRex-specific tweaks."""
+"""mLSTM layer copied from xLSTM Large, with TiRex-specific tweaks."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Literal
 
 import torch
 import torch.nn as nn
-from xlstm.components.conv import CausalConv1d, CausalConv1dConfig
-from xlstm.components.init import bias_linspace_init_
-from xlstm.xlstm_large.model import (
-    MultiHeadLayerNorm,
-    mLSTMBackend,
-    mLSTMBackendConfig,
-    mLSTMLayerConfig,
-    soft_cap,
-)
+from mlstm_kernels.torch.backend_module import mLSTMBackend, mLSTMBackendConfig
 
+from .norm import MultiHeadLayerNorm
 from .xlstm_mixed_config import xLSTMMixedConfig
+
+# soft_cap, bias_linspace_init_ and the mLSTMLayerConfig fields are copied from xlstm.
+
+
+def soft_cap(values: torch.Tensor, cap_value: float | torch.Tensor | None) -> torch.Tensor:
+    """Soft caps a tensor to cap_value with a scaled tanh; no cap when cap_value is None."""
+    if cap_value is None:
+        return values
+    return cap_value * torch.tanh(values / cap_value)
+
+
+def bias_linspace_init_(param: torch.Tensor, start: float = 3.4, end: float = 6.0) -> torch.Tensor:
+    """Linearly spaced bias init across dimensions."""
+    assert param.dim() == 1, f"param must be 1-dimensional (typically a bias), got {param.dim()}"
+    n_dims = param.shape[0]
+    init_vals = torch.linspace(start, end, n_dims)
+    with torch.no_grad():
+        param.copy_(init_vals)
+    return param
 
 
 @dataclass
-class conv_mLSTMLayerConfig(mLSTMLayerConfig):
-    """Extends mlstm layer config with controls for causal convolution."""
+class conv_mLSTMLayerConfig:
+    """Configuration of the xLSTM Large mLSTM layer, plus TiRex's convolution and RoPE controls."""
+
+    embedding_dim: int
+    num_heads: int
+    use_bias: bool = False
+    norm_eps: float = 1e-6
+    norm_reduction_force_float32: bool = True
+    qk_dim_factor: float = 0.5
+    v_dim_factor: float = 1.0
+    gate_soft_cap: float = 15.0
+    mlstm_backend: mLSTMBackendConfig = field(default_factory=mLSTMBackendConfig)
+    weight_mode: str = "single"
 
     conv1d_kernel_size: int = 0
     conv1d_channel_mixing: bool = False
@@ -31,7 +54,7 @@ class conv_mLSTMLayerConfig(mLSTMLayerConfig):
 
 
 class mLSTMLayer(nn.Module):
-    """mLSTM implementation copied from xLSTM 7B, adapted to use convolution."""
+    """mLSTM implementation copied from xLSTM 7B."""
 
     def __init__(self, config: conv_mLSTMLayerConfig):
         super().__init__()
@@ -40,47 +63,24 @@ class mLSTMLayer(nn.Module):
         self.v_dim = int(config.embedding_dim * config.v_dim_factor)
         self.qk_dim = int(config.embedding_dim * config.qk_dim_factor)
 
-        self.q = nn.Linear(
-            in_features=self.config.embedding_dim,
-            out_features=self.qk_dim,
-            bias=self.config.use_bias,
+        # Fused input projection of q, k, v and the o, i, f gate pre-activations, in that order.
+        # The i and f gates always have a bias; without use_bias the rest of the bias starts at zero.
+        self.in_proj_split = (
+            self.qk_dim,
+            self.qk_dim,
+            self.v_dim,
+            self.v_dim,
+            self.config.num_heads,
+            self.config.num_heads,
         )
-        self.k = nn.Linear(
-            in_features=self.config.embedding_dim,
-            out_features=self.qk_dim,
-            bias=self.config.use_bias,
-        )
-        self.v = nn.Linear(
-            in_features=self.config.embedding_dim,
-            out_features=self.v_dim,
-            bias=self.config.use_bias,
-        )
-
-        self.ogate_preact = nn.Linear(
-            in_features=self.config.embedding_dim,
-            out_features=self.v_dim,
-            bias=self.config.use_bias,
-        )
-        self.igate_preact = nn.Linear(
-            in_features=self.config.embedding_dim,
-            out_features=self.config.num_heads,
-            bias=True,
-        )
-        self.fgate_preact = nn.Linear(
-            in_features=self.config.embedding_dim,
-            out_features=self.config.num_heads,
-            bias=True,
-        )
+        self.in_proj = nn.Linear(self.config.embedding_dim, sum(self.in_proj_split), bias=True)
+        if not self.config.use_bias:
+            nn.init.zeros_(self.in_proj.bias)
 
         if self.config.conv1d_kernel_size > 0:
-            self.conv1d = CausalConv1d(
-                config=CausalConv1dConfig(
-                    feature_dim=self.config.embedding_dim,
-                    kernel_size=self.config.conv1d_kernel_size,
-                    channel_mixing=self.config.conv1d_channel_mixing,
-                )
+            raise NotImplementedError(
+                "The mLSTM layer no longer supports a causal convolution (conv1d_kernel_size > 0)."
             )
-            self.conv_act_fn = nn.SiLU()
 
         self.ogate_act_fn = nn.Sigmoid()
         self.mlstm_backend = mLSTMBackend(config=self.config.mlstm_backend)
@@ -99,23 +99,25 @@ class mLSTMLayer(nn.Module):
             bias=self.config.use_bias,
         )
 
+    def _load_from_state_dict(self, state_dict, prefix, *args, **kwargs):
+        # Older checkpoints store a separate linear layer per projection
+        legacy = ("q", "k", "v", "ogate_preact", "igate_preact", "fgate_preact")
+        if all(f"{prefix}{name}.weight" in state_dict for name in legacy):
+            weights = [state_dict.pop(f"{prefix}{name}.weight") for name in legacy]
+            biases = [state_dict.pop(f"{prefix}{name}.bias", None) for name in legacy]
+            biases = [w.new_zeros(w.shape[0]) if b is None else b for w, b in zip(weights, biases)]
+            state_dict[f"{prefix}in_proj.weight"] = torch.cat(weights)
+            state_dict[f"{prefix}in_proj.bias"] = torch.cat(biases)
+        super()._load_from_state_dict(state_dict, prefix, *args, **kwargs)
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Process a full sequence through the mlstm."""
         assert x.ndim == 3, f"Input must have shape [B, S, D], got {x.shape}"
         B, S, _ = x.shape
 
-        if self.config.conv1d_kernel_size > 0:
-            x_conv = self.conv1d(x)
-            x_conv = self.conv_act_fn(x_conv)
-        else:
-            x_conv = x
-
-        q = self.q(x_conv)
-        k = self.k(x_conv)
-        v = self.v(x)
-        o_preact = self.ogate_preact(x)
-        i_preact = soft_cap(self.igate_preact(x), cap_value=self.config.gate_soft_cap)
-        f_preact = soft_cap(self.fgate_preact(x), cap_value=self.config.gate_soft_cap)
+        q, k, v, o_preact, i_preact, f_preact = self.in_proj(x).split(self.in_proj_split, dim=-1)
+        i_preact = soft_cap(i_preact, cap_value=self.config.gate_soft_cap)
+        f_preact = soft_cap(f_preact, cap_value=self.config.gate_soft_cap)
 
         q = q.reshape(B, S, self.config.num_heads, -1).transpose(1, 2)
         k = k.reshape(B, S, self.config.num_heads, -1).transpose(1, 2)
@@ -201,9 +203,13 @@ def init_cell(config: xLSTMMixedConfig, device: Literal["cpu", "cuda", "mps"]) -
             mlstm_backend=_mlstm_backend_config(config, device),
         )
     )
-    # Match mLSTMBlock.reset_parameters gate initialisation.
-    torch.nn.init.zeros_(layer.fgate_preact.weight)
-    bias_linspace_init_(layer.fgate_preact.bias, start=3.0, end=6.0)
-    torch.nn.init.zeros_(layer.igate_preact.weight)
-    torch.nn.init.normal_(layer.igate_preact.bias, mean=0.0, std=0.1)
+    # Match mLSTMBlock.reset_parameters gate initialisation; i and f are the last rows of in_proj.
+    num_heads = layer.config.num_heads
+    i_rows = slice(-2 * num_heads, -num_heads)
+    f_rows = slice(-num_heads, None)
+    with torch.no_grad():
+        torch.nn.init.zeros_(layer.in_proj.weight[f_rows])
+        bias_linspace_init_(layer.in_proj.bias[f_rows], start=3.0, end=6.0)
+        torch.nn.init.zeros_(layer.in_proj.weight[i_rows])
+        torch.nn.init.normal_(layer.in_proj.bias[i_rows], mean=0.0, std=0.1)
     return layer

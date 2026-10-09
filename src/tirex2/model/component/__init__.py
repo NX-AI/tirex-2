@@ -3,10 +3,10 @@
 
 from .attention_block import AttentionBlock, AttentionLayer
 from .bi_xlstm import BiXLSTM
+from .feedforward import MLP
 from .flashrnn_slstm import FlashRNNLayerConfig, sLSTMFlashRNNLayer
-from .layernorm import LayerNorm
-from .mlp import MLP
 from .mlstm_block import conv_mLSTMLayerConfig, mLSTMLayer
+from .norm import LayerNorm
 from .patch_tokenizer import Patch, Tokenizer
 from .postprocessor import PostProcessor, PostProcessorConfig
 from .residual_block import ResidualBlock
