@@ -96,7 +96,9 @@ class mLSTMLayer(nn.Module):
         )
 
         if self.config.conv1d_kernel_size > 0:
-            raise NotImplementedError("The mLSTM layer no longer supports a causal convolution (conv1d_kernel_size > 0).")
+            raise NotImplementedError(
+                "The mLSTM layer no longer supports a causal convolution (conv1d_kernel_size > 0)."
+            )
 
         self.ogate_act_fn = nn.Sigmoid()
         self.mlstm_backend = mLSTMBackend(config=self.config.mlstm_backend)

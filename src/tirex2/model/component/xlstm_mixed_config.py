@@ -3,6 +3,7 @@
 
 from dataclasses import dataclass, field
 
+
 @dataclass
 class xLSTMLargeConfig:
     embedding_dim: int
@@ -45,7 +46,7 @@ class xLSTMLargeConfig:
     mode: str = "train"
     """The mode of operation for the backend. Determines how the `forward` method behaves.
     Available modes are 'train', 'train_with_padding', 'inference'.
-    'inference' works with arbitrary sequence lengths, and does not support training. 
+    'inference' works with arbitrary sequence lengths, and does not support training.
     It calls a sequence of different kernels to process the sequence.
     'train_with_padding' pads the input to multiples of `chunk_size`.
     """
@@ -70,7 +71,7 @@ class xLSTMLargeConfig:
     """The factor to determine the dimension of the intermediate projection in the feedforward layer."""
     ffn_round_up_to_multiple_of: int = 64
     """Round the intermediate projection dimension to the next multiple of this value."""
-    
+
     # capping
     gate_soft_cap: float = 15.0
     """Soft cap value for the gates."""
@@ -83,6 +84,7 @@ class xLSTMLargeConfig:
     Mode 'fused' uses a single weight matrix for the query, key, value, and gates.
     'fused' is benefitial in inference settings.
     """
+
 
 @dataclass
 class xLSTMMixedConfig(xLSTMLargeConfig):
