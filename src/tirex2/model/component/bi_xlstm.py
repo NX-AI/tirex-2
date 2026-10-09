@@ -8,12 +8,10 @@ from typing import Literal
 import torch
 from torch import nn
 
-# From xlstm large
-from xlstm.xlstm_large.components import RMSNorm
-from xlstm.xlstm_large.model import FeedForward
-
+from .feedforward import FeedForward
 from .flashrnn_slstm import init_cell as init_slstm_cell
 from .mlstm_block import init_cell as init_mlstm_cell
+from .norm import RMSNorm
 from .xlstm_mixed_config import xLSTMMixedConfig
 
 
