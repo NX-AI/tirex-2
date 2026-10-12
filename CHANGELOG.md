@@ -6,11 +6,12 @@ All notable changes to TiRex-2 are documented here.
 
 ### Improvements
 
-- `load_model` now loads checkpoints from `config.json` and `model.safetensors`, which avoids unpickling. The legacy `model-config.yaml` and `model.ckpt` files are deprecated with a `FutureWarning`, and `scripts/convert_checkpoint.py` converts them, in [#55](https://github.com/NX-AI/tirex-2/pull/55), contributed by [Suad0](https://github.com/Suad0).
+- ⭐️🏋 **Default `safetensors` weights**: All checkpoints ship model configuration and weights in `json` and `safetensors` formats. `load_model` now loads from `config.json` and `model.safetensors`, which avoids unpickling and is faster. The legacy `yaml` and `ckpt` files are deprecated with a `FutureWarning` in [#55](https://github.com/NX-AI/tirex-2/pull/55), contributed by [Suad0](https://github.com/Suad0).
 
 ### Documentation and development
 
 - Added the Intended Use, Limitations and EU AI Act Notice (`INTENDED_USE.md`), linked from the README and the documentation, in [#67](https://github.com/NX-AI/tirex-2/pull/67), contributed by [Lukas Fischer](https://github.com/lukfischer) and [Yipeng Sun](https://github.com/sypsyp97).
+- Added [a script](https://github.com/NX-AI/tirex-2/tree/main/scripts/convert_checkpoint.py) to convert legacy checkpoints to new formats in [#55](https://github.com/NX-AI/tirex-2/pull/55), contributed by [Suad0](https://github.com/Suad0).
 
 ### Security and CI
 
