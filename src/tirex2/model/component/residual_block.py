@@ -6,7 +6,7 @@
 import torch
 from torch import nn
 
-from .layernorm import LayerNorm
+from .norm import LayerNorm
 
 
 @torch.compile
