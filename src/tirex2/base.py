@@ -11,6 +11,7 @@ from typing import Any
 import torch
 import yaml
 from huggingface_hub import snapshot_download
+from huggingface_hub.errors import LocalEntryNotFoundError
 from safetensors.torch import load_file as load_safetensors
 
 from ._state_dict import expand_shared_duplicates
@@ -76,7 +77,22 @@ def _resolve_ckpt_dir(
     if allow_patterns is not None:
         return Path(snapshot_download(repo_id=repo_id, allow_patterns=allow_patterns, **hf_kwargs))
 
-    ckpt_dir = Path(snapshot_download(repo_id=repo_id, allow_patterns=SAFETENSORS_PATTERNS, **hf_kwargs))
+    try:
+        ckpt_dir = Path(snapshot_download(repo_id=repo_id, allow_patterns=SAFETENSORS_PATTERNS, **hf_kwargs))
+    except LocalEntryNotFoundError as exc:
+        # Newer Hub clients reject incomplete offline snapshots before returning
+        # their path, even when the cached legacy files form a usable checkpoint.
+        # Use the base exception to remain compatible with older Hub clients.
+        snapshot_path = getattr(exc, "snapshot_path", None)
+        if snapshot_path is None:
+            raise
+        ckpt_dir = Path(snapshot_path)
+        if not all(
+            (ckpt_dir / current).is_file() or (ckpt_dir / legacy).is_file()
+            for current, legacy in _LEGACY_FALLBACKS.items()
+        ):
+            raise
+        return ckpt_dir
     missing = [legacy for current, legacy in _LEGACY_FALLBACKS.items() if not (ckpt_dir / current).is_file()]
     if not missing:
         return ckpt_dir

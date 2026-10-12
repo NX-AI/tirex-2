@@ -9,10 +9,18 @@ from pathlib import Path
 import pytest
 import torch
 import yaml
+from huggingface_hub.errors import LocalEntryNotFoundError
 from safetensors.torch import load_file as load_safetensors, save_file as save_safetensors
 
 from tirex2._state_dict import expand_shared_duplicates, shared_tensor_groups
-from tirex2.base import CKPT_FILENAME, CONFIG_FILENAME, LEGACY_CONFIG_FILENAME, WEIGHTS_FILENAME, load_model
+from tirex2.base import (
+    CKPT_FILENAME,
+    CONFIG_FILENAME,
+    LEGACY_CONFIG_FILENAME,
+    WEIGHTS_FILENAME,
+    _resolve_ckpt_dir,
+    load_model,
+)
 from tirex2.model.tirex2 import TiRex2
 from tirex2.model.types import TimeseriesType
 
@@ -340,3 +348,63 @@ def test_convert_downloads_the_legacy_checkpoint_it_reads(fake_hub, tmp_path, al
     assert requests == [[LEGACY_CONFIG_FILENAME, CKPT_FILENAME]]
     assert (tmp_path / "out" / WEIGHTS_FILENAME).is_file()
     assert (tmp_path / "out" / CONFIG_FILENAME).is_file()
+
+
+@pytest.fixture
+def offline_hub_cache(tmp_path, aliased_model, small_model_kwargs):
+    # Older supported Hub clients do not have the completeness check that caused
+    # this regression. Exercise the real client when that check is available.
+    tree_cache = pytest.importorskip("huggingface_hub._tree_cache")
+    repo = tmp_path / "models--review--model"
+    commit = "a" * 40
+    snapshot = repo / "snapshots" / commit
+    _write_legacy_checkpoint(snapshot, aliased_model, small_model_kwargs("cpu", RECIPE))
+    convert(str(snapshot), None, should_verify=False)
+    (repo / "refs").mkdir()
+    (repo / "refs" / "main").write_text(commit)
+    tree_cache.write_tree_cache(
+        str(repo),
+        commit,
+        {
+            name: tree_cache.TreeCacheEntry(size=(snapshot / name).stat().st_size, blob_id="b" * 40)
+            for name in [CONFIG_FILENAME, WEIGHTS_FILENAME, LEGACY_CONFIG_FILENAME, CKPT_FILENAME]
+        },
+    )
+    return snapshot, {"cache_dir": str(tmp_path), "local_files_only": True}
+
+
+@pytest.mark.parametrize(
+    "uncached",
+    [[CONFIG_FILENAME, WEIGHTS_FILENAME], [CONFIG_FILENAME], [WEIGHTS_FILENAME]],
+    ids=["legacy-only", "legacy-config", "legacy-weights"],
+)
+def test_load_model_uses_legacy_files_in_incomplete_offline_snapshot(offline_hub_cache, aliased_model, uncached):
+    snapshot, hf_kwargs = offline_hub_cache
+    for name in uncached:
+        (snapshot / name).unlink()
+
+    with pytest.warns(FutureWarning):
+        loaded = load_model("review/model", device="cpu", hf_kwargs=hf_kwargs)
+
+    _assert_same_parameters(loaded.model, aliased_model)
+
+
+def test_offline_snapshot_without_either_weights_format_still_fails(offline_hub_cache):
+    snapshot, hf_kwargs = offline_hub_cache
+    (snapshot / WEIGHTS_FILENAME).unlink()
+    (snapshot / CKPT_FILENAME).unlink()
+
+    with pytest.raises(LocalEntryNotFoundError):
+        _resolve_ckpt_dir("review/model", hf_kwargs=hf_kwargs)
+
+
+def test_hub_cache_miss_without_snapshot_path_is_preserved(monkeypatch):
+    error = LocalEntryNotFoundError("No cached snapshot")
+
+    def fail_download(**kwargs):
+        raise error
+
+    monkeypatch.setattr("tirex2.base.snapshot_download", fail_download)
+    with pytest.raises(LocalEntryNotFoundError) as raised:
+        _resolve_ckpt_dir("review/model", hf_kwargs={"local_files_only": True})
+    assert raised.value is error
