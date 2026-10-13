@@ -6,6 +6,8 @@ All notable changes to TiRex-2 are documented here.
 
 ### Improvements
 
+- Removed the `xlstm` dependency to reduce the package footprint, in [#71](https://github.com/NX-AI/tirex-2/pull/71), contributed by [Martin Loretz](https://github.com/martinloretzzz).
+
 ### Documentation and development
 
 - Refactored the sLSTM recurrence interface to support future kernel implementations and decoupled its configuration from FlashRNN in [#70](https://github.com/NX-AI/tirex-2/pull/70), contributed by [Martin Loretz](https://github.com/martinloretzzz).
