@@ -205,7 +205,7 @@ class TiRex2(nn.Module):
         self.num_quantiles = len(quantiles)
         quantiles_tensor = torch.tensor(quantiles)
         self.register_buffer("quantiles", quantiles_tensor, persistent=False)
-        # TTA defaults for this checkpoint (carried in model-config.yaml).
+        # TTA defaults for this checkpoint (carried in config.json).
         # ``predict`` uses them whenever the matching argument is left as None.
         self.tta_sign_flip = tta_sign_flip
         self.tta_diff = tta_diff
@@ -307,7 +307,7 @@ class TiRex2(nn.Module):
         tta_sign_flip : bool, optional
             Opt-in sign-flip test-time augmentation. Leave as ``None`` (the
             default) to use the checkpoint's configured setting
-            (``self.tta_sign_flip``, from ``model-config.yaml``); pass an
+            (``self.tta_sign_flip``, from ``config.json``); pass an
             explicit ``True``/``False`` to override it for this call. When
             enabled, the model is run a second time on the sign-flipped input
             (target *and* every covariate negated); the flipped forecast is
@@ -319,7 +319,7 @@ class TiRex2(nn.Module):
         tta_diff : bool, optional
             Opt-in differencing path inside the postprocessor. Leave as ``None``
             (the default) to use the checkpoint's configured setting
-            (``self.tta_diff``, from ``model-config.yaml``); pass an explicit
+            (``self.tta_diff``, from ``config.json``); pass an explicit
             ``True``/``False`` to override trend differencing for this call.
         pad_context : bool, optional
             If ``True`` (the default), contexts shorter than ``context_len`` are

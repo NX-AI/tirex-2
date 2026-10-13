@@ -11555,6 +11555,7 @@ packages:
   - mlstm-kernels>=2.0.6
   - pyyaml>=6
   - huggingface-hub>=0.35.3
+  - safetensors>=0.6
   - narwhals>=2.0
   - matplotlib>=3.10.0 ; extra == 'examples'
   - plotly ; extra == 'examples'
