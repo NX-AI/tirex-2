@@ -6,7 +6,8 @@ All notable changes to TiRex-2 are documented here.
 
 ### Improvements
 
-- ⭐️🏋 **Default `safetensors` weights**: All checkpoints ship model configuration and weights in `json` and `safetensors` formats. `load_model` now loads from `config.json` and `model.safetensors`, which avoids unpickling and is faster. The legacy `yaml` and `ckpt` files are deprecated with a `FutureWarning` in [#55](https://github.com/NX-AI/tirex-2/pull/55), contributed by [Suad0](https://github.com/Suad0).
+- Removed the `xlstm` dependency to reduce the package footprint, in [#71](https://github.com/NX-AI/tirex-2/pull/71), contributed by [Martin Loretz](https://github.com/martinloretzzz).
+- **Default `safetensors` weights**: All checkpoints ship model configuration and weights in `json` and `safetensors` formats. `load_model` now loads from `config.json` and `model.safetensors`, which avoids unpickling and is faster. The legacy `yaml` and `ckpt` files are deprecated with a `FutureWarning` in [#55](https://github.com/NX-AI/tirex-2/pull/55), contributed by [Suad0](https://github.com/Suad0).
 
 ### Documentation and development
 
