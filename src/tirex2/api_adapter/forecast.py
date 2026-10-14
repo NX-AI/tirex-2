@@ -358,7 +358,7 @@ class ForecastModel:
         In particular ``tta_sign_flip`` controls sign-flip test-time augmentation
         (roughly doubles inference cost), and ``tta_diff`` controls postprocessor
         differencing; when omitted, the checkpoint's configured defaults
-        (``model-config.yaml``) are used. Pass ``True``/``False`` to override.
+        (``config.json``) are used. Pass ``True``/``False`` to override.
 
         Examples
         --------
@@ -405,7 +405,7 @@ class ForecastModel:
         In particular ``tta_sign_flip`` controls sign-flip test-time augmentation
         (roughly doubles inference cost), and ``tta_diff`` controls postprocessor
         differencing; when omitted, the checkpoint's configured defaults
-        (``model-config.yaml``) are used. Pass ``True``/``False`` to override.
+        (``config.json``) are used. Pass ``True``/``False`` to override.
         """
         try:
             from .gluon import build_gluon_timeseries
