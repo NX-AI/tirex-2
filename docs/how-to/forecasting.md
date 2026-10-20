@@ -33,14 +33,20 @@ the backbone; unknown attributes fall through to the underlying model, so
 model = load_model("NX-AI/TiRex-2", device="cuda", use_flex_attention=True)
 ```
 
-`compile` applies `torch.compile` to the mLSTM on every device, and sLSTM
-on CPU/MPS only. Compilation happens on the first forecast per input shape, so it pays off for repeated calls rather than one-shot use. It applies per model instance.
+`compile=True` applies `torch.compile` to the block stack. Each new input shape is compiled
+on its first forecast: seconds on CUDA, but minutes on CPU/MPS, where later forecasts are up
+to 1.9x faster. It pays off for repeated forecasts of the same shapes and applies per model instance.
 
 ```python
 model = load_model("NX-AI/TiRex-2", device="cpu", compile=True)
 ```
 
-See [#47](https://github.com/NX-AI/tirex-2/pull/47) for the change and its CPU/CUDA benchmarks.
+On CUDA, the forward pass is replayed from a CUDA graph per input shape for up to 32 series
+(padded to a multiple of 4); pass `cuda_graphs=False` to run eagerly.
+
+```python
+model = load_model("NX-AI/TiRex-2", device="cuda", cuda_graphs=False)
+```
 
 ## Univariate forecasting
 
@@ -190,7 +196,7 @@ context length (2,048) are left-padded with NaN, as in training. Setting `pad_co
 skips padding to the model's full context length, reducing the number of input patches and
 speeding up inference for short contexts at the cost of a small loss in forecast accuracy.
 Shorter series are still left-padded with NaN to the longest context in their batch, and
-the tokenizer adds any left-padding needed to form whole patches.
+the context is left-padded to a multiple of 4 patches (128 time steps).
 
 ```python
 forecast = model.forecast([ts], prediction_length=64, pad_context=False)

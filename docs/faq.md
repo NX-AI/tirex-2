@@ -2,15 +2,12 @@
 
 ??? question "How do I run TiRex-2 on CUDA?"
 
-    With `device="cuda"`, TiRex-2 builds its fused sLSTM kernel (FlashRNN) with `nvcc` on the
-    first forecast. In order to run TiRex-2 on CUDA you need:
-
-    1. **A CUDA Toolkit installed and discoverable** — `nvcc` must be on `PATH` or reachable
-       via `CUDA_HOME`.
-    2. **A CUDA Toolkit whose major version matches your PyTorch build** — any 12.x toolkit
-       for a `cu12x` torch wheel, any 13.x toolkit for a `cu13x` one. Check with
-       `python -c "import torch; print(torch.version.cuda)"`.
-    3. **A CUDA Toolkit no newer than your driver supports.**
+    Install a CUDA build of PyTorch and pass `device="cuda"`; no CUDA Toolkit is needed. The
+    sLSTM and mLSTM recurrences run on Triton kernels, which PyTorch's Linux CUDA wheels ship
+    and which are compiled on first use (this needs a C compiler such as `gcc`). Without
+    Triton, e.g. with PyTorch's Windows wheels, TiRex-2 falls back to its PyTorch
+    implementations of both recurrences, which are slower but give the same forecasts up to
+    rounding.
 
 ??? question "Which NVIDIA GPU architectures does TiRex-2 support?"
 
@@ -20,19 +17,17 @@
 
 ??? question "When should I use `compile=True`?"
 
-    We recommend to use `compile=True` on CPU, when the context length and prediction length stay the same across forecasts —
-    `torch.compile` re-traces on every new input shape, so the speed-up only pays off when one
-    shape is reused.
-
-    See [Forecasting](how-to/forecasting.md#loading-the-model) and
-    [#47](https://github.com/NX-AI/tirex-2/pull/47) for the CPU benchmarks.
+    Use it for long-running processes that forecast the same input shapes repeatedly: each
+    new shape is compiled on its first forecast, which takes seconds on CUDA and minutes on
+    CPU, after which forecasts are up to 1.9x faster on CPU. On CUDA, CUDA graphs already
+    remove most of the overhead it would save. See [Forecasting](how-to/forecasting.md#loading-the-model).
 
 ??? question "How can I speed up forecasts on short contexts?"
 
     Pass `pad_context=False` to `forecast(...)` to skip padding to the model's full context
     length (2,048), reducing inference time for short contexts at the cost of a small loss
-    in forecast accuracy. Padding to the longest context in each batch and to whole patches
-    still applies. The default is `pad_context=True`.
+    in forecast accuracy. Padding to the longest context in each batch and to a multiple of
+    4 patches (128 time steps) still applies. The default is `pad_context=True`.
 
     See [Forecasting](how-to/forecasting.md#context-padding) for details and
     [#57](https://github.com/NX-AI/tirex-2/pull/57) for the benchmarks.

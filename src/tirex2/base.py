@@ -4,35 +4,26 @@
 """Loading utilities for inference-ready :class:`TiRex2` checkpoints."""
 
 import json
-import warnings
 from pathlib import Path
 from typing import Any
 
 import torch
-import yaml
 from huggingface_hub import snapshot_download
-from huggingface_hub.errors import LocalEntryNotFoundError
 from safetensors.torch import load_file as load_safetensors
 
-from ._state_dict import expand_shared_duplicates
 from .api_adapter import ForecastModel
 from .model import TiRex2
-from .model.component.flashrnn_slstm import _FlashRNNLayer
-from .model.component.mlstm_block import mLSTMLayer
 
 CONFIG_FILENAME = "config.json"
 WEIGHTS_FILENAME = "model.safetensors"
-#: Legacy YAML config, superseded by :data:`CONFIG_FILENAME`.
+#: Legacy YAML config and torch-pickle weights, no longer loaded; see ``scripts/convert_checkpoint.py``.
 LEGACY_CONFIG_FILENAME = "model-config.yaml"
-#: Legacy torch-pickle weights, superseded by :data:`WEIGHTS_FILENAME`.
 CKPT_FILENAME = "model.ckpt"
 #: Files fetched from a Hugging Face repo, see :func:`_resolve_ckpt_dir`.
 SAFETENSORS_PATTERNS = [CONFIG_FILENAME, WEIGHTS_FILENAME]
 LEGACY_PATTERNS = [LEGACY_CONFIG_FILENAME, CKPT_FILENAME]
-#: Each current file and the legacy file it supersedes.
-_LEGACY_FALLBACKS = {CONFIG_FILENAME: LEGACY_CONFIG_FILENAME, WEIGHTS_FILENAME: CKPT_FILENAME}
-#: Where users get the current checkpoint format, named in deprecation warnings.
-_DEFAULT_REPO_ID = "NX-AI/TiRex-2"
+#: The last release that loads the legacy files.
+_LAST_LEGACY_RELEASE = "0.3.1"
 
 
 def _resolve_ckpt_dir(
@@ -42,15 +33,6 @@ def _resolve_ckpt_dir(
 ) -> Path:
     """Resolve a local checkpoint directory or download one from Hugging Face.
 
-    A repo keeps the legacy ``model-config.yaml`` and ``model.ckpt`` around for
-    older clients long after it has gained ``config.json`` and
-    ``model.safetensors``, and ``allow_patterns`` is a whitelist rather than a
-    preference: asking for both formats downloads both, so every user would
-    transfer the weights twice and read one copy. The current files are
-    therefore requested on their own, and a legacy file is only fetched when the
-    repo turns out not to carry its replacement. The second request costs a
-    metadata lookup against an already-populated cache.
-
     Parameters
     ----------
     ckpt_path : str or pathlib.Path
@@ -58,8 +40,7 @@ def _resolve_ckpt_dir(
     hf_kwargs : dict, optional
         Extra keyword arguments for :func:`huggingface_hub.snapshot_download`.
     allow_patterns : list of str, optional
-        Fetch exactly these files instead of preferring safetensors over the
-        legacy pickle. Used by tooling that specifically wants one format.
+        Files to fetch from a repo, :data:`SAFETENSORS_PATTERNS` by default.
     """
     raw_path = str(ckpt_path)
     local_path = Path(raw_path).expanduser()
@@ -73,31 +54,8 @@ def _resolve_ckpt_dir(
     else:
         return local_path
 
-    hf_kwargs = hf_kwargs or {}
-    if allow_patterns is not None:
-        return Path(snapshot_download(repo_id=repo_id, allow_patterns=allow_patterns, **hf_kwargs))
-
-    try:
-        ckpt_dir = Path(snapshot_download(repo_id=repo_id, allow_patterns=SAFETENSORS_PATTERNS, **hf_kwargs))
-    except LocalEntryNotFoundError as exc:
-        # Newer Hub clients reject incomplete offline snapshots before returning
-        # their path, even when the cached legacy files form a usable checkpoint.
-        # Use the base exception to remain compatible with older Hub clients.
-        snapshot_path = getattr(exc, "snapshot_path", None)
-        if snapshot_path is None:
-            raise
-        ckpt_dir = Path(snapshot_path)
-        if not all(
-            (ckpt_dir / current).is_file() or (ckpt_dir / legacy).is_file()
-            for current, legacy in _LEGACY_FALLBACKS.items()
-        ):
-            raise
-        return ckpt_dir
-    missing = [legacy for current, legacy in _LEGACY_FALLBACKS.items() if not (ckpt_dir / current).is_file()]
-    if not missing:
-        return ckpt_dir
-
-    return Path(snapshot_download(repo_id=repo_id, allow_patterns=missing, **hf_kwargs))
+    patterns = SAFETENSORS_PATTERNS if allow_patterns is None else allow_patterns
+    return Path(snapshot_download(repo_id=repo_id, allow_patterns=patterns, **(hf_kwargs or {})))
 
 
 def _looks_like_hf_repo_id(path: str) -> bool:
@@ -106,57 +64,18 @@ def _looks_like_hf_repo_id(path: str) -> bool:
 
 
 def _resolve_file(ckpt_dir: Path, filename: str, kind: str) -> Path:
-    """Pick ``filename`` in ``ckpt_dir``, falling back to the legacy file it supersedes."""
-    current_file = ckpt_dir / filename
-    if current_file.is_file():
-        return current_file
-
-    legacy_file = ckpt_dir / _LEGACY_FALLBACKS[filename]
-    if legacy_file.is_file():
-        return legacy_file
-
-    raise FileNotFoundError(f"Expected model {kind} at {current_file} or {legacy_file}")
-
-
-def _warn_legacy_file(legacy_file: Path, replacement: str, reason: str) -> None:
-    """Point users at the current file on the Hub rather than at repo-only tooling.
-
-    ``stacklevel`` attributes the warning to the caller of :func:`load_model`.
-    """
-    warnings.warn(
-        f"Loading the legacy {legacy_file.name!r} from {legacy_file.parent}. {reason} This format is "
-        f"deprecated and support will be removed in a future release. Download {replacement!r} from "
-        f"the Hugging Face model repo instead, e.g. load_model({_DEFAULT_REPO_ID!r}) fetches it "
-        f"automatically; it is loaded in preference whenever it is present.",
-        FutureWarning,
-        stacklevel=4,
-    )
-
-
-def _load_config(config_file: Path) -> dict[str, Any]:
-    """Read the model config from ``config.json`` or the legacy ``model-config.yaml``."""
-    with config_file.open() as f:
-        if config_file.name == CONFIG_FILENAME:
-            return json.load(f)
-        _warn_legacy_file(config_file, CONFIG_FILENAME, "Hugging Face model repos store their config as JSON.")
-        return yaml.safe_load(f)
-
-
-def _load_state_dict(model: TiRex2, weights_file: Path) -> dict[str, torch.Tensor]:
-    """Read a state dict from a safetensors or legacy torch-pickle weights file.
-
-    Tensors that ``model`` shares under several names are stored once (see
-    :mod:`tirex2._state_dict`), so the aliases are restored here and the caller
-    can keep loading strictly.
-    """
-    if weights_file.name == WEIGHTS_FILENAME:
-        state_dict = load_safetensors(weights_file, device="cpu")
-    else:
-        _warn_legacy_file(weights_file, WEIGHTS_FILENAME, "It is a torch pickle, which can run arbitrary code.")
-        checkpoint = torch.load(weights_file, map_location="cpu", weights_only=True)
-        state_dict = checkpoint.get("state_dict", checkpoint) if isinstance(checkpoint, dict) else checkpoint
-
-    return expand_shared_duplicates(model, state_dict)
+    """Return ``ckpt_dir / filename``, pointing legacy checkpoints at the last release that loads them."""
+    file = ckpt_dir / filename
+    if file.is_file():
+        return file
+    message = f"Expected model {kind} at {file}."
+    if any((ckpt_dir / legacy).is_file() for legacy in LEGACY_PATTERNS):
+        message += (
+            f" {ckpt_dir} holds a legacy checkpoint ({LEGACY_CONFIG_FILENAME}, {CKPT_FILENAME}), which this "
+            f"version no longer loads: use tirex-2<={_LAST_LEGACY_RELEASE} for it, or convert it with "
+            f"scripts/convert_checkpoint.py from the tirex-2 repository."
+        )
+    raise FileNotFoundError(message)
 
 
 def load_model(
@@ -166,6 +85,7 @@ def load_model(
     hf_kwargs: dict[str, Any] | None = None,
     use_flex_attention: bool | None = None,
     compile: bool = False,
+    cuda_graphs: bool | None = None,
 ) -> ForecastModel:
     """Load an inference-ready :class:`TiRex2` from a checkpoint directory or HF repo.
 
@@ -174,9 +94,8 @@ def load_model(
     ckpt_path : str or pathlib.Path
         Hugging Face repo id (``org/repo`` or ``hf://org/repo``), downloaded with
         ``huggingface_hub``, or a local directory containing ``config.json`` and
-        ``model.safetensors``. The legacy ``model-config.yaml`` and
-        ``model.ckpt`` are still read when their replacement is missing, but are
-        deprecated and emit a :class:`FutureWarning`.
+        ``model.safetensors``. Legacy ``model-config.yaml`` / ``model.ckpt``
+        checkpoints need ``tirex-2<=0.3.1``.
     device : {"cpu", "cuda", "mps"}
         Runtime device and recurrent-kernel family to use. This overrides any
         device/backend stored in the checkpoint config. ``"mps"`` runs on Apple
@@ -191,8 +110,13 @@ def load_model(
         ``False`` forces dense attention. Leave as ``None`` to preserve the
         checkpoint configuration and package defaults.
     compile : bool
-        If True, ``torch.compile`` the recurrent layers: mLSTM always, and sLSTM
-        only on CPU/MPS.
+        ``torch.compile`` the block stack, for long-running processes that
+        forecast the same input shapes repeatedly. Each new input shape is
+        compiled on its first forecast, which takes seconds on CUDA and minutes
+        on CPU/MPS; later forecasts are up to 1.9x faster on CPU.
+    cuda_graphs : bool, optional
+        Replay the forward pass from a CUDA graph per input shape, which removes
+        the kernel launch overhead. Defaults to True on CUDA.
 
     Returns
     -------
@@ -220,7 +144,7 @@ def load_model(
     config_file = _resolve_file(ckpt_dir, CONFIG_FILENAME, "config")
     weights_file = _resolve_file(ckpt_dir, WEIGHTS_FILENAME, "weights")
 
-    config = _load_config(config_file)
+    config = json.loads(config_file.read_text())
     config["device"] = device
     if use_flex_attention is not None:
         for template in config["stack_config"]["templates"].values():
@@ -228,13 +152,11 @@ def load_model(
 
     model = TiRex2(**config)
 
-    model.load_state_dict(_load_state_dict(model, weights_file), strict=True)
+    state_dict = load_safetensors(weights_file, device="cpu")
+    model.load_state_dict(state_dict, strict=True)
+    model.use_cuda_graphs = device.startswith("cuda") if cuda_graphs is None else cuda_graphs
     model.eval()
     if compile:
-        # slSTM compiled on cpu/mps only.
-        targets = (mLSTMLayer,) if device == "cuda" else (mLSTMLayer, _FlashRNNLayer)
-        for module in model.modules():
-            if isinstance(module, targets):
-                module.compile()
+        model._stack = torch.compile(model._stack)
 
     return ForecastModel(model)

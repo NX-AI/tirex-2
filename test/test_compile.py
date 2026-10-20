@@ -1,50 +1,35 @@
-import json
+import sys
 from pathlib import Path
 
 import pytest
 import torch
+from safetensors.torch import save_file as save_safetensors
 
 from tirex2 import TimeseriesType, load_model
-from tirex2.model.component.flashrnn_slstm import _FlashRNNLayer
-from tirex2.model.component.mlstm_block import mLSTMLayer
+from tirex2.base import CONFIG_FILENAME, WEIGHTS_FILENAME
 
-REFERENCES = Path(__file__).parent / "references"
-CHECKPOINT = "NX-AI/TiRex-2"
-RTOL, ATOL = 1e-5, 1e-5
+sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 
-REFERENCE_INPUT = json.loads((REFERENCES / "reference_input.json").read_text())
-REFERENCE_OUTPUT = json.loads((REFERENCES / "reference_output_cpu.json").read_text())
+from convert_checkpoint import write_config  # noqa: E402
 
-H = REFERENCE_INPUT["H"]
-TARGET = torch.tensor(REFERENCE_INPUT["target"], dtype=torch.float32)
-FUTURE_COVARIATES = torch.tensor(REFERENCE_INPUT["future_covariates"], dtype=torch.float32)
-
-SCENARIOS = {
-    "univariate": TimeseriesType(target=TARGET[None], past_covariates=None, future_covariates=None),
-    "multivariate": TimeseriesType(target=TARGET[None], past_covariates=None, future_covariates=FUTURE_COVARIATES),
-}
+RECIPE = ["small_mlstm", "small_slstm"]
+DEVICES = ["cpu", pytest.param("cuda", marks=pytest.mark.skipif(not torch.cuda.is_available(), reason="needs a GPU"))]
 
 
-@pytest.fixture(scope="module")
-def compiled_model():
-    try:
-        return load_model(CHECKPOINT, device="cpu", compile=True)
-    except Exception as exc:
-        pytest.skip(f"reference checkpoint {CHECKPOINT} is unavailable: {exc}")
+@pytest.mark.parametrize("device", DEVICES)
+def test_compiled_forecast_matches_eager(tmp_path, build_small_model, small_model_kwargs, device):
+    torch.manual_seed(0)
+    model = build_small_model("cpu", recipe=RECIPE)
+    save_safetensors(model.state_dict(), str(tmp_path / WEIGHTS_FILENAME))
+    write_config(small_model_kwargs("cpu", RECIPE), tmp_path / CONFIG_FILENAME)
 
+    eager = load_model(tmp_path, device=device, compile=False)
+    compiled = load_model(tmp_path, device=device, compile=True)
+    assert not hasattr(eager.model._stack, "_torchdynamo_orig_callable")
+    assert hasattr(compiled.model._stack, "_torchdynamo_orig_callable")
 
-@pytest.mark.parametrize("layer_cls", [mLSTMLayer, _FlashRNNLayer])
-def test_recurrent_layers_are_compiled(compiled_model, layer_cls):
-    layers = [m for m in compiled_model.model.modules() if isinstance(m, layer_cls)]
-    assert layers, f"model has no {layer_cls.__name__} to compile"
-    uncompiled = [m for m in layers if m._compiled_call_impl is None]
-    assert not uncompiled, f"{len(uncompiled)}/{len(layers)} {layer_cls.__name__} left uncompiled"
-
-
-@pytest.mark.parametrize("scenario", list(SCENARIOS))
-def test_compiled_forecast_matches_cpu_reference(compiled_model, scenario):
-    forecast = compiled_model.forecast([SCENARIOS[scenario]], prediction_length=H, output_type="torch")[0]
-    expected = torch.tensor(REFERENCE_OUTPUT[scenario], dtype=torch.float32)
-
-    assert forecast.shape == expected.shape
-    torch.testing.assert_close(forecast, expected, rtol=RTOL, atol=ATOL)
+    torch.manual_seed(1)
+    ts = [TimeseriesType(target=torch.randn(2, 64).cumsum(-1), past_covariates=None, future_covariates=None)]
+    expected = eager.forecast(ts, prediction_length=8, output_type="torch")[0]
+    actual = compiled.forecast(ts, prediction_length=8, output_type="torch")[0]
+    torch.testing.assert_close(actual, expected, rtol=1e-4, atol=1e-4)

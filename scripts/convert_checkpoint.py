@@ -8,11 +8,9 @@ pickle; the current one is a ``config.json`` plus a ``model.safetensors`` file,
 which is what :func:`tirex2.base.load_model` reads first. This script is the
 one place the current files are produced from the legacy ones.
 
-Tensors that the model shares under several ``state_dict`` names are written
-once, because ``safetensors`` refuses to serialize shared storage. Which names
-are redundant is derived from the live module graph (see
-:mod:`tirex2._state_dict`), not from name patterns, and ``load_model`` restores
-them on load.
+The legacy weights are loaded into the model, which converts older layouts
+(e.g. unfused projections and aliased names) on load, and the model's own
+state dict is written.
 
 Examples
 --------
@@ -38,9 +36,7 @@ from pathlib import Path
 import torch
 import yaml
 from safetensors.torch import load_file as load_safetensors, save_file as save_safetensors
-from torch import nn
 
-from tirex2._state_dict import expand_shared_duplicates, shared_tensor_groups
 from tirex2.base import (
     CKPT_FILENAME,
     CONFIG_FILENAME,
@@ -53,57 +49,6 @@ from tirex2.base import (
 from tirex2.model import TiRex2
 
 MANIFEST_FILENAME = f"{WEIGHTS_FILENAME}.manifest.json"
-
-
-def drop_shared_duplicates(
-    model: nn.Module,
-    state_dict: dict[str, torch.Tensor],
-) -> tuple[dict[str, torch.Tensor], list[str]]:
-    """Reduce every alias group in ``state_dict`` to its single canonical name.
-
-    The surviving name is the alphabetically first one of its group. That
-    choice is a convention of the writer only:
-    :func:`tirex2._state_dict.expand_shared_duplicates` restores from whichever
-    group member a checkpoint happens to carry.
-
-    Parameters
-    ----------
-    model : torch.nn.Module
-        Model defining the alias groups, see
-        :func:`tirex2._state_dict.shared_tensor_groups`.
-    state_dict : dict[str, torch.Tensor]
-        State dict to reduce. It is not modified.
-
-    Returns
-    -------
-    kept : dict[str, torch.Tensor]
-        ``state_dict`` without the redundant names, insertion order preserved.
-    dropped : list[str]
-        The removed names, sorted.
-
-    Raises
-    ------
-    ValueError
-        If two names of one alias group hold different values. That means the
-        state dict was not produced by this model wiring, and dropping either
-        name would silently lose information.
-    """
-    redundant: set[str] = set()
-    for group in shared_tensor_groups(model):
-        present = [name for name in group if name in state_dict]
-        if not present:
-            continue
-        canonical, *duplicates = present
-        for name in duplicates:
-            if not torch.equal(state_dict[canonical], state_dict[name]):
-                raise ValueError(
-                    f"{name!r} and {canonical!r} alias the same tensor in the model but hold "
-                    f"different values in the state dict; deduplication would lose information."
-                )
-        redundant.update(duplicates)
-
-    kept = {name: tensor for name, tensor in state_dict.items() if name not in redundant}
-    return kept, sorted(redundant)
 
 
 def sha256(path: Path) -> str:
@@ -163,7 +108,7 @@ def load_legacy_state_dict(ckpt_file: Path) -> dict[str, torch.Tensor]:
 
 def verify(model: TiRex2, weights_file: Path, expected: dict[str, torch.Tensor]) -> None:
     """Re-read the written file the way ``load_model`` does and require an exact match."""
-    restored = expand_shared_duplicates(model, load_safetensors(weights_file, device="cpu"))
+    restored = load_safetensors(weights_file, device="cpu")
     if restored.keys() != expected.keys():
         only_written = sorted(restored.keys() - expected.keys())
         only_source = sorted(expected.keys() - restored.keys())
@@ -174,7 +119,13 @@ def verify(model: TiRex2, weights_file: Path, expected: dict[str, torch.Tensor])
     model.load_state_dict(restored, strict=True)
 
 
-def convert(ckpt_path: str, out_dir: Path | None, *, should_verify: bool, config_only: bool = False) -> Path:
+def convert(
+    ckpt_path: str,
+    out_dir: Path | None,
+    *,
+    should_verify: bool,
+    config_only: bool = False,
+) -> Path:
     """Write ``config.json``, and unless ``config_only`` also ``model.safetensors`` and its manifest.
 
     Returns the path of the last file written: the weights, or with
@@ -196,16 +147,16 @@ def convert(ckpt_path: str, out_dir: Path | None, *, should_verify: bool, config
     weights_file = out_dir / WEIGHTS_FILENAME
 
     config = load_legacy_config(legacy_config_file)
-    # The model graph identifies shared tensors and, by constructing at all,
-    # validates the config; neither needs the configured device, so stay on CPU.
+    # Constructing the model validates the config; that needs no particular device, so stay on CPU.
     model = TiRex2(**{**config, "device": "cpu"})
     write_config(config, config_file)
     print(f"wrote {config_file}")
     if config_only:
         return config_file
 
-    state_dict = load_legacy_state_dict(ckpt_file)
-    kept, dropped = drop_shared_duplicates(model, state_dict)
+    legacy_state_dict = load_legacy_state_dict(ckpt_file)
+    model.load_state_dict(legacy_state_dict, strict=True)
+    state_dict = {name: tensor.detach().contiguous() for name, tensor in model.state_dict().items()}
 
     # Identify the source by content rather than by the local cache path, so the file
     # does not depend on where the checkpoint happened to be downloaded. The tensor
@@ -216,7 +167,7 @@ def convert(ckpt_path: str, out_dir: Path | None, *, should_verify: bool, config
     metadata = {"format": "pt", "source_sha256": source_sha256}
     if _looks_like_hf_repo_id(ckpt_path):
         metadata["source"] = ckpt_path
-    save_safetensors(kept, str(weights_file), metadata=metadata)
+    save_safetensors(state_dict, str(weights_file), metadata=metadata)
 
     if should_verify:
         verify(model, weights_file, state_dict)
@@ -225,23 +176,18 @@ def convert(ckpt_path: str, out_dir: Path | None, *, should_verify: bool, config
         "source_checkpoint": str(ckpt_file),
         "source_sha256": source_sha256,
         "output_sha256": sha256(weights_file),
-        "num_tensors_in_checkpoint": len(state_dict),
-        "num_tensors_written": len(kept),
-        "num_parameters_written": sum(tensor.numel() for tensor in kept.values()),
-        # Restored on load from the tensor they alias; see tirex2._state_dict.
-        "dropped_keys": dropped,
+        "num_tensors_in_checkpoint": len(legacy_state_dict),
+        "num_tensors_written": len(state_dict),
+        "num_parameters_written": sum(tensor.numel() for tensor in state_dict.values()),
         "tensors": {
             name: {"shape": list(tensor.shape), "dtype": str(tensor.dtype).removeprefix("torch."), **stats(tensor)}
-            for name, tensor in kept.items()
+            for name, tensor in state_dict.items()
         },
     }
     (out_dir / MANIFEST_FILENAME).write_text(json.dumps(manifest, indent=2) + "\n")
 
     print(f"wrote {weights_file}")
-    print(
-        f"  {len(kept)} tensors, {manifest['num_parameters_written']:,} parameters "
-        f"({len(dropped)} shared-tensor aliases written once)"
-    )
+    print(f"  {len(state_dict)} tensors, {manifest['num_parameters_written']:,} parameters")
     print(f"wrote {out_dir / MANIFEST_FILENAME}")
     return weights_file
 
