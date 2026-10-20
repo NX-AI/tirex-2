@@ -7,18 +7,26 @@ All notable changes to TiRex-2 are documented here.
 ### Improvements
 
 - ⭐️🚀 Faster CUDA inference: CUDA graphs by default for up to 32 series (up to 5x faster at small batch sizes, `load_model(..., cuda_graphs=False)` to disable), and the sLSTM recurrence now runs on [slstm-kernels](https://github.com/NX-AI/slstm-kernels) (Triton on CUDA, PyTorch on CPU/MPS and without Triton), which keeps its states in float32 and is up to 7x faster than FlashRNN. GIFT-Eval and fev-bench scores are unchanged. FlashRNN and `mlstm_kernels` are no longer dependencies, and no CUDA Toolkit is needed. The sLSTM gate and mLSTM input projections run as one matmul each; older checkpoints are converted on load. `pad_context=False` now pads to a multiple of 4 patches, contributed by [Martin Loretz](https://github.com/martinloretzzz).
-- Removed the `xlstm` dependency to reduce the package footprint, in [#71](https://github.com/NX-AI/tirex-2/pull/71), contributed by [Martin Loretz](https://github.com/martinloretzzz).
-- **Default `safetensors` weights**: All checkpoints ship model configuration and weights in `json` and `safetensors` formats. `load_model` now loads from `config.json` and `model.safetensors`, which avoids unpickling and is faster. The legacy `yaml` and `ckpt` files are deprecated with a `FutureWarning` in [#55](https://github.com/NX-AI/tirex-2/pull/55), contributed by [Suad0](https://github.com/Suad0).
-- `load_model` no longer loads the legacy `model-config.yaml` and `model.ckpt` files: use `tirex-2<=0.3.1` for them, or convert them with `scripts/convert_checkpoint.py`. PyYAML is no longer a dependency, contributed by [Martin Loretz](https://github.com/martinloretzzz).
+- `load_model` no longer loads the legacy `model-config.yaml` and `model.ckpt` files: use `tirex-2<=0.4.0` for them, or convert them with `scripts/convert_checkpoint.py`. PyYAML is no longer a dependency, contributed by [Martin Loretz](https://github.com/martinloretzzz).
 
 ### Documentation and development
 
 - Simplified the model code: the FlashRNN sLSTM layer is replaced by `sLSTMLayer` in `slstm_block.py`, `xLSTMMixedConfig` and `xLSTMLargeConfig` are removed (`BiXLSTM` takes plain arguments), `conv_mLSTMLayerConfig` is renamed to `mLSTMLayerConfig`, and unused options are dropped from the feed-forward networks and norms. The CPU reference tests compare relative norms, as the sLSTM's bfloat16 rounding moves single values by up to 1e-3 between machines, contributed by [Martin Loretz](https://github.com/martinloretzzz).
+
+### Security and CI
+
+## [0.4.0] - 2026-10-20
+
+### Improvements
+
+- Removed the `xlstm` dependency to reduce the package footprint, in [#71](https://github.com/NX-AI/tirex-2/pull/71), contributed by [Martin Loretz](https://github.com/martinloretzzz).
+- **Default `safetensors` weights**: All checkpoints ship model configuration and weights in `json` and `safetensors` formats. `load_model` now loads from `config.json` and `model.safetensors`, which avoids unpickling and is faster. The legacy `yaml` and `ckpt` files are deprecated with a `FutureWarning` in [#55](https://github.com/NX-AI/tirex-2/pull/55), contributed by [Suad0](https://github.com/Suad0).
+
+### Documentation and development
+
 - Refactored the sLSTM recurrence interface to support future kernel implementations and decoupled its configuration from FlashRNN in [#70](https://github.com/NX-AI/tirex-2/pull/70), contributed by [Martin Loretz](https://github.com/martinloretzzz).
 - Added the Intended Use, Limitations and EU AI Act Notice (`INTENDED_USE.md`), linked from the README and the documentation, in [#67](https://github.com/NX-AI/tirex-2/pull/67), contributed by [Lukas Fischer](https://github.com/lukfischer) and [Yipeng Sun](https://github.com/sypsyp97).
 - Added [a script](https://github.com/NX-AI/tirex-2/tree/main/scripts/convert_checkpoint.py) to convert legacy checkpoints to new formats in [#55](https://github.com/NX-AI/tirex-2/pull/55), contributed by [Suad0](https://github.com/Suad0).
-
-### Security and CI
 
 ## [0.3.1] - 2026-10-05
 
@@ -72,7 +80,8 @@ All notable changes to TiRex-2 are documented here.
 
 Initial TiRex-2 release, contributed by [martinloretzzz](https://github.com/martinloretzzz) in the [initial commit](https://github.com/NX-AI/tirex-2/commit/abdf2898162482cc5c862905a406fc1134fbae67).
 
-[Unreleased]: https://github.com/NX-AI/tirex-2/compare/v0.3.1...HEAD
+[Unreleased]: https://github.com/NX-AI/tirex-2/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/NX-AI/tirex-2/releases/tag/v0.4.0
 [0.3.1]: https://github.com/NX-AI/tirex-2/releases/tag/v0.3.1
 [0.3.0]: https://github.com/NX-AI/tirex-2/releases/tag/v0.3.0
 [0.2.1]: https://github.com/NX-AI/tirex-2/releases/tag/v0.2.1

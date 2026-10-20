@@ -152,7 +152,7 @@ def test_load_model_rejects_legacy_checkpoints_with_the_last_release_that_loads_
 ):
     _write_legacy_checkpoint(tmp_path, aliased_model, small_model_kwargs("cpu", RECIPE))
 
-    with pytest.raises(FileNotFoundError, match=r"tirex-2<=0\.3\.1.*convert_checkpoint\.py"):
+    with pytest.raises(FileNotFoundError, match=r"tirex-2<=0\.4\.0.*convert_checkpoint\.py"):
         load_model(str(tmp_path), device="cpu")
 
 

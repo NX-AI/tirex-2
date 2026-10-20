@@ -25,7 +25,7 @@ CKPT_FILENAME = "model.ckpt"
 SAFETENSORS_PATTERNS = [CONFIG_FILENAME, WEIGHTS_FILENAME]
 LEGACY_PATTERNS = [LEGACY_CONFIG_FILENAME, CKPT_FILENAME]
 #: The last release that loads the legacy files.
-_LAST_LEGACY_RELEASE = "0.3.1"
+_LAST_LEGACY_RELEASE = "0.4.0"
 
 
 def _resolve_ckpt_dir(
@@ -97,7 +97,7 @@ def load_model(
         Hugging Face repo id (``org/repo`` or ``hf://org/repo``), downloaded with
         ``huggingface_hub``, or a local directory containing ``config.json`` and
         ``model.safetensors``. Legacy ``model-config.yaml`` / ``model.ckpt``
-        checkpoints need ``tirex-2<=0.3.1``.
+        checkpoints need ``tirex-2<=0.4.0``.
     device : {"cpu", "cuda", "mps"}
         Runtime device and recurrent-kernel family to use. This overrides any
         device/backend stored in the checkpoint config. ``"mps"`` runs on Apple

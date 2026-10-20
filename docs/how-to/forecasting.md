@@ -182,9 +182,9 @@ Extra keyword arguments passed to `forecast(...)` are forwarded to the backbone'
 
 - `tta_sign_flip: bool` — opt-in sign-flip test-time augmentation: the model is also run on
   the sign-flipped input and the two passes are averaged in level space. Roughly doubles
-  inference cost. Defaults to the checkpoint's configured setting when omitted.
-- `tta_diff: bool` — opt-in differencing inside the postprocessor. Defaults to the
-  checkpoint's configured setting when omitted.
+  inference cost. Defaults to the checkpoint's configured setting (`False`) when omitted.
+- `tta_diff: bool` — differencing inside the postprocessor. Defaults to the
+  checkpoint's configured setting (`True`) when omitted.
 
 ```python
 forecast = model.forecast([ts], prediction_length=64, tta_sign_flip=True)
