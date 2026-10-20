@@ -248,7 +248,7 @@ class TiRex2(nn.Module):
         return lambda x: self._stack(x, group_vector, target_mask, known_covariate_mask, indices)
 
     def _stack(self, x, group_vector, target_mask, known_covariate_mask, indices):
-        """Block stack and output layer; ``load_model(compile=True)`` compiles this function."""
+        """Block stack and output layer."""
         # forward through actual mLSTM/sLSTM layers, we select only the output of the last layer;
         # hidden representations are not relevant for forecasting
         for x in self._forward_layerwise(x, group_vector, target_mask, known_covariate_mask, indices):

@@ -33,13 +33,14 @@ the backbone; unknown attributes fall through to the underlying model, so
 model = load_model("NX-AI/TiRex-2", device="cuda", use_flex_attention=True)
 ```
 
-`compile=True` applies `torch.compile` to the block stack. Each new input shape is compiled
-on its first forecast: seconds on CUDA, but minutes on CPU/MPS, where later forecasts are up
-to 1.9x faster. It pays off for repeated forecasts of the same shapes and applies per model instance.
+`compile` applies `torch.compile` to the mLSTM on every device, and sLSTM
+on CPU/MPS only. Compilation happens on the first forecast per input shape, so it pays off for repeated calls rather than one-shot use. It applies per model instance.
 
 ```python
 model = load_model("NX-AI/TiRex-2", device="cpu", compile=True)
 ```
+
+See [#47](https://github.com/NX-AI/tirex-2/pull/47) for the change and its CPU/CUDA benchmarks.
 
 On CUDA, the forward pass is replayed from a CUDA graph per input shape for up to 32 series
 (padded to a multiple of 4); pass `cuda_graphs=False` to run eagerly.

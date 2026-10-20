@@ -17,10 +17,12 @@
 
 ??? question "When should I use `compile=True`?"
 
-    Use it for long-running processes that forecast the same input shapes repeatedly: each
-    new shape is compiled on its first forecast, which takes seconds on CUDA and minutes on
-    CPU, after which forecasts are up to 1.9x faster on CPU. On CUDA, CUDA graphs already
-    remove most of the overhead it would save. See [Forecasting](how-to/forecasting.md#loading-the-model).
+    We recommend to use `compile=True` on CPU, when the context length and prediction length stay the same across forecasts —
+    `torch.compile` re-traces on every new input shape, so the speed-up only pays off when one
+    shape is reused.
+
+    See [Forecasting](how-to/forecasting.md#loading-the-model) and
+    [#47](https://github.com/NX-AI/tirex-2/pull/47) for the CPU benchmarks.
 
 ??? question "How can I speed up forecasts on short contexts?"
 

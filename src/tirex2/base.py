@@ -13,6 +13,8 @@ from safetensors.torch import load_file as load_safetensors
 
 from .api_adapter import ForecastModel
 from .model import TiRex2
+from .model.component.mlstm_block import mLSTMLayer
+from .model.component.slstm_block import sLSTMLayer
 
 CONFIG_FILENAME = "config.json"
 WEIGHTS_FILENAME = "model.safetensors"
@@ -110,10 +112,8 @@ def load_model(
         ``False`` forces dense attention. Leave as ``None`` to preserve the
         checkpoint configuration and package defaults.
     compile : bool
-        ``torch.compile`` the block stack, for long-running processes that
-        forecast the same input shapes repeatedly. Each new input shape is
-        compiled on its first forecast, which takes seconds on CUDA and minutes
-        on CPU/MPS; later forecasts are up to 1.9x faster on CPU.
+        If True, ``torch.compile`` the recurrent layers: mLSTM always, and sLSTM
+        only on CPU/MPS.
     cuda_graphs : bool, optional
         Replay the forward pass from a CUDA graph per input shape, which removes
         the kernel launch overhead. Defaults to True on CUDA.
@@ -157,6 +157,10 @@ def load_model(
     model.use_cuda_graphs = device.startswith("cuda") if cuda_graphs is None else cuda_graphs
     model.eval()
     if compile:
-        model._stack = torch.compile(model._stack)
+        # sLSTM compiled on cpu/mps only.
+        targets = (mLSTMLayer,) if device.startswith("cuda") else (mLSTMLayer, sLSTMLayer)
+        for module in model.modules():
+            if isinstance(module, targets):
+                module.compile()
 
     return ForecastModel(model)
