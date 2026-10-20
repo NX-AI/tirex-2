@@ -71,7 +71,7 @@ flashrnn = "0 day"
 no-build = true
 
 [tool.pixi.dependencies]
-python = ">=3.11,<3.15"
+python = ">=3.11"
 
 [tool.pixi.pypi-dependencies]
 tirex-2 = { path = ".", editable = true }
