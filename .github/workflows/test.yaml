@@ -100,6 +100,12 @@ jobs:
 
       - name: Select preview Python version for the test environment
         run: |
+          # pandas 2.3.x has no Python 3.15 wheels; override the GluonTS cap for preview CI.
+          cat >> pyproject.toml <<'EOF'
+
+          [tool.pixi.feature.test.pypi-options.dependency-overrides]
+          pandas = ">=2.3.3"
+          EOF
           # Lift the default Python cap on this platform so the test feature can require 3.15.
           pixi add --platform linux-64-cpu "python>=3.11" --no-install
           pixi workspace channel add --feature test conda-forge/label/python_rc --priority=-1 --no-install
