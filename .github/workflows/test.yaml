@@ -99,11 +99,14 @@ jobs:
           cache: false
 
       - name: Select preview Python version for the test environment
-        # Preview dependency availability and compatibility should not block stable CI.
-        continue-on-error: true
         run: |
+          # Lift the default Python cap on this platform so the test feature can require 3.15.
+          pixi add --platform linux-64-cpu "python>=3.11" --no-install
           pixi workspace channel add --feature test conda-forge/label/python_rc --priority=-1 --no-install
           pixi add --feature test --platform linux-64-cpu "python=3.15.*" --no-install
+
+      - name: Verify preview Python version
+        run: pixi run -e test python -c "import sys; assert sys.version_info[:2] == (3, 15), sys.version"
 
       - name: Run tests on CPU
         run: pixi run test
