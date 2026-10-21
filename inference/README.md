@@ -230,11 +230,13 @@ To connect the MCP to a tool like Claude Desktop, follow their [guide](https://m
 
 ## Configuration Options
 
+> Docker images bundle the default `NX-AI/TiRex-2` model configuration and weight and thus do not require Internet access. Override `MODEL_PATH` to use another Hugging Face model ID (which requires downloading) or a local checkpoint.
+
 You can set these env variables when running the container using the -e env flag, like `docker run -e MODEL_DEVICE=cuda ghcr.io/nx-ai/tirex2-cpu`
 
 | Environment Variable                        | Default Value                         | Description                                                     |
 | :------------------------------------------ | :------------------------------------ | :-------------------------------------------------------------- |
-| **MODEL_PATH**                              | `NX-AI/TiRex-2`                       | The Huggingface model id.                                       |
+| **MODEL_PATH**                              | `/opt/models/tirex2` in Docker; `NX-AI/TiRex-2` otherwise | Local checkpoint directory or Hugging Face model ID. |
 | **MODEL_DEVICE**                            | `cpu`                                 | Device to run the model on (`cpu` or `cuda`).                   |
 | **HTTP_HOST**                               | `0.0.0.0`                             | Host the HTTP server binds to.                                  |
 | **HTTP_PORT**                               | `8000`                                | Port the HTTP server binds to.                                  |

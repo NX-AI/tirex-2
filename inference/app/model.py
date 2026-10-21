@@ -1,7 +1,6 @@
 # Copyright (c) NXAI GmbH.
 # Licensed under the Apache License, Version 2.0; see LICENSE for details.
 
-import numpy as np
 import torch
 
 from app.config import Settings

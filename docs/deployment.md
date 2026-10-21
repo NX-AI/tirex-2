@@ -20,6 +20,11 @@ Two container images are published:
   NVIDIA Container Toolkit, or on Windows via Docker Desktop's WSL2 backend with NVIDIA WSL
   GPU support.
 
+???+ note "Offline deployment"
+
+    Both images bundle the default `NX-AI/TiRex-2` configuration and weights at
+    `/opt/models/tirex2`. Loading this checkpoint requires no network access or model cache volume.
+
 ### Running a container
 
 To start a container from either image, run:
@@ -38,28 +43,29 @@ To start a container from either image, run:
 
 ???+ info "Warmup and compilation"
 
-    Both images download the model and compile the **univariate** forecast path with
+    Both images load the bundled model and compile the **univariate** forecast path with
     `torch.compile` at startup
     (C++ on CPU, Triton on GPU) to enable fast inference. This can take up to 20 seconds. Changing
     context length or prediction horizon does not trigger recompilation.
 
     However, the first **multivariate** request requires a separate, one-time compilation.
 
-??? tip "Caching model weights"
+??? tip "Using another model checkpoint"
 
-    The weights are not baked into the image — the container downloads them from Hugging Face on
-    first use. The cache path differs by image:
+    Set `MODEL_PATH` to a Hugging Face model ID to download a different checkpoint at runtime (requires network access). The cache path differs by image:
 
     - **CPU image**: runs as `appuser` (UID 1000), home `/home/appuser`.
     - **GPU image**: runs as `ubuntu`, home `/home/ubuntu`.
 
     The cache lands at the default location (`~/.cache/huggingface`) under that user's home. Mount a
-    volume there to avoid re-downloading:
+    volume there to reuse downloaded weights when recreating containers. Replace `ORG/MODEL`
+    with your model ID:
 
     === "CPU Image"
 
         ```bash
         docker run -it -p 8000:8000 \
+          -e MODEL_PATH=ORG/MODEL \
           -v tirex2-cache:/home/appuser/.cache/huggingface \
           ghcr.io/nx-ai/tirex2-cpu
         ```
@@ -68,15 +74,33 @@ To start a container from either image, run:
 
         ```bash
         docker run -it --gpus 1 -p 8000:8000 \
+          -e MODEL_PATH=ORG/MODEL \
           -v tirex2-cache:/home/ubuntu/.cache/huggingface \
           ghcr.io/nx-ai/tirex2-gpu
         ```
 
-    Without this volume, a stopped-and-restarted container keeps the weights, but a **recreated**
-    container re-downloads them. This includes every `docker compose up` after an edit and every
-    image update.
+    Make sure custom cache mounts are writable by the container's user.
 
-    If you point the cache at your own mount instead, make sure it's writable by the container's user.
+    Alternatively, mount a local checkpoint directory containing `config.json` and
+    `model.safetensors` and set `MODEL_PATH` to its container path:
+
+    === "CPU Image"
+
+        ```bash
+        docker run -it -p 8000:8000 \
+          -v /absolute/path/to/checkpoint:/opt/models/custom:ro \
+          -e MODEL_PATH=/opt/models/custom \
+          ghcr.io/nx-ai/tirex2-cpu
+        ```
+
+    === "GPU Image"
+
+        ```bash
+        docker run -it --gpus 1 -p 8000:8000 \
+          -v /absolute/path/to/checkpoint:/opt/models/custom:ro \
+          -e MODEL_PATH=/opt/models/custom \
+          ghcr.io/nx-ai/tirex2-gpu
+        ```
 
 ## HTTP API
 
@@ -286,21 +310,21 @@ Set environment variables with `-e`, for example:
 
 Available options are:
 
-| Environment Variable               | Default Value                         | Description                                                                      |
-| :--------------------------------- | :------------------------------------ | :------------------------------------------------------------------------------- |
-| `MODEL_PATH`                       | `NX-AI/TiRex-2`                       | The Hugging Face model ID.                                                       |
-| `MODEL_DEVICE`                     | `cpu` (CPU image), `cuda` (GPU image) | Device to run the model on (`cpu` or `cuda`).                                    |
-| `HTTP_HOST`                        | `0.0.0.0`                             | Host the HTTP server binds to.                                                   |
-| `HTTP_PORT`                        | `8000`                                | Port the HTTP server binds to.                                                   |
-| `MQTT_ENABLED`                     | `0`                                   | Enable MQTT client functionality (`1` = true, `0` = false).                      |
-| `MQTT_BROKER_HOST`                 | `None`                                | Hostname or IP address of the MQTT broker.                                       |
-| `MQTT_BROKER_PORT`                 | `None`                                | Port of the MQTT broker.                                                         |
-| `MQTT_BROKER_USERNAME`             | `None`                                | Username for authenticating with the MQTT broker (if required).                  |
-| `MQTT_BROKER_PASSWORD`             | `None`                                | Password for authenticating with the MQTT broker (if required).                  |
-| `MQTT_CLIENT_ID`                   | `tirex-worker`                        | Stable, unique client ID so the broker can resume the session on reconnect.      |
-| `MQTT_SESSION_EXPIRY`              | `3600`                                | Seconds the broker retains the session (and queued requests) while disconnected. |
-| `MQTT_TOPIC_UNIVARIATE_FORECAST`   | `tirex/univariate/forecast/request`   | Topic to subscribe to for univariate forecast requests.                          |
-| `MQTT_TOPIC_MULTIVARIATE_FORECAST` | `tirex/multivariate/forecast/request` | Topic to subscribe to for multivariate forecast requests.                        |
+| Environment Variable               | Default Value                                             | Description                                                                      |
+| :--------------------------------- | :-------------------------------------------------------- | :------------------------------------------------------------------------------- |
+| `MODEL_PATH`                       | `/opt/models/tirex2` in Docker; `NX-AI/TiRex-2` otherwise | Local checkpoint directory or Hugging Face model ID.                             |
+| `MODEL_DEVICE`                     | `cpu` (CPU image), `cuda` (GPU image)                     | Device to run the model on (`cpu` or `cuda`).                                    |
+| `HTTP_HOST`                        | `0.0.0.0`                                                 | Host the HTTP server binds to.                                                   |
+| `HTTP_PORT`                        | `8000`                                                    | Port the HTTP server binds to.                                                   |
+| `MQTT_ENABLED`                     | `0`                                                       | Enable MQTT client functionality (`1` = true, `0` = false).                      |
+| `MQTT_BROKER_HOST`                 | `None`                                                    | Hostname or IP address of the MQTT broker.                                       |
+| `MQTT_BROKER_PORT`                 | `None`                                                    | Port of the MQTT broker.                                                         |
+| `MQTT_BROKER_USERNAME`             | `None`                                                    | Username for authenticating with the MQTT broker (if required).                  |
+| `MQTT_BROKER_PASSWORD`             | `None`                                                    | Password for authenticating with the MQTT broker (if required).                  |
+| `MQTT_CLIENT_ID`                   | `tirex-worker`                                            | Stable, unique client ID so the broker can resume the session on reconnect.      |
+| `MQTT_SESSION_EXPIRY`              | `3600`                                                    | Seconds the broker retains the session (and queued requests) while disconnected. |
+| `MQTT_TOPIC_UNIVARIATE_FORECAST`   | `tirex/univariate/forecast/request`                       | Topic to subscribe to for univariate forecast requests.                          |
+| `MQTT_TOPIC_MULTIVARIATE_FORECAST` | `tirex/multivariate/forecast/request`                     | Topic to subscribe to for multivariate forecast requests.                        |
 
 ## Building the images yourself
 
