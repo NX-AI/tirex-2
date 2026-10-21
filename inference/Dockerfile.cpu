@@ -16,6 +16,12 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
 COPY requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Bundle the default checkpoint without loading the model or requiring a GPU.
+RUN hf download NX-AI/TiRex-2 config.json model.safetensors \
+    --local-dir /opt/models/tirex2 && \
+    test -f /opt/models/tirex2/config.json && \
+    test -f /opt/models/tirex2/model.safetensors
+
 # -------------------------
 # --- Stage 2: Runtime
 # -------------------------
@@ -43,6 +49,10 @@ COPY THIRD-PARTY-LICENSES.md .
 
 # Copy app code; keep a single COPY with chown
 COPY --chown=appuser:appuser app/ ./app/
+
+# Load the bundled checkpoint locally, including when running without network access.
+COPY --from=build --chown=appuser:appuser /opt/models/tirex2 /opt/models/tirex2
+ENV MODEL_PATH=/opt/models/tirex2
 
 USER appuser
 EXPOSE 8000
