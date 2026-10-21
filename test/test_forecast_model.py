@@ -1024,3 +1024,71 @@ def test_forecast_df_returns_the_input_dataframe_backend(backend):
         output_type="pandas",
     )
     assert isinstance(as_pandas, pd.DataFrame)
+
+
+def test_forecast_real_small_model_without_context_padding(build_small_model):
+    torch.manual_seed(0)
+    backbone = build_small_model("cpu").eval()
+    adapter = ForecastModel(backbone)
+    prediction_length = 4
+    series = _real_model_series(prediction_length)
+
+    forecasts = adapter.forecast(series, prediction_length=prediction_length, pad_context=False)
+
+    assert len(forecasts) == len(series)
+    for ts, forecast in zip(series, forecasts):
+        assert forecast.shape == (ts.target.shape[0], backbone.num_quantiles, prediction_length)
+        assert torch.isfinite(forecast).all()
+
+
+def test_forecast_without_context_padding_feeds_shorter_input(build_small_model):
+    backbone = build_small_model("cpu").eval()
+    adapter = ForecastModel(backbone)
+    context = backbone.context_len // 2
+    series = [TimeseriesType(target=torch.randn(1, context), past_covariates=None, future_covariates=None)]
+
+    lengths = []
+    forward = backbone.forward
+
+    def spy_forward(batch):
+        lengths.append(batch["x"].shape[-1])
+        return forward(batch)
+
+    backbone.forward = spy_forward
+    for pad_context in (True, False):
+        adapter.forecast(series, prediction_length=4, pad_context=pad_context)
+
+    padded, unpadded = lengths
+    assert padded == backbone.context_len + backbone.future_len
+    assert unpadded == context + backbone.future_len
+    assert unpadded < padded
+
+
+@pytest.mark.parametrize("context", [1, 3, 7, 10])
+def test_forecast_without_context_padding_rounds_context_up_to_whole_patches(build_small_model, context):
+    torch.manual_seed(0)
+    backbone = build_small_model("cpu").eval()
+    adapter = ForecastModel(backbone)
+    patch = backbone.input_patch_size
+    length = context + backbone.future_len
+    assert length % patch != 0
+    series = [TimeseriesType(target=torch.randn(1, context), past_covariates=None, future_covariates=None)]
+
+    input_lengths, num_patches = [], []
+    input_transform = backbone.tokenizer.input_transform
+
+    def spy_input_transform(x):
+        patches, state = input_transform(x)
+        input_lengths.append(x.shape[-1])
+        num_patches.append(patches.shape[-2])
+        return patches, state
+
+    backbone.tokenizer.input_transform = spy_input_transform
+    forecast = adapter.forecast(series, prediction_length=4, pad_context=False)[0]
+
+    padded_length = -(-length // patch) * patch
+    assert input_lengths == [length]
+    assert num_patches == [padded_length // patch]
+    assert 0 < padded_length - length < patch
+    assert forecast.shape == (1, backbone.num_quantiles, 4)
+    assert torch.isfinite(forecast).all()

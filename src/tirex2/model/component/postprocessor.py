@@ -186,12 +186,14 @@ class PostProcessor:
         diff_masks: list[list[bool]],
         group_target_indices: dict[int, list[int]],
         group_row_is_diff: dict[int, list[bool]],
+        preserve_grad: bool = False,
         **kwargs,
     ):
         """Calibrate the band per row type and integrate differenced rows back."""
-        output = output.detach().cpu()
-        group_vector = group_vector.detach().cpu()
-        target_mask = target_mask.detach().cpu()
+        if not preserve_grad:
+            output = output.detach().cpu()
+        group_vector = group_vector.to(output.device)
+        target_mask = target_mask.to(output.device)
 
         sample_rows = [[None] * len(mask) for mask in diff_masks]
         group_id = int(group_vector[0].item())
@@ -203,7 +205,7 @@ class PostProcessor:
             group_sample = output[mask]
 
             # ``row_is_diff`` is per target row: differenced and raw rows can mix.
-            row_is_diff = torch.tensor(group_row_is_diff[group_id], dtype=torch.bool)
+            row_is_diff = torch.tensor(group_row_is_diff[group_id], device=output.device, dtype=torch.bool)
 
             # Raw-row band calibration: sqrt(raw_band_scale) * t^(raw_band_exponent-0.5)
             # multiplies the model's per-step offset around its median.
@@ -220,8 +222,15 @@ class PostProcessor:
                 group_sample[not_diff] = rescaled
 
             if row_is_diff.any():
-                last_values = transform_params[sample_idx]["last_values"].detach().cpu()[target_indices]
-                group_sample = self._diff_inverse(group_sample, row_is_diff, {"last_values": last_values})
+                last_values = transform_params[sample_idx]["last_values"][target_indices].to(output.device)
+                if not preserve_grad:
+                    last_values = last_values.detach()
+                group_sample = self._diff_inverse(
+                    group_sample,
+                    row_is_diff,
+                    {"last_values": last_values},
+                    preserve_grad=preserve_grad,
+                )
 
             for row, target_idx in zip(group_sample, target_indices):
                 sample_rows[sample_idx][target_idx] = row
@@ -279,7 +288,9 @@ class PostProcessor:
         last_values = x.gather(-1, last_idx.unsqueeze(-1)).squeeze(-1)
         return {"last_values": torch.nan_to_num(last_values, nan=0.0)}
 
-    def _diff_inverse(self, sample: torch.Tensor, mask: torch.Tensor, params: dict) -> torch.Tensor:
+    def _diff_inverse(
+        self, sample: torch.Tensor, mask: torch.Tensor, params: dict, preserve_grad: bool = False
+    ) -> torch.Tensor:
         """Invert first-order differencing on ``mask`` rows: median path + rss band term."""
         out = sample.clone()
         if not mask.any():
@@ -294,7 +305,14 @@ class PostProcessor:
         offset = diff - median_step
 
         sign = offset.sum(dim=-1, keepdim=True).sign()
-        rss = torch.sqrt(torch.cumsum(offset * offset, dim=-1))
+        rss_squared = torch.cumsum(offset * offset, dim=-1)
+        if preserve_grad:
+            # The median offset is identically zero. Avoid sqrt'(0) in backward
+            # while keeping its forward value exactly zero.
+            rss = torch.sqrt(rss_squared.clamp_min(torch.finfo(rss_squared.dtype).tiny))
+            rss = torch.where(rss_squared > 0, rss, torch.zeros_like(rss))
+        else:
+            rss = torch.sqrt(rss_squared)
         t_idx = torch.arange(1, diff.shape[-1] + 1, device=diff.device, dtype=diff.dtype)
         horizon_factor = t_idx ** (self.cfg.diff_band_exponent - 0.5)
         band = sign * rss * horizon_factor

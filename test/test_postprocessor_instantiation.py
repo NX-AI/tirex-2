@@ -50,6 +50,30 @@ def test_tta_diff_false_disables_differencing_masks():
     assert meta["diff_masks"] == [[False]]
 
 
+def test_output_can_preserve_finite_gradients():
+    pp = PostProcessor()
+    output = torch.randn(2, 9, 4, requires_grad=True)
+    metadata = {
+        "group_sample_map": {1: 0},
+        "group_vector": torch.tensor([1, 1]),
+        "target_mask": torch.tensor([True, True]),
+        "transform_params": [{"last_values": torch.tensor([4.0, 1.0])}],
+        "diff_masks": [[True, False]],
+        "group_target_indices": {1: [0, 1]},
+        "group_row_is_diff": {1: [True, False]},
+    }
+
+    detached = pp.transform_output(output, **metadata)
+    differentiable = pp.transform_output(output, preserve_grad=True, **metadata)
+
+    torch.testing.assert_close(differentiable[0], detached[0])
+    assert not detached[0].requires_grad
+    assert differentiable[0].requires_grad
+    differentiable[0].sum().backward()
+    assert torch.isfinite(output.grad).all()
+    assert output.grad.abs().sum() > 0
+
+
 @pytest.mark.parametrize(
     ("field", "value"),
     [

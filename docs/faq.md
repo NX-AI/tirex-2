@@ -27,6 +27,16 @@
     See [Forecasting](how-to/forecasting.md#loading-the-model) and
     [#47](https://github.com/NX-AI/tirex-2/pull/47) for the CPU benchmarks.
 
+??? question "How can I speed up forecasts on short contexts?"
+
+    Pass `pad_context=False` to `forecast(...)` to skip padding to the model's full context
+    length (2,048), reducing inference time for short contexts at the cost of a small loss
+    in forecast accuracy. Padding to the longest context in each batch and to whole patches
+    still applies. The default is `pad_context=True`.
+
+    See [Forecasting](how-to/forecasting.md#context-padding) for details and
+    [#57](https://github.com/NX-AI/tirex-2/pull/57) for the benchmarks.
+
 ??? question "Why does TiRex-2 fail with `where cl` on Windows?"
 
     PyTorch may compile model components at runtime, so the Python process needs access to

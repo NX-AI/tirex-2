@@ -175,13 +175,28 @@ Extra keyword arguments passed to `forecast(...)` are forwarded to the backbone'
 
 - `tta_sign_flip: bool` — opt-in sign-flip test-time augmentation: the model is also run on
   the sign-flipped input and the two passes are averaged in level space. Roughly doubles
-  inference cost. Defaults to the checkpoint's configured setting when omitted.
-- `tta_diff: bool` — opt-in differencing inside the postprocessor. Defaults to the
-  checkpoint's configured setting when omitted.
+  inference cost. Defaults to the checkpoint's configured setting (`False`) when omitted.
+- `tta_diff: bool` — differencing inside the postprocessor. Defaults to the
+  checkpoint's configured setting (`True`) when omitted.
 
 ```python
 forecast = model.forecast([ts], prediction_length=64, tta_sign_flip=True)
 ```
+
+## Context padding
+
+By default (`pad_context=True` in `forecast(...)`), contexts shorter than the model's default
+context length (2,048) are left-padded with NaN, as in training. Setting `pad_context=False`
+skips padding to the model's full context length, reducing the number of input patches and
+speeding up inference for short contexts at the cost of a small loss in forecast accuracy.
+Shorter series are still left-padded with NaN to the longest context in their batch, and
+the tokenizer adds any left-padding needed to form whole patches.
+
+```python
+forecast = model.forecast([ts], prediction_length=64, pad_context=False)
+```
+
+See [#57](https://github.com/NX-AI/tirex-2/pull/57) for speed and accuracy benchmarks.
 
 ## GluonTS and FEV integration
 

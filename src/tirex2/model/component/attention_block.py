@@ -8,7 +8,7 @@ from typing import Any
 import torch
 from torch.nn import functional as F
 
-from .mlp import MLP
+from .feedforward import MLP
 
 FLEX_MASK_BLOCK_SIZE = 128
 FLEX_KERNEL_BLOCK_SIZE = 32
