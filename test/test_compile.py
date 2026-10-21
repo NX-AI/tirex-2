@@ -5,12 +5,13 @@ import pytest
 import torch
 
 from tirex2 import TimeseriesType, load_model
-from tirex2.model.component.flashrnn_slstm import _FlashRNNLayer
 from tirex2.model.component.mlstm_block import mLSTMLayer
+from tirex2.model.component.slstm_block import sLSTMLayer
 
 REFERENCES = Path(__file__).parent / "references"
 CHECKPOINT = "NX-AI/TiRex-2"
-RTOL, ATOL = 1e-5, 1e-5
+# Relative norm, as in test_references: the sLSTM's bfloat16 rounding differs slightly between machines.
+MAX_RELATIVE_DEVIATION = 1e-3
 
 REFERENCE_INPUT = json.loads((REFERENCES / "reference_input.json").read_text())
 REFERENCE_OUTPUT = json.loads((REFERENCES / "reference_output_cpu.json").read_text())
@@ -33,7 +34,7 @@ def compiled_model():
         pytest.skip(f"reference checkpoint {CHECKPOINT} is unavailable: {exc}")
 
 
-@pytest.mark.parametrize("layer_cls", [mLSTMLayer, _FlashRNNLayer])
+@pytest.mark.parametrize("layer_cls", [mLSTMLayer, sLSTMLayer])
 def test_recurrent_layers_are_compiled(compiled_model, layer_cls):
     layers = [m for m in compiled_model.model.modules() if isinstance(m, layer_cls)]
     assert layers, f"model has no {layer_cls.__name__} to compile"
@@ -47,4 +48,4 @@ def test_compiled_forecast_matches_cpu_reference(compiled_model, scenario):
     expected = torch.tensor(REFERENCE_OUTPUT[scenario], dtype=torch.float32)
 
     assert forecast.shape == expected.shape
-    torch.testing.assert_close(forecast, expected, rtol=RTOL, atol=ATOL)
+    assert (forecast - expected).norm() / expected.norm() < MAX_RELATIVE_DEVIATION

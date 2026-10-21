@@ -321,13 +321,7 @@ class AttentionBlock(torch.nn.Module):
         )
 
         self.norm_ffn = torch.nn.RMSNorm(self.input_dim, eps=1e-6)
-        self.ffn_hidden_dim = 4 * self.input_dim
-        self.ffn = MLP(
-            d_model=self.input_dim,
-            d_ff=self.ffn_hidden_dim,
-            dropout=self.dropout,
-            act_fn=act_fn,
-        )
+        self.ffn = MLP(self.input_dim, 4 * self.input_dim, act_fn, dropout=self.dropout)
 
     def forward(
         self,
@@ -335,6 +329,7 @@ class AttentionBlock(torch.nn.Module):
         *args,
         group_vector: torch.Tensor | None = None,
         target_mask: torch.Tensor | None = None,
+        attention_idx: torch.Tensor | None = None,
         **kwargs,
     ) -> torch.Tensor:
         """Forward pass through attention and FFN with residual connections.
@@ -345,6 +340,8 @@ class AttentionBlock(torch.nn.Module):
             Input tensor of shape [B, L, D]
         group_vector : torch.Tensor or None, optional
             Optional group ids for group-wise attention masking
+        attention_idx : torch.Tensor or None, optional
+            Variates in non-singleton groups (see ``variate_indices``), derived when omitted.
         *args
             Unused positional arguments for interface compatibility
         **kwargs
@@ -358,16 +355,16 @@ class AttentionBlock(torch.nn.Module):
         x_in = x
 
         if group_vector is not None:
-            gv = group_vector.squeeze(-1) if group_vector.ndim == 2 else group_vector
-            _, inverse, counts = torch.unique(gv, return_inverse=True, return_counts=True)
-            keep_mask = counts[inverse] > 1
-            assert keep_mask.dtype == torch.bool, f"keep_mask must be bool, got {keep_mask.dtype}"
-            if not bool(keep_mask.any()):
+            if attention_idx is None:
+                gv = group_vector.squeeze(-1) if group_vector.ndim == 2 else group_vector
+                _, inverse, counts = torch.unique(gv, return_inverse=True, return_counts=True)
+                attention_idx = torch.where(counts[inverse] > 1)[0]
+            if attention_idx.numel() == 0:
                 return x_in  # batch is entirely singleton groups -> block is a no-op
-            x = x[:, keep_mask, :]
-            group_vector = group_vector[keep_mask]
+            x = x[:, attention_idx, :]
+            group_vector = group_vector[attention_idx]
             if target_mask is not None:
-                target_mask = target_mask[keep_mask]
+                target_mask = target_mask[attention_idx]
 
             assert x.shape[1] == group_vector.shape[0], (
                 f"gather shape mismatch: x={x.shape[1]}, gv={group_vector.shape[0]}"
@@ -385,7 +382,7 @@ class AttentionBlock(torch.nn.Module):
         # Scatter non-singleton outputs back into the full-L tensor
         if group_vector is not None:
             out = x_in.clone()
-            out[:, keep_mask, :] = x
+            out[:, attention_idx, :] = x
             assert out.shape == x_in.shape
             x = out
 

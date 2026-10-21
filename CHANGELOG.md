@@ -6,7 +6,12 @@ All notable changes to TiRex-2 are documented here.
 
 ### Improvements
 
+- ⭐️🚀 Faster CUDA inference: CUDA graphs by default for up to 32 series (up to 5x faster at small batch sizes, `load_model(..., cuda_graphs=False)` to disable), and the sLSTM recurrence now runs on [slstm-kernels](https://github.com/NX-AI/slstm-kernels) (Triton on CUDA, PyTorch on CPU/MPS and without Triton), which keeps its states in float32 and is up to 7x faster than FlashRNN. GIFT-Eval and fev-bench scores are unchanged. FlashRNN and `mlstm_kernels` are no longer dependencies, and no CUDA Toolkit is needed. The sLSTM gate and mLSTM input projections run as one matmul each; older checkpoints are converted on load. `pad_context=False` now pads to a multiple of 4 patches, contributed by [Martin Loretz](https://github.com/martinloretzzz).
+- `load_model` no longer loads the legacy `model-config.yaml` and `model.ckpt` files: use `tirex-2<=0.4.0` for them, or convert them with `scripts/convert_checkpoint.py`. PyYAML is no longer a dependency, contributed by [Martin Loretz](https://github.com/martinloretzzz).
+
 ### Documentation and development
+
+- Simplified the model code: the FlashRNN sLSTM layer is replaced by `sLSTMLayer` in `slstm_block.py`, `xLSTMMixedConfig` and `xLSTMLargeConfig` are removed (`BiXLSTM` takes plain arguments), `conv_mLSTMLayerConfig` is renamed to `mLSTMLayerConfig`, and unused options are dropped from the feed-forward networks and norms. The CPU reference tests compare relative norms, as the sLSTM's bfloat16 rounding moves single values by up to 1e-3 between machines, contributed by [Martin Loretz](https://github.com/martinloretzzz).
 
 ### Security and CI
 

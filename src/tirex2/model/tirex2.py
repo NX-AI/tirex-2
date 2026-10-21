@@ -9,7 +9,7 @@ from typing import Any, Literal
 import torch
 from torch import nn
 
-from .component.norm import LayerNorm
+from .component.norm import RMSNorm
 from .component.patch_tokenizer import Tokenizer
 from .component.postprocessor import PostProcessor
 from .component.residual_block import ResidualBlock
@@ -19,7 +19,9 @@ from .component.variate_mixing_block import (
     MultivariateBlockConfig,
     TimeMixerConfig,
     VariateMixerConfig,
+    variate_indices,
 )
+from .cuda_graph import CUDAGraphRunner
 from .types import TimeseriesType
 
 Device = Literal["cpu", "cuda", "mps"]
@@ -194,7 +196,7 @@ class TiRex2(nn.Module):
             if use_rmsnorm:
                 self.stack_out_norm = torch.nn.RMSNorm(embedding_dim, eps=eps)
             else:
-                self.stack_out_norm = LayerNorm(embedding_dim, eps=eps)
+                self.stack_out_norm = RMSNorm(embedding_dim, eps=eps)
         else:
             self.stack_out_norm = torch.nn.Identity()
 
@@ -218,22 +220,19 @@ class TiRex2(nn.Module):
             act_fn=self.act_func,
             dropout_p=self.dropout,
         )
+        self.use_cuda_graphs = False  # load_model enables it on CUDA
+        self._cuda_graphs: CUDAGraphRunner | None = None
         self.to(self.device)
 
     def forward(self, batch: dict[str, Any]) -> torch.Tensor | tuple[torch.Tensor, dict[str, torch.Tensor]]:
         """Forward pass producing quantile predictions for all variates in batch."""
         x, group_vector, target_mask, known_covariate_mask, scaler_state, tokenizer_state = self._prepare_forward(batch)
 
-        # forward through actual mLSTM/sLSTM layers, we select only the output of the last layer;
-        # hidden representations are not relevant for forecasting
-        for x in self._forward_layerwise(x, group_vector, target_mask, known_covariate_mask):
-            pass
+        if self._uses_cuda_graphs(x):
+            x = self._run_cuda_graph(x, group_vector, target_mask, known_covariate_mask)
+        else:
+            x = self._build_stack_fn(group_vector, target_mask, known_covariate_mask)(x)
 
-        # Normalise at the end of the stack
-        x = self.stack_out_norm(x)
-        x = nn.functional.dropout(x, self.dropout, training=self.training)
-
-        x = self.output_patch_embedding(x)  # [B*V, L, D] -> [B*V, L, D_out]
         x = torch.unflatten(x, -1, (self.num_quantiles, self.output_patch_size))  # [B*V, L, D_out] -> [B*V, L, Q, P]
         x = torch.transpose(x, 1, 2)  # switch quantile and num_token_dimension  [B*V, L, Q, P] -> [B*V, Q, L, P]
 
@@ -243,7 +242,63 @@ class TiRex2(nn.Module):
 
         return x
 
-    def _forward_layerwise(self, x, group_vector, target_mask, known_covariate_mask):
+    def _build_stack_fn(self, group_vector, target_mask, known_covariate_mask):
+        """The stack as a function of the tokens; the mask indices are computed here, outside any CUDA graph."""
+        indices = variate_indices(group_vector, target_mask, known_covariate_mask)
+        return lambda x: self._stack(x, group_vector, target_mask, known_covariate_mask, indices)
+
+    def _stack(self, x, group_vector, target_mask, known_covariate_mask, indices):
+        """Block stack and output layer."""
+        # forward through actual mLSTM/sLSTM layers, we select only the output of the last layer;
+        # hidden representations are not relevant for forecasting
+        for x in self._forward_layerwise(x, group_vector, target_mask, known_covariate_mask, indices):
+            pass
+
+        # Normalise at the end of the stack
+        x = self.stack_out_norm(x)
+        x = nn.functional.dropout(x, self.dropout, training=self.training)
+        return self.output_patch_embedding(x)  # [B*V, L, D] -> [B*V, L, D_out]
+
+    def _run_cuda_graph(self, x, group_vector, target_mask, known_covariate_mask) -> torch.Tensor:
+        """Run the stack from a CUDA graph, captured per input shape.
+
+        To share graphs, several variates are padded to a multiple of 4 with zero
+        rows, each a target in a new group, so the real variates never see them.
+        """
+        if self._cuda_graphs is None:
+            self._cuda_graphs = CUDAGraphRunner(self._build_stack_fn)
+
+        num_rows = x.shape[0]
+        num_pad = -num_rows % 4 if num_rows > 1 and group_vector is not None else 0
+        if num_pad:
+            x = nn.functional.pad(x, (0, 0, 0, 0, 0, num_pad))
+            group_vector = torch.cat([group_vector, group_vector.max() + 1 + torch.arange(num_pad, device=x.device)])
+            target_mask = nn.functional.pad(target_mask, (0, num_pad), value=True)
+            if known_covariate_mask is not None:
+                known_covariate_mask = nn.functional.pad(known_covariate_mask, (0, num_pad), value=False)
+        return self._cuda_graphs(x, group_vector, target_mask, known_covariate_mask)[:num_rows]
+
+    def _uses_cuda_graphs(self, x: torch.Tensor) -> bool:
+        """CUDA graphs serve gradient-free CUDA inference; FlexAttention's block mask can't be replayed.
+
+        Graphs only pay off while kernel launches dominate, so larger batches run
+        eagerly rather than holding a graph's buffers per shape.
+        """
+        return (
+            self.use_cuda_graphs
+            and x.is_cuda
+            and x.shape[0] <= 32  # variate rows
+            and not self.training
+            and not torch.is_grad_enabled()
+            and not any(block.variate_mixer.attn.use_flex_attention for block in self.stack)
+        )
+
+    def _apply(self, fn, *args, **kwargs):
+        # The graphs read the parameters by address, which moving the model changes.
+        self._cuda_graphs = None
+        return super()._apply(fn, *args, **kwargs)
+
+    def _forward_layerwise(self, x, group_vector, target_mask, known_covariate_mask, indices=None):
         # Run the input through the stack.
         state = {i: None for i in range(len(self.stack))}
         for i, block in enumerate(self.stack):  # type: ignore[reportArgumentType]
@@ -254,6 +309,7 @@ class TiRex2(nn.Module):
                 target_mask=target_mask,
                 known_covariate_mask=known_covariate_mask,
                 state=block_state,
+                indices=indices,
             )
 
             if block_state is None:
@@ -327,7 +383,7 @@ class TiRex2(nn.Module):
             skip padding to the full model length, reducing the number of input
             patches and inference time for short contexts at the cost of a small
             loss in forecast accuracy. Padding to the longest context in each
-            batch and to whole patches still applies.
+            batch and to a multiple of 4 patches still applies.
         """
         if tta_sign_flip is None:
             tta_sign_flip = self.tta_sign_flip
@@ -410,9 +466,11 @@ class TiRex2(nn.Module):
         context = nn.functional.pad(context, (0, right_pad), value=torch.nan)
 
         max_ts_len = self.context_len + self.future_len
-        if context.shape[-1] < max_ts_len and pad_context:
-            pad_len = max_ts_len - context.shape[-1]
-            context = nn.functional.pad(context, (pad_len, 0), value=torch.nan)
+        if context.shape[-1] < max_ts_len:
+            # Without pad_context, pad to a multiple of 4 patches: fewer shapes to compile and capture.
+            bucket = 4 * self.input_patch_size
+            pad_to = max_ts_len if pad_context else min(-(-context.shape[-1] // bucket) * bucket, max_ts_len)
+            context = nn.functional.pad(context, (pad_to - context.shape[-1], 0), value=torch.nan)
         elif context.shape[-1] > max_ts_len:
             context = context[..., -max_ts_len:]
         return context
