@@ -1,0 +1,11 @@
+{
+  "name": "tirex2",
+  "version": "0.1.0",
+  "description": "Zero-shot time series forecasting with TiRex-2, including covariates, quantiles, and evaluation.",
+  "author": { "name": "NXAI" },
+  "homepage": "https://nx-ai.github.io/tirex-2/",
+  "repository": "https://github.com/NX-AI/tirex-2",
+  "license": "Apache-2.0",
+  "keywords": ["time-series", "forecasting", "tirex-2"],
+  "skills": "./skills/"
+}
