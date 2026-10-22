@@ -6,11 +6,11 @@ All notable changes to TiRex-2 are documented here.
 
 ### Improvements
 
-- Docker images for CPU/GPU inference servers now include the default model weights for offline deployment in [#82](https://github.com/NX-AI/tirex-2/pull/82), contributed by [Zhihao Dai](https://github.com/daidahao).
+- ⭐️ **Forecasting skill**: Added a forecasting skill with Claude Code and Codex plugins, including dataframe and tensor examples in [#84](https://github.com/NX-AI/tirex-2/pull/84), contributed by [Zhihao Dai](https://github.com/daidahao).
+- ⭐️📦 **Offline Docker images**: Docker images for CPU/GPU inference servers now include the default model weights for offline deployment in [#82](https://github.com/NX-AI/tirex-2/pull/82), contributed by [Zhihao Dai](https://github.com/daidahao).
 
 ### Documentation and development
 
-- Added a time series forecasting skill with Claude Code and Codex plugins, including dataframe and tensor examples and installation instructions.
 
 ### Security and CI
 
