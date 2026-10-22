@@ -18,6 +18,8 @@ import triton
 import triton.language as tl
 from triton.language.extra import libdevice
 
+from .slstm_torch import slstm_torch
+
 NG_GATES = 4
 
 LOG2E = tl.constexpr(1.4426950408889634)
@@ -168,6 +170,9 @@ def slstm_triton_fw(
     bias: torch.Tensor, # [NH, NG, HD]
     cu_seqlens: torch.Tensor = None, # [B+1]
 )-> tuple[torch.Tensor, torch.Tensor]:  # [B, S, NH, HD], [B, NH, NG, HD]
+    if torch.is_grad_enabled() and any(t.requires_grad for t in (x, states, weight, bias)):
+        return slstm_torch(x, states, weight, bias, cu_seqlens)
+
     check_tensors(x, states, weight, bias, cu_seqlens)
     Bx, S, NH, NG, HD = x.shape
     B = states.shape[0]

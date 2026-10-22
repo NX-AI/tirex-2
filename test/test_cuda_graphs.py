@@ -106,3 +106,10 @@ def test_cuda_falls_back_to_the_pytorch_kernels_without_triton(build_small_model
     model.use_cuda_graphs = True
     for actual, want in zip(model.predict(timeseries, 8), expected):
         assert (actual - want).norm() / want.norm() < 1e-2
+
+
+def test_gradients_reach_every_parameter_on_cuda(model):
+    _, batch, _, _ = model._prepare_input(_covariates(), 8, tta_diff=True)
+    model(batch).sum().backward()
+    missing = [name for name, p in model.named_parameters() if p.requires_grad and (p.grad is None or not p.grad.any())]
+    assert not missing
