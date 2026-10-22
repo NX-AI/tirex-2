@@ -10,6 +10,8 @@ All notable changes to TiRex-2 are documented here.
 
 ### Documentation and development
 
+- Added a time series forecasting skill with Claude Code and Codex plugins, including dataframe and tensor examples and installation instructions.
+
 ### Security and CI
 
 - Simplified Docker image builds and consolidated CI to test CPU/GPU images before publishing in [#82](https://github.com/NX-AI/tirex-2/pull/82), contributed by [Zhihao Dai](https://github.com/daidahao).
