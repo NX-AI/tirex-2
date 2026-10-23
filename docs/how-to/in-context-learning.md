@@ -30,8 +30,8 @@ from tirex2 import TimeseriesType, load_model
 
 model = load_model("NX-AI/TiRex-2", device="cpu")  # or device="cuda"
 
-context_cycle = torch.as_tensor(pressure[1787], dtype=torch.float32) 
-target_cycle = torch.as_tensor(pressure[1788], dtype=torch.float32)   
+context_cycle = torch.as_tensor(pressure[1787], dtype=torch.float32)
+target_cycle = torch.as_tensor(pressure[1788], dtype=torch.float32)
 
 n = 1                                       # number of repeated cycles in the context
 context = context_cycle.repeat(n)           # (n * 200,)
@@ -45,7 +45,7 @@ ts = TimeseriesType(
 forecast = model.forecast([ts], prediction_length=200, output_type="torch")[0]
 
 median, p10, p90 = forecast[0, 4], forecast[0, 0], forecast[0, 8]
-mae = (median - target_cycle).abs().mean().item() 
+mae = (median - target_cycle).abs().mean().item()
 ```
 
 The 9 quantiles correspond to levels `0.1, 0.2, ..., 0.9`. We plot the median (index `4`) as the point forecast and use the `0.1` and `0.9` quantiles (indices `0` and `8`) to define the prediction band. Forecast accuracy is evaluated by comparing the median with the actual values of cycle 1788 using the **mean absolute error (MAE)**, which measures the average absolute difference between predicted and observed values.
