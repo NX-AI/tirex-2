@@ -1,5 +1,6 @@
 {
   "name": "tirex2-plugins",
+  "description": "Time series forecasting skills for TiRex-2.",
   "owner": {
     "name": "NXAI"
   },

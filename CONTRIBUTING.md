@@ -36,6 +36,18 @@ The MkDocs site lives in [`docs/`](docs/) and publishes to [GitHub Pages](https:
 - Preview locally: `pixi run docs`.
 - Build with warnings treated as errors (as CI does): `pixi run --frozen docs-build`.
 
+## Agent plugin checks
+
+Bump both manifest versions when changing `plugins/tirex2/`. CI checks Claude validation
+and Codex installation without model credentials or weights.
+
+To check locally:
+
+```bash
+pixi run python scripts/check_plugin.py --base main
+pixi run python -m unittest discover -s scripts/tests
+```
+
 ## Commit & Review Etiquette
 
 - Avoid committing generated artifacts (e.g. `.pixi/`, `output/`, `model`, `*.csv`,

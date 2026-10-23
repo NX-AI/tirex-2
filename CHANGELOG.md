@@ -14,6 +14,7 @@ All notable changes to TiRex-2 are documented here.
 
 ### Security and CI
 
+- Added plugin CI checks for manifest validation, Codex installation, package contents, and version bumps in [#100](https://github.com/NX-AI/tirex-2/pull/100), contributed by [Zhihao Dai](https://github.com/daidahao).
 - Updated CA certificates and CI tooling for the eMudhra/emSign security incident in [#83](https://github.com/NX-AI/tirex-2/pull/83), contributed by [Zhihao Dai](https://github.com/daidahao).
 - Simplified Docker image builds and consolidated CI to test CPU/GPU images before publishing in [#82](https://github.com/NX-AI/tirex-2/pull/82), contributed by [Zhihao Dai](https://github.com/daidahao).
 
