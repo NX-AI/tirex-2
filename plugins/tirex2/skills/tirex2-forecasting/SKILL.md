@@ -46,6 +46,6 @@ Deliver labeled forecasts and record checkpoint, version, device, cutoff, horizo
 
 Start with defaults and a small batch. `batch_size` counts series; automatic reduction on device OOM cannot fix an oversized single series. Use `yield_per_batch=True` to limit output memory.
 
-Consider `compile=True` for repeated shapes, allowing for compilation overhead. Validate the speed/accuracy tradeoff of `pad_context=False`; `tta_sign_flip=True` roughly doubles inference work.
+Consider `load_model(..., compile=True)` for repeated shapes, allowing for compilation overhead. Validate the speed/accuracy tradeoff of `pad_context=False`; `tta_sign_flip=True` roughly doubles inference work.
 
 Each open-source call recomputes over its context. For updates, append observations and realign covariates. Incremental streaming without recomputation is [PRO-only](https://nx-ai.github.io/tirex-2/how-to/streaming/).
