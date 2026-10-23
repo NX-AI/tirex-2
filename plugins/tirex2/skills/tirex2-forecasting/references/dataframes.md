@@ -1,6 +1,6 @@
 # Dataframe forecasting
 
-Reference: local `docs/how-to/dataframes.md` and the [published dataframe guide](https://nx-ai.github.io/tirex-2/how-to/dataframes/). These examples use pandas; the API also accepts supported eager dataframe libraries and normally preserves the input library.
+Reference: [dataframe guide](https://nx-ai.github.io/tirex-2/how-to/dataframes/). These examples use pandas; the API also accepts supported eager dataframe libraries and normally preserves the input library.
 
 ## One series and a known calendar covariate
 

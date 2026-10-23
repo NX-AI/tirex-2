@@ -1,6 +1,6 @@
 # Tensor forecasting
 
-References: local `docs/how-to/forecasting.md`, `docs/how-to/covariates.md`, and `src/tirex2/model/types.py`; published [forecasting](https://nx-ai.github.io/tirex-2/how-to/forecasting/) and [covariate](https://nx-ai.github.io/tirex-2/how-to/covariates/) guides.
+References: [forecasting](https://nx-ai.github.io/tirex-2/how-to/forecasting/) and [covariate](https://nx-ai.github.io/tirex-2/how-to/covariates/) guides.
 
 ## Input contract
 

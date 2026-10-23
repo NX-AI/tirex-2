@@ -25,7 +25,7 @@ from tirex2 import load_model
 model = load_model("NX-AI/TiRex-2", device="cpu")
 ```
 
-Prefer a supplied local checkpoint when available. Start small on CPU; use `cuda` or `mps` when supported. Report checkpoint access errors. For CUDA setup, see local `docs/faq.md` or the [FAQ](https://nx-ai.github.io/tirex-2/faq/).
+Prefer a supplied local checkpoint when available. Start small on CPU; use `cuda` or `mps` when supported. Report checkpoint access errors. For CUDA setup, see the [FAQ](https://nx-ai.github.io/tirex-2/faq/).
 
 ## Choose the API
 

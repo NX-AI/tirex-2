@@ -8,7 +8,7 @@
       "name": "tirex2",
       "source": {
         "source": "local",
-        "path": "./"
+        "path": "./plugins/tirex2"
       },
       "policy": {
         "installation": "AVAILABLE",
