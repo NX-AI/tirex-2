@@ -78,7 +78,9 @@ jobs:
         load: true
         tags: tirex2-cpu:test
         push: false
-        cache-from: type=gha,scope=cpu
+        # Refresh system certificates after the eMudhra/emSign incident.
+        pull: true
+        no-cache: true
 
     # Hosted runners have no GPU; both images exercise inference on CPU.
     - name: Test CPU image inference (CPU execution)
@@ -102,7 +104,7 @@ jobs:
           -e MQTT_BROKER_PORT=1883 \
           "$TEST_IMAGE"
 
-        docker run --rm --name tirex-inference-tests --network host --entrypoint sh \
+        docker run --pull=always --rm --name tirex-inference-tests --network host --entrypoint sh \
           -e TEST_START_SERVER=0 \
           -e TEST_HOST=127.0.0.1 \
           -e TEST_PORT=8000 \
@@ -125,7 +127,9 @@ jobs:
           ghcr.io/nx-ai/tirex2-cpu:${{ steps.get_version.outputs.version }}
           ghcr.io/nx-ai/tirex2-cpu:latest
         push: true
-        cache-from: type=gha,scope=cpu
+        # Refresh system certificates after the eMudhra/emSign incident.
+        pull: true
+        no-cache: true
         cache-to: type=gha,mode=max,scope=cpu
 
     - name: Clean up after CPU build
@@ -141,7 +145,9 @@ jobs:
         load: true
         tags: tirex2-gpu:test
         push: false
-        cache-from: type=gha,scope=gpu
+        # Refresh system certificates after the eMudhra/emSign incident.
+        pull: true
+        no-cache: true
 
     # Hosted runners have no GPU; both images exercise inference on CPU.
     - name: Test GPU image inference (CPU execution)
@@ -165,7 +171,7 @@ jobs:
           -e MQTT_BROKER_PORT=1883 \
           "$TEST_IMAGE"
 
-        docker run --rm --name tirex-inference-tests --network host --entrypoint sh \
+        docker run --pull=always --rm --name tirex-inference-tests --network host --entrypoint sh \
           -e TEST_START_SERVER=0 \
           -e TEST_HOST=127.0.0.1 \
           -e TEST_PORT=8000 \
@@ -188,5 +194,7 @@ jobs:
           ghcr.io/nx-ai/tirex2-gpu:${{ steps.get_version.outputs.version }}
           ghcr.io/nx-ai/tirex2-gpu:latest
         push: true
-        cache-from: type=gha,scope=gpu
+        # Refresh system certificates after the eMudhra/emSign incident.
+        pull: true
+        no-cache: true
         cache-to: type=gha,mode=max,scope=gpu
