@@ -372,7 +372,6 @@ class TiRex2(nn.Module):
             )
             prediction_length = self.future_len
 
-        # retrieve device to compute on and move every input tensor onto it
         device = next(self.parameters()).device
 
         context = [ts.target.cpu() for ts in timeseries]
