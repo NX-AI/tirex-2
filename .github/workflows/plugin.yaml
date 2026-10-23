@@ -2,8 +2,20 @@ name: Check agent plugin
 
 on:
   pull_request:
+    paths:
+      - 'plugins/**'
+      - '.claude-plugin/**'
+      - '.agents/plugins/**'
+      - '.github/workflows/plugin.yaml'
+      - 'scripts/**'
   push:
     branches: [main]
+    paths:
+      - 'plugins/**'
+      - '.claude-plugin/**'
+      - '.agents/plugins/**'
+      - '.github/workflows/plugin.yaml'
+      - 'scripts/**'
   workflow_dispatch:
 
 permissions:
@@ -21,12 +33,11 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.13'
-      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
-        with:
-          node-version: '24'
       - name: Install Claude CLI
         run: |
-          npm install --global @anthropic-ai/claude-code@2.1.309
+          curl -fsSL https://claude.ai/install.sh | bash -s -- 2.1.309
+      - name: Check Claude CLI version
+        run: claude --version
       - name: Test validator and check package
         run: |
           python -m unittest discover -s scripts/tests -p 'test_check_plugin.py'
@@ -51,12 +62,11 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.13'
-      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
-        with:
-          node-version: '24'
       - name: Install Codex CLI
         run: |
-          npm install --global @openai/codex@0.163.0
+          curl -fsSL https://chatgpt.com/codex/install.sh | sh -s -- --release 0.163.0
+      - name: Check Codex CLI version
+        run: codex --version
       - name: Install through Codex and verify cache
         run: |
           codex plugin marketplace add .
