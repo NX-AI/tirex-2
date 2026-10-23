@@ -14,6 +14,7 @@ All notable changes to TiRex-2 are documented here.
 
 ### Security and CI
 
+- Updated CA certificates and CI tooling for the eMudhra/emSign security incident in [#83](https://github.com/NX-AI/tirex-2/pull/83), contributed by [Zhihao Dai](https://github.com/daidahao).
 - Simplified Docker image builds and consolidated CI to test CPU/GPU images before publishing in [#82](https://github.com/NX-AI/tirex-2/pull/82), contributed by [Zhihao Dai](https://github.com/daidahao).
 
 ## [0.4.0] - 2026-10-20

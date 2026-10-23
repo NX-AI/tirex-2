@@ -58,7 +58,7 @@ jobs:
         platforms: arm64
 
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+      uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
     - name: Login to GitHub Container Registry
       if: ${{ env.PUBLISH_IMAGES == 'true' }}
@@ -70,7 +70,7 @@ jobs:
 
     # https://docs.docker.com/build/ci/github-actions/test-before-push/
     - name: Build CPU image for testing
-      uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+      uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
       with:
         platforms: linux/amd64
         context: inference
@@ -78,7 +78,9 @@ jobs:
         load: true
         tags: tirex2-cpu:test
         push: false
-        cache-from: type=gha,scope=cpu
+        # Refresh system certificates after the eMudhra/emSign incident.
+        pull: true
+        no-cache: true
 
     # Hosted runners have no GPU; both images exercise inference on CPU.
     - name: Test CPU image inference (CPU execution)
@@ -102,7 +104,7 @@ jobs:
           -e MQTT_BROKER_PORT=1883 \
           "$TEST_IMAGE"
 
-        docker run --rm --name tirex-inference-tests --network host --entrypoint sh \
+        docker run --pull=always --rm --name tirex-inference-tests --network host --entrypoint sh \
           -e TEST_START_SERVER=0 \
           -e TEST_HOST=127.0.0.1 \
           -e TEST_PORT=8000 \
@@ -116,7 +118,7 @@ jobs:
 
     - name: Build and push CPU image
       if: ${{ env.PUBLISH_IMAGES == 'true' }}
-      uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+      uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
       with:
         platforms: linux/amd64,linux/arm64
         context: inference
@@ -125,7 +127,9 @@ jobs:
           ghcr.io/nx-ai/tirex2-cpu:${{ steps.get_version.outputs.version }}
           ghcr.io/nx-ai/tirex2-cpu:latest
         push: true
-        cache-from: type=gha,scope=cpu
+        # Refresh system certificates after the eMudhra/emSign incident.
+        pull: true
+        no-cache: true
         cache-to: type=gha,mode=max,scope=cpu
 
     - name: Clean up after CPU build
@@ -133,7 +137,7 @@ jobs:
 
     # https://docs.docker.com/build/ci/github-actions/test-before-push/
     - name: Build GPU image for testing
-      uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+      uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
       with:
         platforms: linux/amd64
         context: inference
@@ -141,7 +145,9 @@ jobs:
         load: true
         tags: tirex2-gpu:test
         push: false
-        cache-from: type=gha,scope=gpu
+        # Refresh system certificates after the eMudhra/emSign incident.
+        pull: true
+        no-cache: true
 
     # Hosted runners have no GPU; both images exercise inference on CPU.
     - name: Test GPU image inference (CPU execution)
@@ -165,7 +171,7 @@ jobs:
           -e MQTT_BROKER_PORT=1883 \
           "$TEST_IMAGE"
 
-        docker run --rm --name tirex-inference-tests --network host --entrypoint sh \
+        docker run --pull=always --rm --name tirex-inference-tests --network host --entrypoint sh \
           -e TEST_START_SERVER=0 \
           -e TEST_HOST=127.0.0.1 \
           -e TEST_PORT=8000 \
@@ -179,7 +185,7 @@ jobs:
 
     - name: Build and push GPU image
       if: ${{ env.PUBLISH_IMAGES == 'true' }}
-      uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+      uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
       with:
         platforms: linux/amd64
         context: inference
@@ -188,5 +194,7 @@ jobs:
           ghcr.io/nx-ai/tirex2-gpu:${{ steps.get_version.outputs.version }}
           ghcr.io/nx-ai/tirex2-gpu:latest
         push: true
-        cache-from: type=gha,scope=gpu
+        # Refresh system certificates after the eMudhra/emSign incident.
+        pull: true
+        no-cache: true
         cache-to: type=gha,mode=max,scope=gpu
