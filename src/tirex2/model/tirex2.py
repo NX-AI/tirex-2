@@ -563,7 +563,7 @@ class TiRex2(nn.Module):
         )  # type: ignore
         result = []
         for ts, out in zip(original_timeseries, output):
-            result.append(out.to(ts.target))
+            result.append(out.sort(dim=1).values.to(ts.target))
         return result
 
     def _create_stack(

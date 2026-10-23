@@ -1092,3 +1092,16 @@ def test_forecast_without_context_padding_rounds_context_up_to_four_patches(buil
     assert num_patches == [padded_length // patch]
     assert forecast.shape == (1, backbone.num_quantiles, 4)
     assert torch.isfinite(forecast).all()
+
+
+@pytest.mark.parametrize("tta_sign_flip", [False, True])
+def test_forecast_quantiles_are_sorted(build_small_model, tta_sign_flip):
+    torch.manual_seed(0)
+    backbone = build_small_model("cpu").eval()
+    with torch.no_grad():
+        for param in backbone.parameters():
+            param.mul_(4)
+    ts = [TimeseriesType(torch.randn(2, 96).cumsum(-1), torch.randn(1, 96), torch.randn(1, 120)) for _ in range(3)]
+
+    for forecast in backbone.predict(ts, prediction_length=24, tta_sign_flip=tta_sign_flip):
+        assert (forecast.diff(dim=1) >= 0).all()
