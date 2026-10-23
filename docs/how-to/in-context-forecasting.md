@@ -65,7 +65,7 @@ the model cannot tell that the pattern will repeat.
 
 ## ICL: extending the context
 
-The more cycles we include in the context, the more evidence the model has of how the signal evolves over time. By expanding the context from  *n* = 1 to 5 load cycles (`context_cycle.repeat(n)`), we can explore how additional history affects the model's ability to capture recurring patterns. 
+The more cycles we include in the context, the more evidence the model has of how the signal evolves over time. By expanding the context from  *n* = 1 to 5 load cycles (`context_cycle.repeat(n)`), we can explore how additional history affects the model's ability to capture recurring patterns.
 
 !!! tip "Try it"
     Move the slider, or press play, to see how the forecast changes with *n*.
