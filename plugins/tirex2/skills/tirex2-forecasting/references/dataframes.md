@@ -16,7 +16,7 @@ history = pd.DataFrame({
     "timestamp": pd.date_range("2025-01-01", periods=128, freq="D"),
     "sales": 20 + 3 * np.sin(np.arange(128) * 2 * np.pi / 7),
 })
-history["weekday"] = history["timestamp"].dt.dayofweek.astype("float32")
+history["weekday"] = history["timestamp"].dt.day_of_week.astype("float32")
 future = pd.DataFrame({
     "timestamp": pd.date_range(
         history["timestamp"].iloc[-1] + pd.Timedelta(days=1),
@@ -24,7 +24,7 @@ future = pd.DataFrame({
         freq="D",
     ),
 })
-future["weekday"] = future["timestamp"].dt.dayofweek.astype("float32")
+future["weekday"] = future["timestamp"].dt.day_of_week.astype("float32")
 
 model = load_model("NX-AI/TiRex-2", device="cpu")
 result = model.forecast_df(
