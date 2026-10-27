@@ -13,6 +13,8 @@ synchronizing, so the recurrence can be captured in a CUDA graph. Only the
 recurrent matmul runs on bfloat16 operands.
 """
 
+from functools import cache
+
 import torch
 import triton
 import triton.language as tl
@@ -23,6 +25,13 @@ from .slstm_torch import slstm_torch
 NG_GATES = 4
 
 LOG2E = tl.constexpr(1.4426950408889634)
+
+SMEM_HEADROOM = 4096
+
+
+@cache
+def _max_shared_mem(device_index: int) -> int:
+    return triton.runtime.driver.active.utils.get_device_properties(device_index)["max_shared_mem"]
 
 
 def check_tensors(x, states, weight, bias, cu_seqlens):
@@ -75,14 +84,13 @@ def slstm_pointwise(iraw, fraw, zraw, oraw, c, n, m):
         triton.Config({'B_BLOCK_SIZE': 2**i}, num_warps=w, num_stages=1)
         for i in range(6) for w in (4, 8, 16)
     ],
-    key=['B', 'S', 'NH', 'NG', 'HD'],
+    key=['B', 'S', 'NH', 'NG', 'HD', 'RESIDENT_WEIGHTS'],
     prune_configs_by={"early_config_prune": lambda configs, nargs, **kwargs: [c for c in configs if c.kwargs["B_BLOCK_SIZE"] <= triton.next_power_of_2(nargs["B"])]},
 )
 @triton.jit
-def slstm_kernel(x_ptr, states_ptr, weight_ptr, bias_ptr, cu_seqlens_ptr, out, out_states, B: tl.constexpr, S: tl.constexpr, NH: tl.constexpr, NG: tl.constexpr, HD: tl.constexpr, IS_VARLEN: tl.constexpr, B_BLOCK_SIZE: tl.constexpr):
+def slstm_kernel(x_ptr, states_ptr, weight_ptr, bias_ptr, cu_seqlens_ptr, out, out_states, B: tl.constexpr, S: tl.constexpr, NH: tl.constexpr, NG: tl.constexpr, HD: tl.constexpr, IS_VARLEN: tl.constexpr, RESIDENT_WEIGHTS: tl.constexpr, B_BLOCK_SIZE: tl.constexpr):
     pid = tl.program_id(axis=0)
     r = tl.arange(0, HD)[None, :]
-    rr = tl.arange(0, HD * HD)
     head_id = pid % NH
     # int64, as the input/output offsets derived from it exceed int32 beyond ~14k rows of 74 steps
     batch_id = ((pid // NH) * B_BLOCK_SIZE + tl.arange(0, B_BLOCK_SIZE)[:, None]).to(tl.int64)
@@ -107,11 +115,13 @@ def slstm_kernel(x_ptr, states_ptr, weight_ptr, bias_ptr, cu_seqlens_ptr, out, o
     n = tl.load(states_ptr + state_offs + 2 * HD, mask=batch_mask, other=0.0)
     m = tl.load(states_ptr + state_offs + 3 * HD, mask=batch_mask, other=0.0)
 
-    weight_offs = head_id * NG * HD * HD
-    w_i = tl.trans(tl.reshape(tl.load(weight_ptr + weight_offs + 0 * HD * HD + rr), (HD, HD)))
-    w_f = tl.trans(tl.reshape(tl.load(weight_ptr + weight_offs + 1 * HD * HD + rr), (HD, HD)))
-    w_z = tl.trans(tl.reshape(tl.load(weight_ptr + weight_offs + 2 * HD * HD + rr), (HD, HD)))
-    w_o = tl.trans(tl.reshape(tl.load(weight_ptr + weight_offs + 3 * HD * HD + rr), (HD, HD)))
+    # weight arrives transposed, [NH, NG, HD_in, HD_out], so each gate is a row-major tile
+    w_ptrs = weight_ptr + head_id * NG * HD * HD + tl.arange(0, HD)[:, None] * HD + r
+    if RESIDENT_WEIGHTS:
+        w_i = tl.load(w_ptrs + 0 * HD * HD)
+        w_f = tl.load(w_ptrs + 1 * HD * HD)
+        w_z = tl.load(w_ptrs + 2 * HD * HD)
+        w_o = tl.load(w_ptrs + 3 * HD * HD)
 
     bias_offs = head_id * NG * HD
     b_i = tl.load(bias_ptr + bias_offs + 0 * HD + r)
@@ -138,10 +148,17 @@ def slstm_kernel(x_ptr, states_ptr, weight_ptr, bias_ptr, cu_seqlens_ptr, out, o
         p_o = tl.load(next_offs + 3 * HD, mask=x_mask, other=0.0)
 
         y_bf16 = y.to(tl.bfloat16)
-        iraw = tl.dot(y_bf16, w_i, acc=x_i.to(tl.float32) + b_i)
-        fraw = tl.dot(y_bf16, w_f, acc=x_f.to(tl.float32) + b_f)
-        zraw = tl.dot(y_bf16, w_z, acc=x_z.to(tl.float32) + b_z)
-        oraw = tl.dot(y_bf16, w_o, acc=x_o.to(tl.float32) + b_o)
+        if RESIDENT_WEIGHTS:
+            iraw = tl.dot(y_bf16, w_i, acc=x_i.to(tl.float32) + b_i)
+            fraw = tl.dot(y_bf16, w_f, acc=x_f.to(tl.float32) + b_f)
+            zraw = tl.dot(y_bf16, w_z, acc=x_z.to(tl.float32) + b_z)
+            oraw = tl.dot(y_bf16, w_o, acc=x_o.to(tl.float32) + b_o)
+        else:
+            # Re-read from L2 every step
+            iraw = tl.dot(y_bf16, tl.load(w_ptrs + 0 * HD * HD), acc=x_i.to(tl.float32) + b_i)
+            fraw = tl.dot(y_bf16, tl.load(w_ptrs + 1 * HD * HD), acc=x_f.to(tl.float32) + b_f)
+            zraw = tl.dot(y_bf16, tl.load(w_ptrs + 2 * HD * HD), acc=x_z.to(tl.float32) + b_z)
+            oraw = tl.dot(y_bf16, tl.load(w_ptrs + 3 * HD * HD), acc=x_o.to(tl.float32) + b_o)
 
         ynew, cnew, nnew, mnew = slstm_pointwise(iraw, fraw, zraw, oraw, c, n, m)
 
@@ -177,8 +194,9 @@ def slstm_triton_fw(
     Bx, S, NH, NG, HD = x.shape
     B = states.shape[0]
     assert NG == NG_GATES, f"triton backend requires NG={NG_GATES} gates, got {NG}!"
-    # The recurrent tl.dot runs on bf16 operands, so fp32 weights are rounded once up front
-    weight = weight.to(torch.bfloat16)
+    # and transposed so the kernel loads each gate as the [HD_in, HD_out] dot operand
+    weight = weight.to(torch.bfloat16).transpose(-1, -2).contiguous()
+    resident_weights = NG * HD * HD * weight.element_size() + SMEM_HEADROOM <= _max_shared_mem(x.device.index)
 
     out =torch.empty((Bx, S, NH, HD), dtype=x.dtype, device=x.device)
     out_states = torch.empty_like(states)
@@ -188,6 +206,6 @@ def slstm_triton_fw(
     S_dense = 0 if cu_seqlens is not None else S
 
     grid = lambda meta: (triton.cdiv(B, meta["B_BLOCK_SIZE"]) * NH,)
-    slstm_kernel[grid](x, states, weight, bias, cu_seqlens, out, out_states, B, S_dense, NH, NG, HD, cu_seqlens is not None)
+    slstm_kernel[grid](x, states, weight, bias, cu_seqlens, out, out_states, B, S_dense, NH, NG, HD, cu_seqlens is not None, resident_weights)
 
     return out, out_states

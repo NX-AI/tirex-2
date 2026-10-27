@@ -74,10 +74,19 @@ def test_cuda_graphs_are_not_used_with_gradients_training_or_after_moving(model)
     assert model._cuda_graphs is None
 
 
-def test_triton_slstm_matches_the_pytorch_implementation():
+@pytest.mark.parametrize("D", [32, 128])
+@pytest.mark.parametrize("resident_weights", [True, False])
+def test_triton_slstm_matches_the_pytorch_implementation(D, resident_weights, monkeypatch):
+    from tirex2.model.component.kernel import slstm_triton
+
+    if resident_weights and 4 * D * D * 2 + slstm_triton.SMEM_HEADROOM > slstm_triton._max_shared_mem(0):
+        pytest.skip("The resident weights don't fit this GPU's shared memory")
+    # Force either path: resident weights, or re-reading them every step as on small shared memory GPUs
+    monkeypatch.setattr(slstm_triton, "_max_shared_mem", lambda _: 2**30 if resident_weights else 0)
+
     torch.manual_seed(0)
-    B, T, G, H, D = 3, 40, 4, 4, 32
-    Wx, R, b = torch.randn(B, T, G, H, D), 0.1 * torch.randn(H, D, G, D), torch.randn(H, G, D)
+    B, T, G, H = 3, 40, 4, 4
+    Wx, R, b = torch.randn(B, T, G, H, D), (0.1 * 32 / D) * torch.randn(H, D, G, D), torch.randn(H, G, D)
     states = torch.randn(4, B, 1, H, D)
     states[2] = states[2].abs() + 1  # normalizer n >= 1
     Wx, R, b, states = (t.cuda() for t in (Wx, R, b, states))
