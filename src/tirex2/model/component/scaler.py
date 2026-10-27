@@ -34,17 +34,24 @@ class Scaler:
         scale = torch.nan_to_num(torch.nanmean((x - loc) ** 2, dim=-1, keepdim=True).sqrt(), nan=1.0)
         scale = torch.clamp_min(scale, min=self.eps)
 
-        scaled_x = (x - loc) / scale
-
         # Detect binary variates (only NaN, 0.0, 1.0) and bypass scaling
         if self.binaryaware:
             valid = ~torch.isnan(x)
             is_binary = ((x == 0.0) | (x == 1.0) | ~valid).all(dim=-1, keepdim=True)
             loc = torch.where(is_binary, torch.zeros_like(loc), loc)
             scale = torch.where(is_binary, torch.ones_like(scale), scale)
-            scaled_x = (x - loc) / scale
         else:
             is_binary = None
+
+        loc_scale = (loc, scale, is_binary)
+        return self.scale_with(x, loc_scale), loc_scale
+
+    def scale_with(
+        self, x: torch.Tensor, loc_scale: tuple[torch.Tensor, torch.Tensor, torch.Tensor | None]
+    ) -> torch.Tensor:
+        """Normalize ``x`` with fixed statistics ``loc_scale``, as returned by an earlier :meth:`scale` call."""
+        loc, scale, is_binary = loc_scale
+        scaled_x = (x - loc) / scale
 
         if self.use_arcsinh:
             if is_binary is not None and is_binary.any():
@@ -52,7 +59,7 @@ class Scaler:
             else:
                 scaled_x = torch.arcsinh(scaled_x)
 
-        return scaled_x, (loc, scale, is_binary)
+        return scaled_x
 
     def re_scale(
         self, x: torch.Tensor, loc_scale: tuple[torch.Tensor, torch.Tensor, torch.Tensor | None]

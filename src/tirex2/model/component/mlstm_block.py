@@ -10,6 +10,7 @@ import torch
 import torch.nn as nn
 from mlstm_kernels.torch.backend_module import mLSTMBackend, mLSTMBackendConfig
 
+from ..types import RecurrentState
 from .norm import MultiHeadLayerNorm
 from .xlstm_mixed_config import xLSTMMixedConfig
 
@@ -119,6 +120,42 @@ class mLSTMLayer(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Process a full sequence through the mlstm."""
+        q, k, v, i_preact, f_preact, o_preact = self._project(x)
+        h = self.mlstm_backend(
+            q=q,
+            k=k,
+            v=v,
+            i=i_preact,
+            f=f_preact,
+        )
+        return self._output(h, o_preact)
+
+    def forward_with_state(
+        self, x: torch.Tensor, state: RecurrentState | None = None
+    ) -> tuple[torch.Tensor, RecurrentState]:
+        """Process a sequence starting from ``state`` and also return the final state.
+
+        Splitting a sequence and passing the state from one part to the next gives the same output as
+        processing it at once. The state is ``(c, n, m)``; ``None`` starts from zeros.
+        """
+        q, k, v, i_preact, f_preact, o_preact = self._project(x)
+        c, n, m = state if state is not None else (None, None, None)
+        # the inference mode accepts an initial state and always returns the final one
+        h, state = self.mlstm_backend(
+            q=q,
+            k=k,
+            v=v,
+            i=i_preact,
+            f=f_preact,
+            c_initial=c,
+            n_initial=n,
+            m_initial=m,
+            mode="inference",
+        )
+        return self._output(h, o_preact), state
+
+    def _project(self, x: torch.Tensor) -> tuple[torch.Tensor, ...]:
+        """Per-head queries, keys, values and gate pre-activations ``(q, k, v, i, f, o)`` of ``x`` ``[B, S, D]``."""
         assert x.ndim == 3, f"Input must have shape [B, S, D], got {x.shape}"
         B, S, _ = x.shape
 
@@ -134,13 +171,11 @@ class mLSTMLayer(nn.Module):
         v = v.reshape(B, S, self.config.num_heads, -1).transpose(1, 2)
         i_preact = i_preact.transpose(1, 2)
         f_preact = f_preact.transpose(1, 2)
-        h = self.mlstm_backend(
-            q=q,
-            k=k,
-            v=v,
-            i=i_preact,
-            f=f_preact,
-        )
+        return q, k, v, i_preact, f_preact, o_preact
+
+    def _output(self, h: torch.Tensor, o_preact: torch.Tensor) -> torch.Tensor:
+        """Normalize, output-gate and project the per-head hidden states ``h`` back to ``[B, S, D]``."""
+        B, S, _ = o_preact.shape
         expected_h_shape = (
             B,
             self.config.num_heads,

@@ -8,6 +8,7 @@ from typing import Literal
 import torch
 from torch import nn
 
+from ..types import RecurrentState
 from .feedforward import FeedForward
 from .flashrnn_slstm import init_cell as init_slstm_cell
 from .mlstm_block import init_cell as init_mlstm_cell
@@ -117,14 +118,24 @@ class BiXLSTM(nn.Module):
             x_rev = torch.flip(x_rev_out, dims=(1,))
 
         out = self._recombine(x_fwd, x_rev, fwd_idc, rev_idc, x)
+        return self._residual_ffn(x, out)
 
-        # residual connection around lstm + combination
+    def forward_with_state(
+        self, x: torch.Tensor, state: RecurrentState | None = None
+    ) -> tuple[torch.Tensor, RecurrentState]:
+        """Causal pass in which every variate runs through the forward cell only, starting from ``state``.
+
+        Equal to :meth:`forward` when no variate goes through the reverse cell (``known_covariate_mask`` all
+        ``False``). Also returns the final state of the forward cell, so that a sequence can be processed in
+        pieces with the same result as processing it at once.
+        """
+        out, state = self.fwd_cell.forward_with_state(self.norm_lstm(x), state)
+        return self._residual_ffn(x, out.to(x.dtype)), state
+
+    def _residual_ffn(self, x: torch.Tensor, out: torch.Tensor) -> torch.Tensor:
+        """Add the residual around the recurrent stage, then apply the ffn with its own residual."""
         out = x + out
-
-        # ffn with residual connection
-        out = out + self.ffn(self.norm_ffn(out))
-
-        return out
+        return out + self.ffn(self.norm_ffn(out))
 
     def _split_variates(
         self,

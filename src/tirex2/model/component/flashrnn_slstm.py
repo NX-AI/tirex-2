@@ -12,6 +12,7 @@ from typing import Literal
 import torch
 from torch import nn
 
+from ..types import RecurrentState
 from .norm import MultiHeadLayerNorm
 from .xlstm_mixed_config import xLSTMMixedConfig
 
@@ -268,28 +269,8 @@ class _FlashRNNLayer(nn.Module, ABC):
         slstm_state: torch.Tensor | None = None,
     ):
         """Perform a single recurrent update."""
-        batch_size, _, _ = x.shape
-
-        f_gate = self.fgate(x)
-        i_gate = self.igate(x)
-        zgate = self.zgate(x)
-        ogate = self.ogate(x)
-        gates = (
-            f_gate,
-            i_gate,
-            zgate,
-            ogate,
-        )
-        Wx = torch.stack(gates, dim=2)
-        Wx = Wx.reshape(*Wx.shape[:-1], self.config.num_heads, -1)
-
-        y, slstm_state = self.recurrence(Wx, states=self.get_state(slstm_state, batch_size, x))
-        y = y[0]
-
-        y = self.dropout(y)
-
-        out = self.group_norm(y)
-
+        slstm_state = self.get_state(slstm_state, x.shape[0], x)
+        out, (slstm_state,) = self.forward_with_state(x, (slstm_state,))
         return out, {"conv_state": conv_state, "slstm_state": slstm_state}
 
     def forward(
@@ -298,6 +279,18 @@ class _FlashRNNLayer(nn.Module, ABC):
         **kwargs,
     ) -> torch.Tensor:
         """Process a full sequence through the FlashRNN backend."""
+        out, _ = self.forward_with_state(x)
+        return out
+
+    def forward_with_state(
+        self, x: torch.Tensor, state: RecurrentState | None = None
+    ) -> tuple[torch.Tensor, RecurrentState]:
+        """Process a sequence starting from ``state`` and also return the final state.
+
+        Splitting a sequence and passing the state from one part to the next gives the same output as
+        processing it at once. The state is ``(states,)`` with ``states`` of shape ``[4, B, 1, H, D]``;
+        ``None`` starts from zeros.
+        """
         f_gate = self.fgate(x)
         i_gate = self.igate(x)
         zgate = self.zgate(x)
@@ -311,13 +304,13 @@ class _FlashRNNLayer(nn.Module, ABC):
 
         Wx = torch.stack(gates, dim=2)
         Wx = Wx.reshape(*Wx.shape[:-1], self.config.num_heads, -1)
-        y, _ = self.recurrence(Wx)
+        y, last_state = self.recurrence(Wx, states=None if state is None else state[0])
         y = y[0]
 
         y = self.dropout(y)
 
         out = self.group_norm(y)
-        return out
+        return out, (last_state,)
 
 
 class sLSTMFlashRNNLayer(_FlashRNNLayer):

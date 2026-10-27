@@ -20,7 +20,7 @@ from .component.variate_mixing_block import (
     TimeMixerConfig,
     VariateMixerConfig,
 )
-from .types import TimeseriesType
+from .types import RecurrentState, TimeseriesType
 
 Device = Literal["cpu", "cuda", "mps"]
 MatmulPrecision = Literal["highest", "high", "medium"]
@@ -229,19 +229,57 @@ class TiRex2(nn.Module):
         for x in self._forward_layerwise(x, group_vector, target_mask, known_covariate_mask):
             pass
 
-        # Normalise at the end of the stack
-        x = self.stack_out_norm(x)
-        x = nn.functional.dropout(x, self.dropout, training=self.training)
-
-        x = self.output_patch_embedding(x)  # [B*V, L, D] -> [B*V, L, D_out]
-        x = torch.unflatten(x, -1, (self.num_quantiles, self.output_patch_size))  # [B*V, L, D_out] -> [B*V, L, Q, P]
-        x = torch.transpose(x, 1, 2)  # switch quantile and num_token_dimension  [B*V, L, Q, P] -> [B*V, Q, L, P]
+        x = self.decode(x)
 
         # reverse tokenization and scaling
         x = self.tokenizer.output_transform(x, tokenizer_state)  # [B*V, Q, L, P] -> [B*V, Q, T'], T' = T + padding
         x = self.scaler.re_scale(x, scaler_state)
 
         return x
+
+    def embed(self, x: torch.Tensor) -> torch.Tensor:
+        """Embed patches ``[B*V, L, P]`` of scaled values (NaN where missing) into tokens ``[B*V, L, D]``."""
+        # embed the tokens with the "is-present" indication (i.e., x_mask)
+        x_mask = (~torch.isnan(x)).to(x.dtype)
+        x = torch.nan_to_num(x, nan=self.nan_mask_value)
+        x = torch.cat((x, x_mask), dim=-1)
+        return self.input_patch_embedding(x)
+
+    def decode(self, x: torch.Tensor) -> torch.Tensor:
+        """Map stack outputs ``[B*V, L, D]`` to scaled quantile predictions ``[B*V, Q, L, P]``.
+
+        The prediction at token ``i`` is for the patch following it, i.e. patch ``i + 1``.
+        """
+        # Normalise at the end of the stack
+        x = self.stack_out_norm(x)
+        x = nn.functional.dropout(x, self.dropout, training=self.training)
+
+        x = self.output_patch_embedding(x)  # [B*V, L, D] -> [B*V, L, D_out]
+        x = torch.unflatten(x, -1, (self.num_quantiles, self.output_patch_size))  # [B*V, L, D_out] -> [B*V, L, Q, P]
+        return torch.transpose(x, 1, 2)  # switch quantile and num_token_dimension  [B*V, L, Q, P] -> [B*V, Q, L, P]
+
+    def forward_stack_with_state(
+        self,
+        x: torch.Tensor,
+        group_vector: torch.Tensor,
+        target_mask: torch.Tensor,
+        states: list[RecurrentState] | None = None,
+    ) -> tuple[torch.Tensor, list[RecurrentState]]:
+        """Causal pass of tokens ``x`` ``[B*V, L, D]`` through the stack, starting from one recurrent state per block.
+
+        Every variate runs forward in time only, as in :meth:`forward` without known covariates. A token sequence
+        can thus be processed in pieces, each call continuing from the states returned by the previous one, with
+        the same result as processing it at once. ``states=None`` starts from zeros.
+
+        Returns the stack output ``[B*V, L, D]`` and the final recurrent state of every block.
+        """
+        if states is None:
+            states = [None] * len(self.stack)
+        new_states = []
+        for block, state in zip(self.stack, states, strict=True):
+            x, state = block.forward_with_state(x, group_vector, target_mask, state)
+            new_states.append(state)
+        return x, new_states
 
     def _forward_layerwise(self, x, group_vector, target_mask, known_covariate_mask):
         # Run the input through the stack.
@@ -276,12 +314,7 @@ class TiRex2(nn.Module):
         # apply scaling and tokenize
         x, scaler_state = self.scaler.scale(x)
         x, tokenizer_state = self.tokenizer.input_transform(x)
-
-        # embed the tokens with the "is-present" indication (i.e., x_mask)
-        x_mask = (~torch.isnan(x)).to(x.dtype)
-        x = torch.nan_to_num(x, nan=self.nan_mask_value)
-        x = torch.cat((x, x_mask), dim=-1)
-        x = self.input_patch_embedding(x)
+        x = self.embed(x)
         return x, group_vector, target_mask, known_covariate_mask, scaler_state, tokenizer_state
 
     @torch.no_grad
