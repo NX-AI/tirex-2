@@ -73,23 +73,28 @@ class PostProcessor:
         """Pack each sample into one joint group and optionally difference trending targets."""
         # ``past_covariates`` / ``past_future_covariates`` are fed to the model
         # but always on their raw scale - they are never differenced.
-        prepared_targets = []
-        transform_params = []
-        diff_masks = []
+        target = [t.unsqueeze(0) if t.ndim == 1 else t for t in target]
+        lengths = [t.shape[-1] for t in target for _ in range(t.shape[0])] 
+        num_rows = [t.shape[0] for t in target]
+        max_len = max(lengths)
 
-        for t in target:
-            if t.ndim == 1:
-                t = t.unsqueeze(0)
+        # Pad if lengths of Targets is different
+        if all(length == max_len for length in lengths):
+            target_tensor = torch.cat(target, dim=0)
+        else:
+            target_tensor = torch.cat([pad(t, (max_len - t.shape[-1], 0), value=torch.nan) for t in target], dim=0)
 
-            params = self._diff_params(t)
-            should_diff = self._detect_trends(t) if tta_diff else [False] * t.shape[0]
-            diff_t = self._diff_forward(t)[0] if any(should_diff) else t
+        params = self._diff_params(target_tensor)
+        should_diff = self._detect_trends(target_tensor, lengths) if tta_diff else torch.zeros(target_tensor.shape[0], dtype=torch.bool)
 
-            prepared_targets.append({"raw": t, "diff": diff_t})
-            transform_params.append(params)
-            diff_masks.append(should_diff)
+        row_left_pad = torch.tensor([max_len - length for length in lengths], device=target_tensor.device)
+        diff_t = self._diff_forward(target_tensor, row_left_pad) if should_diff.any() else target_tensor
 
-        max_target_len = max(item["raw"].shape[-1] for item in prepared_targets)
+        # Differenced rows where a trend was found, raw rows otherwise: [rows, max_len], left-padded.
+        target_rows = torch.where(should_diff[:, None], diff_t, target_tensor)
+        # Per-series metadata for transform_output, cut from the per-row results.
+        transform_params = [{"last_values": lv} for lv in params["last_values"].split(num_rows)]
+        diff_masks = [mask.tolist() for mask in should_diff.split(num_rows)]
 
         x = []
         group_vector = []
@@ -98,17 +103,12 @@ class PostProcessor:
         group_target_indices = {}
         group_row_is_diff = {}
 
-        for sample_idx, (target_item, diff_mask, pc, pfc) in enumerate(
-            zip(prepared_targets, diff_masks, past_covariates, past_future_covariates)
+        for sample_idx, (t_raw, sample_rows, diff_mask, pc, pfc) in enumerate(
+            zip(target, target_rows.split(num_rows), diff_masks, past_covariates, past_future_covariates)
         ):
-            t_raw = target_item["raw"]
-            t_diff = target_item["diff"]
-
-            # One joint group per sample: every target variate (differenced rows
-            # picked from ``t_diff``, the rest from ``t_raw``) plus its raw covariates.
-            diff_sel = torch.tensor(diff_mask, device=t_raw.device, dtype=torch.bool)
-            target_rows = torch.where(diff_sel.unsqueeze(-1), t_diff, t_raw)
-            V_t = target_rows.shape[0]
+            # One joint group per sample: its target rows (already left-padded to max_len,
+            # differenced where a trend was found) plus its raw covariates.
+            V_t = sample_rows.shape[0]
 
             pc_raw = pc if pc is not None else torch.empty(0, t_raw.shape[-1], device=t_raw.device, dtype=t_raw.dtype)
             pfc_raw = (
@@ -139,11 +139,11 @@ class PostProcessor:
             group_target_indices[next_group] = list(range(V_t))
             group_row_is_diff[next_group] = list(diff_mask)
 
-            left_pad = max_target_len - t_raw.shape[-1]
+            left_pad = max_len - t_raw.shape[-1]
             right_pad = prediction_length
             item = torch.concat(
                 [
-                    pad(target_rows, (left_pad, right_pad), value=torch.nan),
+                    pad(sample_rows, (0, right_pad), value=torch.nan),
                     pad(pc_raw, (left_pad, right_pad), value=torch.nan),
                     pad(pfc_raw, (left_pad, 0), value=torch.nan),
                 ],
@@ -154,7 +154,7 @@ class PostProcessor:
             target_mask.extend([True] * V_t + [False] * (V - V_t))
             group_vector.extend([next_group] * V)
 
-        device = prepared_targets[0]["raw"].device
+        device = target_tensor.device
         x = torch.concat(x, dim=0)
         group_vector = torch.tensor(group_vector, device=device, dtype=torch.float32)
         target_mask = torch.tensor(target_mask, device=device, dtype=torch.bool)
@@ -239,46 +239,56 @@ class PostProcessor:
 
         return [torch.stack(rows, dim=0) for rows in sample_rows]
 
-    def _detect_trends(self, x: torch.Tensor) -> list[bool]:
-        """Per-row trend flags from an ``ols_sigma`` fit on the last ``trend_window`` fraction."""
-        if x.ndim == 1:
-            x = x.unsqueeze(0)
+    def _detect_trends(self, x: torch.Tensor, lengths: list[int]) -> torch.Tensor:
+        """Per-row trend flags from an ``ols_sigma`` fit on the last ``trend_window`` fraction of each row.
 
-        results = []
-        for row in x:
-            window = max(1, round(self.cfg.trend_window * row.shape[-1]))
-            row = row[-window:]
-            mask = ~torch.isnan(row)
-            indices = torch.where(mask)[0].detach().cpu().numpy().astype(np.float64)
-            vals = row[mask].detach().cpu().numpy().astype(np.float64)
-            if len(vals) < 4:
-                results.append(False)
-                continue
-            score, r2 = self._ols_sigma_score(indices, vals, len(row))
-            results.append(score >= self.cfg.trend_threshold and r2 >= self.cfg.trend_min_r2)
-        return results
+        ``x`` is ``[rows, T]``, left-padded with NaN; ``lengths`` holds each row's length before padding.
+        Returns a bool tensor ``[rows]``.
+        """
+        width = x.shape[-1]
+        windows = [max(1, round(self.cfg.trend_window * length)) for length in lengths]
+        windows = torch.tensor(windows, dtype=torch.float64, device=x.device)
+
+        pos = torch.arange(width, dtype=torch.float64, device=x.device)[None, :] - (width - windows)[:, None]
+        values = x.to(torch.float64)
+        valid = (pos >= 0) & ~torch.isnan(values)
+        score, r2, std, n = self._ols_sigma_score(values, valid, pos, windows)
+        return (n >= 4) & (std >= 1e-12) & (score >= self.cfg.trend_threshold) & (r2 >= self.cfg.trend_min_r2)
 
     @staticmethod
-    def _ols_sigma_score(indices: np.ndarray, vals: np.ndarray, length: int) -> tuple[float, float]:
-        """Return ``(|slope_z| * length, r2)`` for an OLS fit on z-scored values."""
-        std = float(np.std(vals, ddof=1))
-        if std < 1e-12:
-            return 0.0, 0.0
-        z = (vals - np.mean(vals)) / std
-        coeffs = np.polyfit(indices, z, 1)
-        slope_z = float(coeffs[0])
-        predicted = coeffs[0] * indices + coeffs[1]
-        ss_res = float(np.sum((z - predicted) ** 2))
-        ss_tot = float(np.sum((z - np.mean(z)) ** 2))
-        r2 = 1.0 - ss_res / ss_tot if ss_tot > 1e-12 else 0.0
-        return abs(slope_z) * length, r2
+    def _ols_sigma_score(
+        values: torch.Tensor, valid: torch.Tensor, pos: torch.Tensor, windows: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        """``_ols_sigma_score`` for every row at once.
 
-    @classmethod
-    def _diff_forward(cls, x: torch.Tensor) -> tuple[torch.Tensor, dict]:
-        """First-order row-wise differencing, retaining last observed levels for inversion."""
-        diff = x[..., 1:] - x[..., :-1]
-        diff = torch.cat([torch.zeros_like(x[..., :1]), diff], dim=-1)
-        return diff, cls._diff_params(x)
+        values, pos: [rows, T] float64; valid: [rows, T] bool (in window and not NaN); windows: [rows].
+        Returns score, r2, std and the number of valid values per row, each [rows].
+        """
+        n = valid.sum(-1, keepdim=True)                                 # valid values per row
+        v = torch.where(valid, values, 0.0)                             # NaN / outside window -> 0
+        p = torch.where(valid, pos, 0.0)
+        dv = torch.where(valid, v - v.sum(-1, keepdim=True) / n, 0.0)   # centred values, 0 where invalid
+        dx = torch.where(valid, p - p.sum(-1, keepdim=True) / n, 0.0)   # centred positions
+        s_xv = (dx * dv).sum(-1)
+        s_xx = (dx * dx).sum(-1)
+        s_vv = (dv * dv).sum(-1)
+        n = n.squeeze(-1)
+        std = torch.sqrt(s_vv / (n - 1))                                # np.std(vals, ddof=1)
+        score = (s_xv / s_xx / std).abs() * windows                     # |slope_z| * len(row)
+        r2 = s_xv * s_xv / (s_xx * s_vv)                                # 1 - ss_res / ss_tot
+        return score, r2, std, n
+
+    @staticmethod
+    def _diff_forward(x: torch.Tensor, left_pad: torch.Tensor) -> torch.Tensor:
+        """First-order row-wise differencing of left-padded rows ``[rows, T]``.
+
+        ``left_pad`` holds each row's number of leading padding columns: the padding stays NaN and
+        each row's first real step is 0.
+        """
+        diff = torch.full_like(x, torch.nan)
+        diff[:, 1:] = x[:, 1:] - x[:, :-1]
+        diff[torch.arange(x.shape[0], device=x.device), left_pad] = 0.0
+        return diff
 
     @staticmethod
     def _diff_params(x: torch.Tensor) -> dict:
