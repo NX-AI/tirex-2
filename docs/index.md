@@ -48,6 +48,26 @@ for background and the [paper](https://arxiv.org/pdf/2607.01204) for details.
 - [Deployment](deployment.md) — the Docker-based HTTP/MQTT/MCP inference server.
 - [API reference](api/index.md) — generated reference for the public `tirex2` API.
 
+## Agent plugin
+
+Forecast time series without training or writing code in Claude Code or Codex using the TiRex-2 plugin:
+
+=== "Claude Code"
+
+    ```bash
+    claude plugin marketplace add NX-AI/tirex-2
+    claude plugin install tirex2@tirex2-plugins
+    ```
+
+=== "Codex"
+
+    ```bash
+    codex plugin marketplace add NX-AI/tirex-2
+    codex plugin add tirex2@tirex2-plugins
+    ```
+
+Start a new session and ask to forecast with TiRex-2.
+
 ## TiRex-2 PRO
 
 This repository contains NXAI's open-source release of TiRex-2. TiRex-2 PRO extends it with:

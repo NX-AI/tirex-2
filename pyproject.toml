@@ -57,7 +57,14 @@ platforms = [
 ]
 # security: exclude packages newer than 7 days
 exclude-newer = "7 days"
-requires-pixi = ">=0.67.0"
+requires-pixi = ">=0.82.1"
+
+# Emergency CA updates must bypass the normal seven-day cooldown.
+[tool.pixi.exclude-newer]
+ca-certificates = "0d"
+
+[tool.pixi.pypi-exclude-newer]
+certifi = "0d"
 
 [tool.pixi.pypi-options]
 # security: disable building wheels for dependencies
@@ -65,6 +72,7 @@ no-build = true
 
 [tool.pixi.dependencies]
 python = ">=3.11"
+ca-certificates = ">=2026.10.19"
 
 [tool.pixi.pypi-dependencies]
 tirex-2 = { path = ".", editable = true }

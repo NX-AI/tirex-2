@@ -4,57 +4,38 @@
 # -------------------------
 # Stage 1: Build
 # -------------------------
-FROM python:3.13-slim AS build
+FROM python:3.12-slim AS build
 
 ARG DEBIAN_FRONTEND=noninteractive
 
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
-
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        build-essential \
-        curl \
-        git && \
-    rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir torch==2.9.1 --index-url https://download.pytorch.org/whl/cpu
+# Bootstrap pip with the advisory SHA256 before fetching other packages.
+RUN python -m pip install --no-cache-dir --no-deps "pip @ https://files.pythonhosted.org/packages/3f/06/3e4420302363fbb71be3c7f35ce042f54bfca330e3e66b3a2e3c4cca579f/pip-26.2.2-py3-none-any.whl#sha256=fd7f4dfa8190e014013b9f08f3e973f4e4c26ffd179a204895533a7254813a70" && \
+    python -m pip install --no-cache-dir --upgrade "pip>=26.2.2" setuptools wheel && \
+    pip install --no-cache-dir torch==2.14.0 --index-url https://download.pytorch.org/whl/cpu
 
 COPY requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Remove pythoch cache and test folders
-RUN find /usr/local/lib/python3.13/site-packages -type d \
-        \( -name '__pycache__' -o -name tests -o -name test \) -prune -exec rm -rf {} +
-
-# Remove packagesd, which are not used. Still to be tested
-# Transformers paackage is in xlSTM, but runs without errors
-RUN pip uninstall -y \
-        ipykernel ipython jedi debugpy \
-        jupyter-client jupyter-core pyzmq tornado nest-asyncio comm \
-        prompt_toolkit pygments traitlets matplotlib-inline stack-data executing \
-        asttokens parso pexpect ptyprocess decorator wcwidth \
-        joypy seaborn \
-        matplotlib pillow fonttools contourpy kiwisolver cycler pyparsing \
-        scipy pandas pytz tzdata \
-        transformers tokenizers safetensors regex \
-    || true
-
+# Bundle the default checkpoint without loading the model or requiring a GPU.
+RUN hf download NX-AI/TiRex-2 config.json model.safetensors \
+    --local-dir /opt/models/tirex2 && \
+    test -f /opt/models/tirex2/config.json && \
+    test -f /opt/models/tirex2/model.safetensors
 
 # -------------------------
 # --- Stage 2: Runtime
 # -------------------------
-FROM python:3.13-slim
+FROM python:3.12-slim
 
 ARG DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends curl \
-    g++ \
+    g++ ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 # Bring in packages installed in build stage
@@ -73,6 +54,10 @@ COPY THIRD-PARTY-LICENSES.md .
 
 # Copy app code; keep a single COPY with chown
 COPY --chown=appuser:appuser app/ ./app/
+
+# Load the bundled checkpoint locally, including when running without network access.
+COPY --from=build --chown=appuser:appuser /opt/models/tirex2 /opt/models/tirex2
+ENV MODEL_PATH=/opt/models/tirex2
 
 USER appuser
 EXPOSE 8000

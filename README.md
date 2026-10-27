@@ -78,6 +78,26 @@ Pixi selects a compatible platform automatically (PyTorch w/ CUDA 13.0 for Linux
 
 See the [FAQ](https://nx-ai.github.io/tirex-2/faq/) in the documentation.
 
+## Agent plugin
+
+Forecast time series without training or writing code in Claude Code or Codex using the TiRex-2 plugin:
+
+**Claude Code**
+
+```bash
+claude plugin marketplace add NX-AI/tirex-2
+claude plugin install tirex2@tirex2-plugins
+```
+
+**Codex**
+
+```bash
+codex plugin marketplace add NX-AI/tirex-2
+codex plugin add tirex2@tirex2-plugins
+```
+
+Start a new session and ask to forecast with TiRex-2.
+
 ## Getting started
 
 The most easy way for you to get started is by checking out our ["Getting Started" notebook](examples/getting_started.ipynb). Moreover, you can jump straight into testing out TiRex using [Google Colab](https://colab.research.google.com/github/NX-AI/tirex-2/blob/main/examples/getting_started.ipynb). If you have cloned this repository, you can also easily start the notebook via Pixi by running:

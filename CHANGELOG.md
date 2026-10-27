@@ -6,6 +6,8 @@ All notable changes to TiRex-2 are documented here.
 
 ### Improvements
 
+- ⭐️🤖 **Forecasting skill**: Added a forecasting skill with Claude Code and Codex plugins, including dataframe and tensor examples in [#84](https://github.com/NX-AI/tirex-2/pull/84), contributed by [Zhihao Dai](https://github.com/daidahao).
+- ⭐️📦 **Offline Docker images**: Docker images for CPU/GPU inference servers now include the default model weights for offline deployment in [#82](https://github.com/NX-AI/tirex-2/pull/82), contributed by [Zhihao Dai](https://github.com/daidahao).
 - ⭐️🚀 Faster CUDA inference: CUDA graphs by default for up to 32 series (up to 5x faster at small batch sizes, `load_model(..., cuda_graphs=False)` to disable), and the sLSTM recurrence now runs on [slstm-kernels](https://github.com/NX-AI/slstm-kernels) (Triton on CUDA, PyTorch on CPU/MPS and without Triton), which keeps its states in float32 and is up to 7x faster than FlashRNN. GIFT-Eval and fev-bench scores are unchanged. FlashRNN and `mlstm_kernels` are no longer dependencies, and no CUDA Toolkit is needed. The sLSTM gate and mLSTM input projections run as one matmul each; older checkpoints are converted on load. `pad_context=False` now pads to a multiple of 4 patches, contributed by [Martin Loretz](https://github.com/martinloretzzz).
 - `load_model` no longer loads the legacy `model-config.yaml` and `model.ckpt` files: use `tirex-2<=0.4.0` for them, or convert them with `scripts/convert_checkpoint.py`. PyYAML is no longer a dependency, contributed by [Martin Loretz](https://github.com/martinloretzzz).
 
@@ -15,12 +17,17 @@ All notable changes to TiRex-2 are documented here.
 
 ### Security and CI
 
+- Added plugin CI checks for manifest validation, Codex installation, package contents, and version bumps in [#100](https://github.com/NX-AI/tirex-2/pull/100), contributed by [Zhihao Dai](https://github.com/daidahao).
+- Updated CA certificates and CI tooling for the eMudhra/emSign security incident in [#83](https://github.com/NX-AI/tirex-2/pull/83), contributed by [Zhihao Dai](https://github.com/daidahao).
+- Simplified Docker image builds and consolidated CI to test CPU/GPU images before publishing in [#82](https://github.com/NX-AI/tirex-2/pull/82), contributed by [Zhihao Dai](https://github.com/daidahao).
+
 ## [0.4.0] - 2026-10-20
 
 ### Improvements
 
+- ⭐️🏋 **Default `safetensors` weights**: All checkpoints ship model configuration and weights in `json` and `safetensors` formats. `load_model` now loads from `config.json` and `model.safetensors`, which avoids unpickling and is faster. The legacy `yaml` and `ckpt` files are deprecated with a `FutureWarning` in [#55](https://github.com/NX-AI/tirex-2/pull/55), contributed by [Suad0](https://github.com/Suad0).
+    - ‼️ Legacy yaml and ckpt formats will no longer be supported from v0.5.0 onwards.
 - Removed the `xlstm` dependency to reduce the package footprint, in [#71](https://github.com/NX-AI/tirex-2/pull/71), contributed by [Martin Loretz](https://github.com/martinloretzzz).
-- **Default `safetensors` weights**: All checkpoints ship model configuration and weights in `json` and `safetensors` formats. `load_model` now loads from `config.json` and `model.safetensors`, which avoids unpickling and is faster. The legacy `yaml` and `ckpt` files are deprecated with a `FutureWarning` in [#55](https://github.com/NX-AI/tirex-2/pull/55), contributed by [Suad0](https://github.com/Suad0).
 
 ### Documentation and development
 
