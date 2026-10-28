@@ -7,7 +7,7 @@ import os
 import threading
 import time
 from collections import deque
-from concurrent.futures import Future, ProcessPoolExecutor
+from concurrent.futures import Executor, Future, ProcessPoolExecutor
 from concurrent.futures.process import BrokenProcessPool
 from dataclasses import dataclass, field
 
@@ -15,6 +15,7 @@ import numpy as np
 import torch
 
 from app.config import Settings
+from app.utils import cpu_quota
 from tirex2 import ForecastModel, TimeseriesType, load_model
 
 Series = tuple[np.ndarray, np.ndarray | None, np.ndarray | None]
@@ -33,27 +34,15 @@ class Request:
 
 
 class ModelPool:
-    def __init__(self, settings: Settings):
+    def __init__(self, settings: Settings, executor: Executor | None = None):
         self.max_queue_wait = settings.max_queue_wait_s
         self.max_worker_batch_size = settings.max_worker_batch_size
         self.max_request_batch_size = settings.max_request_batch_size
-        num_workers = settings.model_workers
-        ctx = mp.get_context("spawn")
-        worker_indices = ctx.Queue()
-        for index in range(num_workers):
-            worker_indices.put(index)
-        self.executor = ProcessPoolExecutor(
-            num_workers,
-            mp_context=ctx,
-            initializer=_init_worker,
-            initargs=(settings, worker_indices, ctx.Barrier(num_workers)),
-        )
-        for started in [self.executor.submit(_noop) for _ in range(num_workers)]:
-            started.result()
+        self.executor = executor or _start_workers(settings)
 
         self.requests: deque[Request] = deque()
         self.requests_changed = threading.Condition()
-        for _ in range(num_workers):
+        for _ in range(settings.model_workers):
             threading.Thread(target=self._batch_loop, daemon=True).start()
 
     async def predict(self, contexts: list[TimeseriesType], prediction_length: int) -> list[np.ndarray]:
@@ -144,6 +133,23 @@ def _to_timeseries(series: Series) -> TimeseriesType:
     return TimeseriesType(*(to_tensor(x) for x in series))
 
 
+def _start_workers(settings: Settings) -> ProcessPoolExecutor:
+    num_workers = settings.model_workers
+    ctx = mp.get_context("spawn")
+    worker_indices = ctx.Queue()
+    for index in range(num_workers):
+        worker_indices.put(index)
+    executor = ProcessPoolExecutor(
+        num_workers,
+        mp_context=ctx,
+        initializer=_init_worker,
+        initargs=(settings, worker_indices, ctx.Barrier(num_workers)),
+    )
+    for started in [executor.submit(_noop) for _ in range(num_workers)]:
+        started.result()
+    return executor
+
+
 _model: ForecastModel | None = None
 _max_worker_batch_size: int | None = None
 
@@ -153,7 +159,8 @@ def _init_worker(settings: Settings, worker_indices, all_ready):
     _max_worker_batch_size = settings.max_worker_batch_size
     index = worker_indices.get()
     if settings.model_device == "cpu":
-        torch.set_num_threads(max(1, torch.get_num_threads() // settings.model_workers))
+        cpus = min(torch.get_num_threads(), cpu_quota() or torch.get_num_threads())
+        torch.set_num_threads(max(1, cpus // settings.model_workers))
     elif settings.model_device == "cuda":
         # Not "cuda:<index>": tirex2 only uses its Triton kernels for the device "cuda".
         torch.cuda.set_device(index % torch.cuda.device_count())

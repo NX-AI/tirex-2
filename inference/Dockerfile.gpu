@@ -60,8 +60,7 @@ RUN mkdir -p /var/cache/triton /var/cache/torchinductor /var/cache/torch_extensi
 ENV TRITON_CACHE_DIR=/var/cache/triton \
     TORCHINDUCTOR_CACHE_DIR=/var/cache/torchinductor \
     TORCH_EXTENSIONS_DIR=/var/cache/torch_extensions \
-    MODEL_DEVICE=cuda \
-    MODEL_COMPILE=1
+    MODEL_DEVICE=cuda
 
 # Load the bundled checkpoint locally, including when running without network access.
 COPY --from=build --chown=ubuntu:ubuntu /opt/models/tirex2 /opt/models/tirex2
