@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     model_path: str = "NX-AI/TiRex-2"
     model_device: str = "cpu"
     model_workers: int = 1
+    max_queue_wait_s: float = 8.0
 
     http_port: int = 8000
     http_host: str = "0.0.0.0"

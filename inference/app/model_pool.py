@@ -1,11 +1,12 @@
 # Copyright (c) NXAI GmbH.
 # Licensed under the Apache License, Version 2.0; see LICENSE for details.
 
+import asyncio
 import multiprocessing as mp
 import os
 import queue
 import threading
-from collections import defaultdict
+import time
 from concurrent.futures import Future, ProcessPoolExecutor
 from concurrent.futures.process import BrokenProcessPool
 from dataclasses import dataclass, field
@@ -19,15 +20,21 @@ from tirex2 import ForecastModel, TimeseriesType, load_model
 Series = tuple[np.ndarray, np.ndarray | None, np.ndarray | None]
 
 
+class QueueFullError(Exception):
+    pass
+
+
 @dataclass
 class Request:
     series: list[Series]
     prediction_length: int
     result: Future = field(default_factory=Future)
+    queued_at: float = field(default_factory=time.monotonic)
 
 
 class ModelPool:
     def __init__(self, settings: Settings):
+        self.max_queue_wait = settings.max_queue_wait_s
         num_workers = settings.model_workers
         ctx = mp.get_context("spawn")
         worker_indices = ctx.Queue()
@@ -46,18 +53,33 @@ class ModelPool:
         for _ in range(num_workers):
             threading.Thread(target=self._batch_loop, daemon=True).start()
 
-    def predict(self, contexts: list[TimeseriesType], prediction_length: int) -> list[np.ndarray]:
+    async def predict(self, contexts: list[TimeseriesType], prediction_length: int) -> list[np.ndarray]:
+        if prediction_length < 1:
+            raise ValueError(f"prediction_length must be >= 1, got {prediction_length}.")
+        if self._oldest_wait() > self.max_queue_wait:
+            raise QueueFullError("The server is overloaded, try again later.")
         request = Request([_to_series(c) for c in contexts], prediction_length)
         self.requests.put(request)
-        return request.result.result()
+        return await asyncio.wrap_future(request.result)
+
+    def _oldest_wait(self) -> float:
+        try:
+            return time.monotonic() - self.requests.queue[0].queued_at
+        except IndexError:
+            return 0.0
 
     def _batch_loop(self):
         while True:
-            by_length = defaultdict(list)
+            requests = []
             for request in self._take_batch():
-                by_length[request.prediction_length].append(request)
-            for prediction_length, requests in by_length.items():
-                self._forecast(requests, prediction_length)
+                if not request.result.set_running_or_notify_cancel():
+                    continue
+                if time.monotonic() - request.queued_at > self.max_queue_wait:
+                    request.result.set_exception(QueueFullError("The server is overloaded, try again later."))
+                else:
+                    requests.append(request)
+            if requests:
+                self._forecast(requests)
 
     def _take_batch(self) -> list[Request]:
         batch = [self.requests.get()]
@@ -67,8 +89,13 @@ class ModelPool:
             except queue.Empty:
                 return batch
 
-    def _forecast(self, requests: list[Request], prediction_length: int):
-        series = [s for request in requests for s in request.series]
+    def _forecast(self, requests: list[Request]):
+        prediction_length = max(request.prediction_length for request in requests)
+        series = [
+            _pad_future_covariates(s, request.prediction_length, prediction_length)
+            for request in requests
+            for s in request.series
+        ]
         try:
             forecasts = self.executor.submit(_forecast_in_worker, series, prediction_length).result()
         except BrokenProcessPool:
@@ -79,14 +106,23 @@ class ModelPool:
                 requests[0].result.set_exception(e)
             else:
                 for request in requests:
-                    self._forecast([request], prediction_length)
+                    self._forecast([request])
             return
 
         start = 0
         for request in requests:
             end = start + len(request.series)
-            request.result.set_result(forecasts[start:end])
+            request.result.set_result([f[..., : request.prediction_length] for f in forecasts[start:end]])
             start = end
+
+
+def _pad_future_covariates(series: Series, prediction_length: int, padded_length: int) -> Series:
+    target, past_covariates, future_covariates = series
+    length = target.shape[-1] + prediction_length
+    if future_covariates is None or future_covariates.shape[-1] < length:
+        return series
+    padding = np.full((future_covariates.shape[0], padded_length - prediction_length), np.nan, np.float32)
+    return target, past_covariates, np.concatenate([future_covariates[..., :length], padding], axis=-1)
 
 
 def _to_series(ts: TimeseriesType) -> Series:
