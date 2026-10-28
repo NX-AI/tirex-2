@@ -176,7 +176,7 @@ resp = requests.post(
 print(resp.json())
 ```
 
-Every request is batched, so provide a list of timeseries as context, even when you only forecast a single timeseries. Bigger batch sizes are more efficient for the hardware, but too big batch sizes can lead to out of memory errors. Requests are also batched across clients: while the model runs, new requests collect in a queue, and as soon as the model is finished, all queued requests are forecast together in one batch. When the server is overloaded and requests wait longer than `MAX_QUEUE_WAIT_S` in the queue, new and waiting requests are rejected with HTTP status 503, so clients can retry later. With `MODEL_WORKERS` above 1, several model instances process batches in parallel, see [Choosing the number of workers](#choosing-the-number-of-workers).
+Every request is batched, so provide a list of timeseries as context, even when you only forecast a single timeseries. Bigger batch sizes are more efficient for the hardware. A request can contain at most `MAX_REQUEST_BATCH_SIZE` series. Requests are also batched across clients: while the model runs, new requests collect in a queue, and as soon as the model is finished, the queued requests are forecast together, in batches of up to `MAX_WORKER_BATCH_SIZE` series. When the server is overloaded and requests wait longer than `MAX_QUEUE_WAIT_S` in the queue, new and waiting requests are rejected with HTTP status 503, so clients can retry later. With `MODEL_WORKERS` above 1, several model instances process batches in parallel, see [Choosing the number of workers](#choosing-the-number-of-workers).
 
 The HTTP API also provides `/univariate/forecast/quantiles` and `/multivariate/forecast/quantiles`, where the 10, 20, 30, 40, 50 (mean), 60, 70, 80 and 90% quantiles are returned, using the same arguments as the `/univariate/forecast/mean` and `/multivariate/forecast/mean` endpoints respectively.
 
@@ -239,7 +239,9 @@ You can set these env variables when running the container using the -e env flag
 | **MODEL_PATH**                              | `/opt/models/tirex2` in Docker; `NX-AI/TiRex-2` otherwise | Local checkpoint directory or Hugging Face model ID. |
 | **MODEL_DEVICE**                            | `cpu`                                 | Device to run the model on (`cpu` or `cuda`).                   |
 | **MODEL_WORKERS**                           | `1`                                   | Number of worker processes, each with its own model instance. See [Choosing the number of workers](#choosing-the-number-of-workers). |
-| **MAX_QUEUE_WAIT_S**                        | `10`                                  | Requests are rejected with HTTP 503 once requests have waited longer than this in the queue. |
+| **MAX_QUEUE_WAIT_S**                        | `8`                                   | Requests are rejected with HTTP 503 once requests have waited longer than this in the queue. |
+| **MAX_WORKER_BATCH_SIZE**                   | `64`                                  | Maximum number of series a worker forecasts in one batch. |
+| **MAX_REQUEST_BATCH_SIZE**                  | `2048`                                | Maximum number of series in one request. Larger requests are rejected. |
 | **HTTP_HOST**                               | `0.0.0.0`                             | Host the HTTP server binds to.                                  |
 | **HTTP_PORT**                               | `8000`                                | Port the HTTP server binds to.                                  |
 | **MQTT_ENABLED**                            | `0`                                   | Enable MQTT client functionality (1=True, 0=False).             |

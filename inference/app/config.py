@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     model_device: str = "cpu"
     model_workers: int = 1
     max_queue_wait_s: float = 8.0
+    max_worker_batch_size: int = 64
+    max_request_batch_size: int = 2048
 
     http_port: int = 8000
     http_host: str = "0.0.0.0"
