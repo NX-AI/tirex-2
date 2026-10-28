@@ -7,6 +7,7 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     model_path: str = "NX-AI/TiRex-2"
     model_device: str = "cpu"
+    model_workers: int = 1
 
     http_port: int = 8000
     http_host: str = "0.0.0.0"
