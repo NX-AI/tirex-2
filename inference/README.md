@@ -176,7 +176,7 @@ resp = requests.post(
 print(resp.json())
 ```
 
-Every request is batched, so provide a list of timeseries as context, even when you only forecast a single timeseries. Bigger batch sizes are more efficient for the hardware, but too big batch sizes can lead to out of memory errors. There isn't any internal batching done, so the consumer of the API is responsible to call with an appropriate batch size for the hardware.
+Every request is batched, so provide a list of timeseries as context, even when you only forecast a single timeseries. Bigger batch sizes are more efficient for the hardware, but too big batch sizes can lead to out of memory errors. Requests are also batched across clients: while the model runs, new requests collect in a queue, and as soon as the model is finished, all queued requests with the same `prediction_length` are forecast together in one batch. With `MODEL_WORKERS` above 1, several model instances process batches in parallel, see [Choosing the number of workers](#choosing-the-number-of-workers).
 
 The HTTP API also provides `/univariate/forecast/quantiles` and `/multivariate/forecast/quantiles`, where the 10, 20, 30, 40, 50 (mean), 60, 70, 80 and 90% quantiles are returned, using the same arguments as the `/univariate/forecast/mean` and `/multivariate/forecast/mean` endpoints respectively.
 
@@ -238,6 +238,7 @@ You can set these env variables when running the container using the -e env flag
 | :------------------------------------------ | :------------------------------------ | :-------------------------------------------------------------- |
 | **MODEL_PATH**                              | `/opt/models/tirex2` in Docker; `NX-AI/TiRex-2` otherwise | Local checkpoint directory or Hugging Face model ID. |
 | **MODEL_DEVICE**                            | `cpu`                                 | Device to run the model on (`cpu` or `cuda`).                   |
+| **MODEL_WORKERS**                           | `1`                                   | Number of worker processes, each with its own model instance. See [Choosing the number of workers](#choosing-the-number-of-workers). |
 | **HTTP_HOST**                               | `0.0.0.0`                             | Host the HTTP server binds to.                                  |
 | **HTTP_PORT**                               | `8000`                                | Port the HTTP server binds to.                                  |
 | **MQTT_ENABLED**                            | `0`                                   | Enable MQTT client functionality (1=True, 0=False).             |
@@ -250,6 +251,13 @@ You can set these env variables when running the container using the -e env flag
 | **MQTT_TOPIC_UNIVARIATE_FORECAST**          | `tirex/univariate/forecast/request`   | Topic to subscribe to for univariate forecast requests.         |
 | **MQTT_TOPIC_MULTIVARIATE_FORECAST**        | `tirex/multivariate/forecast/request` | Topic to subscribe to for multivariate forecast requests.       |
 
+### Choosing the number of workers
+
+Each worker has its own model instance and processes batches in parallel.
+- **CPU:** the cores are split between the workers. Use 1 worker for the lowest latency of single requests, and about 8–16 cores per worker for the highest throughput with many concurrent requests.
+- **GPU:** the workers are spread over the GPUs. Use one worker per GPU.
+
+Use the [load test](#load-test) to find the best setting for your hardware and traffic.
 
 ## Build and run the docker container
 
@@ -317,6 +325,14 @@ $env:TEST_START_SERVER="0"
 $env:TEST_PORT="8000"
 pytest tests -s
 ```
+
+### Load Test:
+Start a container and run increasing numbers of concurrent clients against it. The script reports throughput, latency percentiles and errors:
+```bash
+python tests/loadtest.py --image ghcr.io/nx-ai/tirex2-cpu --concurrency 1 2 4 8 --duration 30
+```
+
+Use `--url http://localhost:8000` to target a server that is already running. See `python tests/loadtest.py --help` for the endpoint, batch size, context length, `--cpus` limit and error-rate threshold options.
 
 ## License
 
