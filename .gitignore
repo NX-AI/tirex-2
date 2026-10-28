@@ -9,6 +9,7 @@ output/
 *.egg-info
 /model/
 *.csv
+!docs/data/*.csv
 build/
 dist/
 /site/
