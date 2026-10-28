@@ -134,7 +134,7 @@ def test_invalid_request_does_not_fail_concurrent_requests(api_server):
         assert response.status_code == 200, response.text
         assert_forecast_close(response.json(), [REFERENCE.univariate[0, MEDIAN_QUANTILE_INDEX]])
     for response in responses[1::2]:
-        assert response.status_code == 500
+        assert response.status_code == 422
         assert "Future known covariates" in response.json()["error_message"]
 
 
@@ -142,5 +142,11 @@ def test_too_many_series_are_rejected(api_server):
     response = _post_raw(
         api_server, "/univariate/forecast/mean", {"context": [[1.0, 2.0, 3.0, 4.0]] * 2049, "prediction_length": 4}
     )
-    assert response.status_code == 500
+    assert response.status_code == 422
     assert "at most 2048 series" in response.json()["error_message"]
+
+
+def test_invalid_prediction_length_is_rejected(api_server):
+    response = _post_raw(api_server, "/univariate/forecast/mean", {"context": [TARGET], "prediction_length": 0})
+    assert response.status_code == 422
+    assert "prediction_length must be >= 1" in response.json()["error_message"]

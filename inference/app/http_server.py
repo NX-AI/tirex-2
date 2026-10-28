@@ -30,6 +30,11 @@ def queue_full_handler(request: Request, exc: QueueFullError) -> JSONResponse:
     return JSONResponse(status_code=503, content={"error_code": 503, "error_message": str(exc)})
 
 
+@app.exception_handler(ValueError)
+def invalid_input_handler(request: Request, exc: ValueError) -> JSONResponse:
+    return JSONResponse(status_code=422, content={"error_code": 422, "error_message": str(exc)})
+
+
 @app.exception_handler(Exception)
 def api_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     return JSONResponse(status_code=500, content={"error_code": 500, "error_message": exc.__str__()})
