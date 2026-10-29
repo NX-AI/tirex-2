@@ -9,6 +9,7 @@ All notable changes to TiRex-2 are documented here.
 - ⭐️🤖 **Forecasting skill**: Added a forecasting skill with Claude Code and Codex plugins, including dataframe and tensor examples in [#84](https://github.com/NX-AI/tirex-2/pull/84), contributed by [Zhihao Dai](https://github.com/daidahao).
 - ⭐️📦 **Offline Docker images**: Docker images for CPU/GPU inference servers now include the default model weights for offline deployment in [#82](https://github.com/NX-AI/tirex-2/pull/82), contributed by [Zhihao Dai](https://github.com/daidahao).
 - **Monotonic quantile forecasts**: Sort predictions across quantile levels to prevent quantile crossings in [#101](https://github.com/NX-AI/tirex-2/pull/101), contributed by [Martin Loretz](https://github.com/martinloretzzz).
+- ⭐️🚀 **Faster batched GPU forecasts**: Preprocessing now runs on the CPU and handles all target rows at once, with trend detection via a closed-form least-squares fit instead of `np.polyfit` per row. GPU forecasts of 32–512 series are 1.5–1.9x faster with identical outputs, in [#111](https://github.com/NX-AI/tirex-2/pull/111), contributed by [Daniil Yefimov](https://github.com/DaniilYefimov).
 
 ### Documentation and development
 
