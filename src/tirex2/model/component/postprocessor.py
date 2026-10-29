@@ -94,9 +94,7 @@ class PostProcessor:
         row_left_pad = torch.tensor([max_len - length for length in lengths], device=target_tensor.device)
         diff_t = self._diff_forward(target_tensor, row_left_pad) if should_diff.any() else target_tensor
 
-        # Differenced rows where a trend was found, raw rows otherwise: [rows, max_len], left-padded.
         target_rows = torch.where(should_diff[:, None], diff_t, target_tensor)
-        # Per-series metadata for transform_output, cut from the per-row results.
         transform_params = [{"last_values": lv} for lv in params["last_values"].split(num_rows)]
         diff_masks = [mask.tolist() for mask in should_diff.split(num_rows)]
 
