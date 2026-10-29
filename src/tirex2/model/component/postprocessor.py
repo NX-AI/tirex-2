@@ -74,7 +74,7 @@ class PostProcessor:
         # ``past_covariates`` / ``past_future_covariates`` are fed to the model
         # but always on their raw scale - they are never differenced.
         target = [t.unsqueeze(0) if t.ndim == 1 else t for t in target]
-        lengths = [t.shape[-1] for t in target for _ in range(t.shape[0])] 
+        lengths = [t.shape[-1] for t in target for _ in range(t.shape[0])]
         num_rows = [t.shape[0] for t in target]
         max_len = max(lengths)
 
@@ -85,7 +85,11 @@ class PostProcessor:
             target_tensor = torch.cat([pad(t, (max_len - t.shape[-1], 0), value=torch.nan) for t in target], dim=0)
 
         params = self._diff_params(target_tensor)
-        should_diff = self._detect_trends(target_tensor, lengths) if tta_diff else torch.zeros(target_tensor.shape[0], dtype=torch.bool)
+        should_diff = (
+            self._detect_trends(target_tensor, lengths)
+            if tta_diff
+            else torch.zeros(target_tensor.shape[0], dtype=torch.bool)
+        )
 
         row_left_pad = torch.tensor([max_len - length for length in lengths], device=target_tensor.device)
         diff_t = self._diff_forward(target_tensor, row_left_pad) if should_diff.any() else target_tensor
@@ -264,18 +268,18 @@ class PostProcessor:
         values, pos: [rows, T] float64; valid: [rows, T] bool (in window and not NaN); windows: [rows].
         Returns score, r2, std and the number of valid values per row, each [rows].
         """
-        n = valid.sum(-1, keepdim=True)                                 # valid values per row
-        v = torch.where(valid, values, 0.0)                             # NaN / outside window -> 0
+        n = valid.sum(-1, keepdim=True)  # valid values per row
+        v = torch.where(valid, values, 0.0)  # NaN / outside window -> 0
         p = torch.where(valid, pos, 0.0)
-        dv = torch.where(valid, v - v.sum(-1, keepdim=True) / n, 0.0)   # centred values, 0 where invalid
-        dx = torch.where(valid, p - p.sum(-1, keepdim=True) / n, 0.0)   # centred positions
+        dv = torch.where(valid, v - v.sum(-1, keepdim=True) / n, 0.0)  # centred values, 0 where invalid
+        dx = torch.where(valid, p - p.sum(-1, keepdim=True) / n, 0.0)  # centred positions
         s_xv = (dx * dv).sum(-1)
         s_xx = (dx * dx).sum(-1)
         s_vv = (dv * dv).sum(-1)
         n = n.squeeze(-1)
-        std = torch.sqrt(s_vv / (n - 1))                                # np.std(vals, ddof=1)
-        score = (s_xv / s_xx / std).abs() * windows                     # |slope_z| * len(row)
-        r2 = s_xv * s_xv / (s_xx * s_vv)                                # 1 - ss_res / ss_tot
+        std = torch.sqrt(s_vv / (n - 1))  # np.std(vals, ddof=1)
+        score = (s_xv / s_xx / std).abs() * windows  # |slope_z| * len(row)
+        r2 = s_xv * s_xv / (s_xx * s_vv)  # 1 - ss_res / ss_tot
         return score, r2, std, n
 
     @staticmethod

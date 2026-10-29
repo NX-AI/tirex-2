@@ -375,9 +375,7 @@ class TiRex2(nn.Module):
         device = next(self.parameters()).device
 
         context = [ts.target.cpu() for ts in timeseries]
-        past_covariates = [
-            ts.past_covariates.cpu() if ts.past_covariates is not None else None for ts in timeseries
-        ]
+        past_covariates = [ts.past_covariates.cpu() if ts.past_covariates is not None else None for ts in timeseries]
         past_future_covariates = []
         for ts in timeseries:
             if ts.future_covariates is None:
