@@ -28,8 +28,7 @@ LEGACY_PATTERNS = [LEGACY_CONFIG_FILENAME, CKPT_FILENAME]
 #: The last release that loads the legacy files.
 _LAST_LEGACY_RELEASE = "0.4.0"
 _LEGACY_CONVERTER_URL = (
-    "https://github.com/NX-AI/tirex-2/blob/"
-    "b16f761e160dab75bb8ea5b74ace008419c2d121/scripts/convert_checkpoint.py"
+    "https://github.com/NX-AI/tirex-2/blob/b16f761e160dab75bb8ea5b74ace008419c2d121/scripts/convert_checkpoint.py"
 )
 
 

@@ -11,11 +11,11 @@ from safetensors.torch import load_file as load_safetensors, save_model
 
 from tirex2._state_dict import expand_shared_duplicates, shared_tensor_groups
 from tirex2.base import (
+    _LEGACY_CONVERTER_URL,
     CKPT_FILENAME,
     CONFIG_FILENAME,
     LEGACY_CONFIG_FILENAME,
     WEIGHTS_FILENAME,
-    _LEGACY_CONVERTER_URL,
     _resolve_ckpt_dir,
     load_model,
 )
