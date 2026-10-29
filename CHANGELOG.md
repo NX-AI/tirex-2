@@ -8,7 +8,9 @@ All notable changes to TiRex-2 are documented here.
 
 - ⭐️🤖 **Forecasting skill**: Added a forecasting skill with Claude Code and Codex plugins, including dataframe and tensor examples in [#84](https://github.com/NX-AI/tirex-2/pull/84), contributed by [Zhihao Dai](https://github.com/daidahao).
 - ⭐️📦 **Offline Docker images**: Docker images for CPU/GPU inference servers now include the default model weights for offline deployment in [#82](https://github.com/NX-AI/tirex-2/pull/82), contributed by [Zhihao Dai](https://github.com/daidahao).
+- ‼️‼️ **Legacy checkpoint support removed**: Checkpoints must be in `json` and `safetensors` formats. Legacy `yaml` and `ckpt` formats are no longer supported onwards. Use `tirex-2<=0.4.0` for legacy checkpoints, or convert them locally with [this script](https://github.com/NX-AI/tirex-2/blob/main/scripts/convert_checkpoint.py), in [#112](https://github.com/NX-AI/tirex-2/pull/112), contributed by [Martin Loretz](https://github.com/martinloretzzz) and [Zhihao Dai](https://github.com/daidahao).
 - **Monotonic quantile forecasts**: Sort predictions across quantile levels to prevent quantile crossings in [#101](https://github.com/NX-AI/tirex-2/pull/101), contributed by [Martin Loretz](https://github.com/martinloretzzz).
+- PyYAML is no longer a direct runtime dependency; it remains explicitly required in the Pixi test and example environments, in [#112](https://github.com/NX-AI/tirex-2/pull/112), contributed by [Martin Loretz](https://github.com/martinloretzzz) and [Zhihao Dai](https://github.com/daidahao).
 
 ### Documentation and development
 

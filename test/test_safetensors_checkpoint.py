@@ -22,7 +22,6 @@ from tirex2.base import (
     load_model,
 )
 from tirex2.model.tirex2 import TiRex2
-from tirex2.model.types import TimeseriesType
 
 # ``scripts`` is repo tooling rather than a package, so make the converter importable.
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
@@ -183,22 +182,6 @@ def test_load_model_loads_converted_safetensors(tmp_path, aliased_model, small_m
     _assert_same_parameters(loaded.model, aliased_model)
 
 
-def test_safetensors_and_legacy_checkpoints_produce_identical_forecasts(tmp_path, aliased_model, small_model_kwargs):
-    config = small_model_kwargs("cpu", RECIPE)
-    legacy_dir = _write_legacy_checkpoint(tmp_path / "legacy", aliased_model, config)
-    safetensors_dir = tmp_path / "safetensors"
-    convert(str(legacy_dir), safetensors_dir, should_verify=False)
-
-    torch.manual_seed(1)
-    series = [TimeseriesType(target=torch.randn(1, 16), past_covariates=None, future_covariates=None)]
-
-    with pytest.warns(FutureWarning):
-        legacy_forecast = load_model(str(legacy_dir), device="cpu").model.predict(series, prediction_length=4)[0]
-    safetensors_forecast = load_model(str(safetensors_dir), device="cpu").model.predict(series, prediction_length=4)[0]
-
-    torch.testing.assert_close(safetensors_forecast, legacy_forecast, rtol=0, atol=0)
-
-
 def test_load_model_prefers_safetensors_over_the_legacy_checkpoint(
     tmp_path, aliased_model, build_small_model, small_model_kwargs
 ):
@@ -215,20 +198,6 @@ def test_load_model_prefers_safetensors_over_the_legacy_checkpoint(
     _assert_same_parameters(loaded.model, other_model)
 
 
-def test_load_model_prefers_json_over_the_legacy_config(tmp_path, aliased_model, small_model_kwargs):
-    # The two configs disagree on a setting, so the loaded model reveals which one was read.
-    config = small_model_kwargs("cpu", RECIPE)
-    _write_legacy_checkpoint(tmp_path, aliased_model, {**config, "tta_diff": False})
-    write_config({**config, "tta_diff": True}, tmp_path / CONFIG_FILENAME)
-
-    with pytest.warns(FutureWarning) as record:
-        loaded = load_model(str(tmp_path), device="cpu")
-
-    assert loaded.model.tta_diff is True
-    # Only the pickle is legacy here; the YAML config is ignored without a warning.
-    assert [CKPT_FILENAME in str(warning.message) for warning in record] == [True]
-
-
 def test_load_model_does_not_warn_for_safetensors(tmp_path, aliased_model, small_model_kwargs):
     _write_legacy_checkpoint(tmp_path, aliased_model, small_model_kwargs("cpu", RECIPE))
     convert(str(tmp_path), None, should_verify=False)
@@ -238,36 +207,31 @@ def test_load_model_does_not_warn_for_safetensors(tmp_path, aliased_model, small
         load_model(str(tmp_path), device="cpu")
 
 
-def test_load_model_warns_once_per_legacy_file(tmp_path, aliased_model, small_model_kwargs):
+def test_load_model_rejects_legacy_checkpoints_with_the_last_release_that_loads_them(
+    tmp_path, aliased_model, small_model_kwargs
+):
     _write_legacy_checkpoint(tmp_path, aliased_model, small_model_kwargs("cpu", RECIPE))
 
-    with pytest.warns(FutureWarning) as record:
-        load_model(str(tmp_path), device="cpu")
-
-    messages = [str(warning.message) for warning in record]
-    assert len(messages) == 2
-    assert LEGACY_CONFIG_FILENAME in messages[0] and CKPT_FILENAME in messages[1]
-    # Users are pointed at the Hub, not at repo tooling a pip install does not ship.
-    assert all("deprecated" in message and "Hugging Face" in message for message in messages)
-    assert not any("convert_checkpoint" in message for message in messages)
-    # Attributed to the caller of load_model, not to tirex2 internals.
-    assert {warning.filename for warning in record} == {__file__}
-
-
-def test_load_model_reports_both_filenames_when_no_weights_are_present(tmp_path, aliased_model, small_model_kwargs):
-    _write_legacy_checkpoint(tmp_path, aliased_model, small_model_kwargs("cpu", RECIPE))
-    (tmp_path / CKPT_FILENAME).unlink()
-
-    with pytest.raises(FileNotFoundError, match=rf"{WEIGHTS_FILENAME}.*{CKPT_FILENAME}"):
+    with pytest.raises(FileNotFoundError, match=r"tirex-2<=0\.4\.0.*convert_checkpoint\.py"):
         load_model(str(tmp_path), device="cpu")
 
 
-def test_load_model_reports_both_filenames_when_no_config_is_present(tmp_path, aliased_model, small_model_kwargs):
+def test_load_model_reports_the_missing_weights(tmp_path, aliased_model, small_model_kwargs):
     _write_legacy_checkpoint(tmp_path, aliased_model, small_model_kwargs("cpu", RECIPE))
-    (tmp_path / LEGACY_CONFIG_FILENAME).unlink()
+    convert(str(tmp_path), None, should_verify=False)
+    (tmp_path / WEIGHTS_FILENAME).unlink()
 
-    with pytest.raises(FileNotFoundError, match=rf"{CONFIG_FILENAME}.*{LEGACY_CONFIG_FILENAME}"):
+    with pytest.raises(FileNotFoundError, match=WEIGHTS_FILENAME):
         load_model(str(tmp_path), device="cpu")
+
+
+def test_load_model_reports_the_missing_config_without_a_legacy_hint(tmp_path, aliased_model):
+    kept, _ = drop_shared_duplicates(aliased_model, aliased_model.state_dict())
+    save_safetensors(kept, str(tmp_path / WEIGHTS_FILENAME))
+
+    with pytest.raises(FileNotFoundError, match=CONFIG_FILENAME) as error:
+        load_model(str(tmp_path), device="cpu")
+    assert "legacy" not in str(error.value)
 
 
 @pytest.fixture
@@ -310,33 +274,14 @@ def test_load_model_downloads_only_the_current_format_when_the_repo_has_both(
     _assert_same_parameters(loaded.model, aliased_model)
 
 
-def test_load_model_falls_back_to_downloading_the_legacy_checkpoint(
-    fake_hub, tmp_path, aliased_model, small_model_kwargs
-):
+def test_load_model_does_not_download_the_legacy_checkpoint(fake_hub, tmp_path, aliased_model, small_model_kwargs):
     repo, requests = fake_hub
     _write_legacy_checkpoint(repo, aliased_model, small_model_kwargs("cpu", RECIPE))
 
-    with pytest.warns(FutureWarning):
-        loaded = load_model("hf://NX-AI/TiRex-2", device="cpu")
+    with pytest.raises(FileNotFoundError):
+        load_model("hf://NX-AI/TiRex-2", device="cpu")
 
-    assert requests == [[CONFIG_FILENAME, WEIGHTS_FILENAME], [LEGACY_CONFIG_FILENAME, CKPT_FILENAME]]
-    _assert_same_parameters(loaded.model, aliased_model)
-
-
-def test_load_model_downloads_only_the_legacy_files_that_have_no_replacement(
-    fake_hub, tmp_path, aliased_model, small_model_kwargs
-):
-    # A repo that gained safetensors before it gained a JSON config.
-    repo, requests = fake_hub
-    _write_legacy_checkpoint(repo, aliased_model, small_model_kwargs("cpu", RECIPE))
-    convert(str(repo), None, should_verify=False)
-    (repo / CONFIG_FILENAME).unlink()
-
-    with pytest.warns(FutureWarning, match=LEGACY_CONFIG_FILENAME):
-        loaded = load_model("NX-AI/TiRex-2", device="cpu")
-
-    assert requests == [[CONFIG_FILENAME, WEIGHTS_FILENAME], [LEGACY_CONFIG_FILENAME]]
-    _assert_same_parameters(loaded.model, aliased_model)
+    assert requests == [[CONFIG_FILENAME, WEIGHTS_FILENAME]]
 
 
 def test_convert_downloads_the_legacy_checkpoint_it_reads(fake_hub, tmp_path, aliased_model, small_model_kwargs):
@@ -378,15 +323,13 @@ def offline_hub_cache(tmp_path, aliased_model, small_model_kwargs):
     [[CONFIG_FILENAME, WEIGHTS_FILENAME], [CONFIG_FILENAME], [WEIGHTS_FILENAME]],
     ids=["legacy-only", "legacy-config", "legacy-weights"],
 )
-def test_load_model_uses_legacy_files_in_incomplete_offline_snapshot(offline_hub_cache, aliased_model, uncached):
+def test_load_model_rejects_legacy_files_in_incomplete_offline_snapshot(offline_hub_cache, aliased_model, uncached):
     snapshot, hf_kwargs = offline_hub_cache
     for name in uncached:
         (snapshot / name).unlink()
 
-    with pytest.warns(FutureWarning):
-        loaded = load_model("review/model", device="cpu", hf_kwargs=hf_kwargs)
-
-    _assert_same_parameters(loaded.model, aliased_model)
+    with pytest.raises((LocalEntryNotFoundError, FileNotFoundError)):
+        load_model("review/model", device="cpu", hf_kwargs=hf_kwargs)
 
 
 def test_offline_snapshot_without_either_weights_format_still_fails(offline_hub_cache):
