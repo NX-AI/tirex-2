@@ -21,7 +21,6 @@ from tirex2.base import (
     load_model,
 )
 from tirex2.model.tirex2 import TiRex2
-from tirex2.model.types import TimeseriesType
 
 # ``scripts`` is repo tooling rather than a package, so make the converter importable.
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
@@ -255,6 +254,20 @@ def offline_hub_cache(tmp_path, aliased_model, small_model_kwargs):
         },
     )
     return snapshot, {"cache_dir": str(tmp_path), "local_files_only": True}
+
+
+@pytest.mark.parametrize(
+    "uncached",
+    [[CONFIG_FILENAME, WEIGHTS_FILENAME], [CONFIG_FILENAME], [WEIGHTS_FILENAME]],
+    ids=["legacy-only", "legacy-config", "legacy-weights"],
+)
+def test_load_model_rejects_legacy_files_in_incomplete_offline_snapshot(offline_hub_cache, aliased_model, uncached):
+    snapshot, hf_kwargs = offline_hub_cache
+    for name in uncached:
+        (snapshot / name).unlink()
+
+    with pytest.raises((LocalEntryNotFoundError, FileNotFoundError)):
+        load_model("review/model", device="cpu", hf_kwargs=hf_kwargs)
 
 
 def test_offline_snapshot_without_either_weights_format_still_fails(offline_hub_cache):
