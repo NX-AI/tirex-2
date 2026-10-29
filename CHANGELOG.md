@@ -14,7 +14,7 @@ All notable changes to TiRex-2 are documented here.
 
 ### Documentation and development
 
-- Removed the legacy conversion script. Use the [archived version](https://github.com/NX-AI/tirex-2/blob/b16f761e160dab75bb8ea5b74ace008419c2d121/scripts/convert_checkpoint.py).
+- Removed the legacy conversion script in [#113](https://github.com/NX-AI/tirex-2/pull/113). Use the [archived version](https://github.com/NX-AI/tirex-2/blob/b16f761e160dab75bb8ea5b74ace008419c2d121/scripts/convert_checkpoint.py).
 
 
 ### Security and CI
