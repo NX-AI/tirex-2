@@ -5,9 +5,11 @@ from statistics import median
 
 import pytest
 import torch
+from safetensors.torch import save_file as save_safetensors
 from torch import nn
 
-from tirex2.base import CKPT_FILENAME, CONFIG_FILENAME, load_model
+from scripts.convert_checkpoint import drop_shared_duplicates
+from tirex2.base import CONFIG_FILENAME, WEIGHTS_FILENAME, load_model
 from tirex2.model.component.attention_block import (
     AttentionBlock,
     AttentionLayer,
@@ -74,7 +76,8 @@ def test_load_model_device_overrides_checkpoint_config(tmp_path, small_model_kwa
 
     with (tmp_path / CONFIG_FILENAME).open("w") as f:
         json.dump(checkpoint_config, f)
-    torch.save(model.state_dict(), tmp_path / CKPT_FILENAME)
+    weights, _ = drop_shared_duplicates(model, model.state_dict())
+    save_safetensors(weights, str(tmp_path / WEIGHTS_FILENAME))
 
     loaded = load_model(str(tmp_path), device="cpu")
 
@@ -103,7 +106,8 @@ def test_load_model_can_override_flex_attention(
 
     with (tmp_path / CONFIG_FILENAME).open("w") as f:
         json.dump(config, f)
-    torch.save(model.state_dict(), tmp_path / CKPT_FILENAME)
+    weights, _ = drop_shared_duplicates(model, model.state_dict())
+    save_safetensors(weights, str(tmp_path / WEIGHTS_FILENAME))
 
     loaded = load_model(str(tmp_path), device="cpu", use_flex_attention=override)
 
@@ -130,7 +134,8 @@ def test_load_model_passes_matmul_precision_from_checkpoint_config(tmp_path, sma
 
     with (tmp_path / CONFIG_FILENAME).open("w") as f:
         json.dump(checkpoint_config, f)
-    torch.save(model.state_dict(), tmp_path / CKPT_FILENAME)
+    weights, _ = drop_shared_duplicates(model, model.state_dict())
+    save_safetensors(weights, str(tmp_path / WEIGHTS_FILENAME))
 
     precision_calls = []
     monkeypatch.setattr(torch, "set_float32_matmul_precision", precision_calls.append)
