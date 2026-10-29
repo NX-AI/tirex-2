@@ -84,11 +84,11 @@ def slstm_pointwise(iraw, fraw, zraw, oraw, c, n, m):
         triton.Config({'B_BLOCK_SIZE': 2**i}, num_warps=w, num_stages=1)
         for i in range(6) for w in (4, 8, 16)
     ],
-    key=['B', 'S', 'NH', 'NG', 'HD', 'RESIDENT_WEIGHTS'],
-    prune_configs_by={"early_config_prune": lambda configs, nargs, **kwargs: [c for c in configs if c.kwargs["B_BLOCK_SIZE"] <= triton.next_power_of_2(nargs["B"])]},
+    key=['B_POW2', 'NH', 'NG', 'HD', 'RESIDENT_WEIGHTS'],
+    prune_configs_by={"early_config_prune": lambda configs, nargs, **kwargs: [c for c in configs if c.kwargs["B_BLOCK_SIZE"] <= nargs["B_POW2"]]},
 )
 @triton.jit
-def slstm_kernel(x_ptr, states_ptr, weight_ptr, bias_ptr, cu_seqlens_ptr, out, out_states, B: tl.constexpr, S: tl.constexpr, NH: tl.constexpr, NG: tl.constexpr, HD: tl.constexpr, IS_VARLEN: tl.constexpr, RESIDENT_WEIGHTS: tl.constexpr, B_BLOCK_SIZE: tl.constexpr):
+def slstm_kernel(x_ptr, states_ptr, weight_ptr, bias_ptr, cu_seqlens_ptr, out, out_states, B, S, B_POW2, NH: tl.constexpr, NG: tl.constexpr, HD: tl.constexpr, IS_VARLEN: tl.constexpr, RESIDENT_WEIGHTS: tl.constexpr, B_BLOCK_SIZE: tl.constexpr):
     pid = tl.program_id(axis=0)
     r = tl.arange(0, HD)[None, :]
     head_id = pid % NH
@@ -201,11 +201,7 @@ def slstm_triton_fw(
     out =torch.empty((Bx, S, NH, HD), dtype=x.dtype, device=x.device)
     out_states = torch.empty_like(states)
 
-    # S only describes the dense layout; passing 0 for varlen keeps the constexpr
-    # (and with it the compile/autotune cache) from churning on every packed length.
-    S_dense = 0 if cu_seqlens is not None else S
-
     grid = lambda meta: (triton.cdiv(B, meta["B_BLOCK_SIZE"]) * NH,)
-    slstm_kernel[grid](x, states, weight, bias, cu_seqlens, out, out_states, B, S_dense, NH, NG, HD, cu_seqlens is not None, resident_weights)
+    slstm_kernel[grid](x, states, weight, bias, cu_seqlens, out, out_states, B, S, triton.next_power_of_2(B), NH, NG, HD, cu_seqlens is not None, resident_weights)
 
     return out, out_states
