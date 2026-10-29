@@ -7,6 +7,7 @@ from typing import Any, Literal
 import torch
 from torch import nn
 
+from ..types import RecurrentState
 from .attention_block import AttentionBlock
 from .bi_xlstm import BiXLSTM
 from .xlstm_mixed_config import xLSTMMixedConfig
@@ -169,19 +170,38 @@ class MultivariateBlock(nn.Module):
         else:
             time_output, _ = _unwrap_output(self.time_mixer(x, target_mask=target_mask))
 
-        # Stage 2: Variate Mixing
+        return self._mix_variates(time_output, group_vector, target_mask), {}
+
+    def forward_with_state(
+        self,
+        x: torch.Tensor,
+        group_vector: torch.Tensor,
+        target_mask: torch.Tensor,
+        state: RecurrentState | None = None,
+    ) -> tuple[torch.Tensor, RecurrentState]:
+        """Causal pass over tokens ``x`` of shape ``[B*V, L, P]``, starting from the recurrent ``state``.
+
+        Every variate runs through the time mixer's forward cell only, so the output equals :meth:`forward`
+        without known covariates. The variate mixer attends across variates at each position independently, so
+        returning the final recurrent state is enough to process a sequence in pieces with the same result as
+        processing it at once.
+        """
+        time_output, state = self.time_mixer.forward_with_state(x, state)
+        return self._mix_variates(time_output, group_vector, target_mask), state
+
+    def _mix_variates(
+        self, x: torch.Tensor, group_vector: torch.Tensor | None, target_mask: torch.Tensor | None
+    ) -> torch.Tensor:
         # Transpose for variate mixing: [B*V, L, P] -> [L, B*V, P]
         # This treats L as the new batch dimension and mixes across B*V (all variates)
-        x_variate = time_output.permute(1, 0, 2)  # [L, B*V, P]
+        x_variate = x.permute(1, 0, 2)  # [L, B*V, P]
 
         variate_output, _ = _unwrap_output(
             self.variate_mixer(x_variate, group_vector=group_vector, target_mask=target_mask)
         )
 
         # Transpose back: [L, B*V, P] -> [B*V, L, P]
-        x = variate_output.permute(1, 0, 2)
-
-        return x, {}
+        return variate_output.permute(1, 0, 2)
 
     def _build_time_mixer(self, config: TimeMixerConfig, block_idx: int, num_blocks: int) -> nn.Module:
         """Instantiate time mixing model from configuration.

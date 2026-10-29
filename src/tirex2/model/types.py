@@ -5,6 +5,10 @@ from dataclasses import dataclass
 
 import torch
 
+# Final state of a recurrent cell, accepted back as its initial state to continue a sequence:
+# ``(c, n, m)`` for an mLSTM cell, ``(states,)`` for an sLSTM cell.
+RecurrentState = tuple[torch.Tensor, ...]
+
 
 @dataclass
 class TimeseriesType:

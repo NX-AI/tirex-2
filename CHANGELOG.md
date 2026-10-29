@@ -12,6 +12,7 @@ All notable changes to TiRex-2 are documented here.
 
 ### Documentation and development
 
+- Added a recurrent state API: `forward_with_state(...)` on the mLSTM/sLSTM cells, `BiXLSTM` and `MultivariateBlock`, and `TiRex2.forward_stack_with_state(...)`, so a sequence can be processed in pieces with the same result as at once. Factored `TiRex2.embed(...)`, `TiRex2.decode(...)` and `Scaler.scale_with(...)` out of the forward pass; batch forecasting is unchanged, contributed by [Suad0](https://github.com/Suad0).
 
 ### Security and CI
 
