@@ -122,8 +122,6 @@ pypi-build = ["pypi-build"]
 [tool.pixi.feature.test.pypi-dependencies]
 tirex-2 = { path = ".", editable = true, extras = ["gluonts", "fev"] }
 pytest = "*"
-# Reads legacy checkpoints in scripts/convert_checkpoint.py
-pyyaml = ">=6"
 # The dataframe adapter is backend-agnostic (narwhals is a core dependency), so the concrete
 # dataframe libraries are a test-only concern
 pandas = "*"

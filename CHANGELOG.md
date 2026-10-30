@@ -9,7 +9,7 @@ All notable changes to TiRex-2 are documented here.
 - ⭐️🤖 **Forecasting skill**: Added a forecasting skill with Claude Code and Codex plugins, including dataframe and tensor examples in [#84](https://github.com/NX-AI/tirex-2/pull/84), contributed by [Zhihao Dai](https://github.com/daidahao).
 - ⭐️📦 **Offline Docker images**: Docker images for CPU/GPU inference servers now include the default model weights for offline deployment in [#82](https://github.com/NX-AI/tirex-2/pull/82), contributed by [Zhihao Dai](https://github.com/daidahao).
 - ⭐️🚀 Faster CUDA inference: CUDA graphs by default for up to 32 series (up to 5x faster at small batch sizes, `load_model(..., cuda_graphs=False)` to disable), and the sLSTM recurrence now runs on [slstm-kernels](https://github.com/NX-AI/slstm-kernels) (Triton on CUDA, PyTorch on CPU/MPS and without Triton), which keeps its states in float32 and is up to 7x faster than FlashRNN. GIFT-Eval and fev-bench scores are unchanged. FlashRNN and `mlstm_kernels` are no longer dependencies, and no CUDA Toolkit is needed. The sLSTM gate and mLSTM input projections run as one matmul each; older checkpoints are converted on load. `pad_context=False` now pads to a multiple of 4 patches, contributed by [Martin Loretz](https://github.com/martinloretzzz).
-- ‼️‼️ **Legacy checkpoint support removed**: Checkpoints must be in `json` and `safetensors` formats. Legacy `yaml` and `ckpt` formats are no longer supported onwards. Use `tirex-2<=0.4.0` for legacy checkpoints, or convert them locally with [this script](https://github.com/NX-AI/tirex-2/blob/main/scripts/convert_checkpoint.py), in [#112](https://github.com/NX-AI/tirex-2/pull/112), contributed by [Martin Loretz](https://github.com/martinloretzzz) and [Zhihao Dai](https://github.com/daidahao).
+- ‼️‼️ **Legacy checkpoint support removed**: Checkpoints must be in `json` and `safetensors` formats. Legacy `yaml` and `ckpt` formats are no longer supported onwards. Use `tirex-2<=0.4.0` for legacy checkpoints, or convert them locally with [this script](https://github.com/NX-AI/tirex-2/blob/b16f761e160dab75bb8ea5b74ace008419c2d121/scripts/convert_checkpoint.py), in [#112](https://github.com/NX-AI/tirex-2/pull/112), contributed by [Martin Loretz](https://github.com/martinloretzzz) and [Zhihao Dai](https://github.com/daidahao).
 - **Monotonic quantile forecasts**: Sort predictions across quantile levels to prevent quantile crossings in [#101](https://github.com/NX-AI/tirex-2/pull/101), contributed by [Martin Loretz](https://github.com/martinloretzzz).
 - PyYAML is no longer a direct runtime dependency; it remains explicitly required in the Pixi test and example environments, in [#112](https://github.com/NX-AI/tirex-2/pull/112), contributed by [Martin Loretz](https://github.com/martinloretzzz) and [Zhihao Dai](https://github.com/daidahao).
 
@@ -17,6 +17,8 @@ All notable changes to TiRex-2 are documented here.
 ### Documentation and development
 
 - Simplified the model code: the FlashRNN sLSTM layer is replaced by `sLSTMLayer` in `slstm_block.py`, `xLSTMMixedConfig` and `xLSTMLargeConfig` are removed (`BiXLSTM` takes plain arguments), `conv_mLSTMLayerConfig` is renamed to `mLSTMLayerConfig`, and unused options are dropped from the feed-forward networks and norms. The CPU reference tests compare relative norms, as the sLSTM's bfloat16 rounding moves single values by up to 1e-3 between machines, contributed by [Martin Loretz](https://github.com/martinloretzzz).
+- Removed the legacy conversion script in [#113](https://github.com/NX-AI/tirex-2/pull/113). Use the [archived version](https://github.com/NX-AI/tirex-2/blob/b16f761e160dab75bb8ea5b74ace008419c2d121/scripts/convert_checkpoint.py).
+
 
 ### Security and CI
 
@@ -36,7 +38,7 @@ All notable changes to TiRex-2 are documented here.
 
 - Refactored the sLSTM recurrence interface to support future kernel implementations and decoupled its configuration from FlashRNN in [#70](https://github.com/NX-AI/tirex-2/pull/70), contributed by [Martin Loretz](https://github.com/martinloretzzz).
 - Added the Intended Use, Limitations and EU AI Act Notice (`INTENDED_USE.md`), linked from the README and the documentation, in [#67](https://github.com/NX-AI/tirex-2/pull/67), contributed by [Lukas Fischer](https://github.com/lukfischer) and [Yipeng Sun](https://github.com/sypsyp97).
-- Added [a script](https://github.com/NX-AI/tirex-2/tree/main/scripts/convert_checkpoint.py) to convert legacy checkpoints to new formats in [#55](https://github.com/NX-AI/tirex-2/pull/55), contributed by [Suad0](https://github.com/Suad0).
+- Added [a script](https://github.com/NX-AI/tirex-2/blob/b16f761e160dab75bb8ea5b74ace008419c2d121/scripts/convert_checkpoint.py) to convert legacy checkpoints to new formats in [#55](https://github.com/NX-AI/tirex-2/pull/55), contributed by [Suad0](https://github.com/Suad0).
 
 ## [0.3.1] - 2026-10-05
 

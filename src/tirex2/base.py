@@ -18,7 +18,7 @@ from .model.component.slstm_block import sLSTMLayer
 
 CONFIG_FILENAME = "config.json"
 WEIGHTS_FILENAME = "model.safetensors"
-#: Legacy YAML config and torch-pickle weights, no longer loaded; see ``scripts/convert_checkpoint.py``.
+#: Legacy YAML config and torch-pickle weights, no longer loaded; see _LEGACY_CONVERTER_URL.
 LEGACY_CONFIG_FILENAME = "model-config.yaml"
 CKPT_FILENAME = "model.ckpt"
 #: Files fetched from a Hugging Face repo, see :func:`_resolve_ckpt_dir`.
@@ -26,6 +26,9 @@ SAFETENSORS_PATTERNS = [CONFIG_FILENAME, WEIGHTS_FILENAME]
 LEGACY_PATTERNS = [LEGACY_CONFIG_FILENAME, CKPT_FILENAME]
 #: The last release that loads the legacy files.
 _LAST_LEGACY_RELEASE = "0.4.0"
+_LEGACY_CONVERTER_URL = (
+    "https://github.com/NX-AI/tirex-2/blob/b16f761e160dab75bb8ea5b74ace008419c2d121/scripts/convert_checkpoint.py"
+)
 
 
 def _resolve_ckpt_dir(
@@ -75,7 +78,7 @@ def _resolve_file(ckpt_dir: Path, filename: str, kind: str) -> Path:
         message += (
             f" {ckpt_dir} holds a legacy checkpoint ({LEGACY_CONFIG_FILENAME}, {CKPT_FILENAME}), which this "
             f"version no longer loads: use tirex-2<={_LAST_LEGACY_RELEASE} for it, or convert it with "
-            f"scripts/convert_checkpoint.py from the tirex-2 repository."
+            f"the archived conversion script at {_LEGACY_CONVERTER_URL}."
         )
     raise FileNotFoundError(message)
 
