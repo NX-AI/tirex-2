@@ -372,13 +372,10 @@ class TiRex2(nn.Module):
             )
             prediction_length = self.future_len
 
-        # retrieve device to compute on and move every input tensor onto it
         device = next(self.parameters()).device
 
-        context = [ts.target.to(device) for ts in timeseries]
-        past_covariates = [
-            ts.past_covariates.to(device) if ts.past_covariates is not None else None for ts in timeseries
-        ]
+        context = [ts.target.cpu() for ts in timeseries]
+        past_covariates = [ts.past_covariates.cpu() if ts.past_covariates is not None else None for ts in timeseries]
         past_future_covariates = []
         for ts in timeseries:
             if ts.future_covariates is None:
@@ -388,7 +385,7 @@ class TiRex2(nn.Module):
             future_covariates = ts.future_covariates
             if future_covariates.shape[-1] > expected_future_covariate_length:
                 future_covariates = future_covariates[..., :expected_future_covariate_length]
-            past_future_covariates.append(future_covariates.to(device))
+            past_future_covariates.append(future_covariates.cpu())
 
         batch, args, kwargs = self.postprocessor.transform_input(
             context,
