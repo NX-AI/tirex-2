@@ -2,12 +2,16 @@
 
 ??? question "How do I run TiRex-2 on CUDA?"
 
-    Install a CUDA build of PyTorch and pass `device="cuda"`; no CUDA Toolkit is needed. The
-    sLSTM and mLSTM recurrences run on Triton kernels, which PyTorch's Linux CUDA wheels ship
-    and which are compiled on first use (this needs a C compiler such as `gcc`). Without
-    Triton, e.g. with PyTorch's Windows wheels, TiRex-2 falls back to its PyTorch
-    implementations of both recurrences, which are slower but give the same forecasts up to
-    rounding.
+    On both platforms, you need a supported NVIDIA GPU, a compatible NVIDIA driver,
+    and a [CUDA build of PyTorch](https://pytorch.org/get-started/locally/).
+    Then load the model with `device="cuda"`. No separate CUDA Toolkit is needed.
+
+    - **Linux:** Install a C compiler such as `gcc`. PyTorch's CUDA wheels include
+      Triton, which compiles the fast recurrence kernels on first use.
+    - **Windows:** Standard PyTorch wheels do not include Triton, so TiRex-2 uses
+      slower PyTorch recurrence kernels. No C compiler is needed for this fallback.
+      For faster inference, try [triton-windows](https://github.com/triton-lang/triton-windows#installation),
+      following its installation guide to match your PyTorch version.
 
 ??? question "Which NVIDIA GPU architectures does TiRex-2 support?"
 
