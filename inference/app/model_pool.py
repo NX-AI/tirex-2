@@ -136,6 +136,7 @@ def _to_timeseries(series: Series) -> TimeseriesType:
 
 def _start_workers(settings: Settings) -> ProcessPoolExecutor:
     num_workers = settings.model_workers
+    print(f"Starting {num_workers} model workers and warming up...", flush=True)
     ctx = mp.get_context("spawn")
     worker_indices = ctx.Queue()
     for index in range(num_workers):
