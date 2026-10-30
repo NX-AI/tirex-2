@@ -44,7 +44,6 @@ requires-pixi = ">=0.82.1"
 
 [tool.pixi.pypi-exclude-newer]
 # Emergency updates here:
-torch = "1 day"
 
 [tool.pixi.pypi-options]
 # security: disable building wheels for dependencies
