@@ -12,10 +12,6 @@ If you have cloned the repository, start it locally via Pixi:
 pixi run notebook
 ```
 
-The `notebook` task uses the `examples` environment. Select a different named platform when
-needed, such as `--platform linux-64-cpu` for CPU-only Linux or
-`--platform linux-64-cuda-126` for CUDA 12.6. Platforms and environments are defined in
-[`pyproject.toml`](https://github.com/NX-AI/tirex-2/blob/main/pyproject.toml).
 
 ## Minimal usage: predicting a simple sine wave
 

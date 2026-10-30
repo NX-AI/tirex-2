@@ -97,7 +97,7 @@ torch = { version = "*", index = "https://pypi.org/simple" }
 default = []
 test = ["test", "fev", "gluonts"]
 examples = ["examples"]
-benchmark = ["benchmark", "fev", "gluonts"]
+benchmark = ["benchmark", "fev", "gluonts", "examples"]
 docs = ["docs"]
 pypi-build = ["pypi-build"]
 
