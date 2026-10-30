@@ -2,6 +2,7 @@
 # Licensed under the Apache License, Version 2.0; see LICENSE for details.
 
 import asyncio
+import inspect
 import multiprocessing as mp
 import os
 import threading
@@ -165,8 +166,13 @@ def _init_worker(settings: Settings, worker_indices, all_ready):
         # Not "cuda:<index>": tirex2 only uses its Triton kernels for the device "cuda".
         torch.cuda.set_device(index % torch.cuda.device_count())
 
-    _model = load_model(settings.model_path, device=settings.model_device)
-    _forecast_in_worker([(np.arange(2048, dtype=np.float32).reshape(1, -1), None, None)], prediction_length=32)
+    kwargs = {}
+    if "cuda_graphs" in inspect.signature(load_model).parameters:
+        kwargs["cuda_graphs"] = False
+    _model = load_model(settings.model_path, device=settings.model_device, **kwargs)
+    warmup_series = (np.arange(2048, dtype=np.float32).reshape(1, -1), None, None)
+    for batch_size in _warmup_batch_sizes(settings.max_worker_batch_size):
+        _forecast_in_worker([warmup_series] * batch_size, prediction_length=32)
     print(f"Worker {index} ready on {next(_model.parameters()).device}.", flush=True)
     all_ready.wait()
 
@@ -179,6 +185,11 @@ def _forecast_in_worker(series: list[Series], prediction_length: int) -> list[np
         output_type="numpy",
         batch_size=min(len(contexts), _max_worker_batch_size),
     )
+
+
+def _warmup_batch_sizes(max_batch_size: int) -> list[int]:
+    powers = [2**i for i in range(1, max_batch_size.bit_length())]
+    return sorted({1, max_batch_size, *powers, *(p - 1 for p in powers)})
 
 
 def _noop():
