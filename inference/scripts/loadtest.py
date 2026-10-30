@@ -8,10 +8,10 @@ over concurrency levels and reports throughput, latency percentiles and errors.
 
 Examples:
     # Start the CPU container and sweep concurrency 1, 4, 16
-    python tests/loadtest.py --image ghcr.io/nx-ai/tirex2-cpu --concurrency 1 4 16
+    python scripts/loadtest.py --image ghcr.io/nx-ai/tirex2-cpu --concurrency 1 4 16
 
     # Against an already running server
-    python tests/loadtest.py --url http://localhost:8000 --duration 60 --batch-size 32
+    python scripts/loadtest.py --url http://localhost:8000 --duration 60 --batch-size 32
 """
 
 import argparse

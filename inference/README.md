@@ -332,10 +332,10 @@ pytest tests -s
 ### Load Test:
 Start a container and run increasing numbers of concurrent clients against it. The script reports throughput, latency percentiles and errors:
 ```bash
-python tests/loadtest.py --image ghcr.io/nx-ai/tirex2-cpu --concurrency 1 2 4 8 --duration 30
+python scripts/loadtest.py --image ghcr.io/nx-ai/tirex2-cpu --concurrency 1 2 4 8 --duration 30
 ```
 
-Use `--url http://localhost:8000` to target a server that is already running. See `python tests/loadtest.py --help` for the endpoint, batch size, context length, `--cpus` limit and error-rate threshold options.
+Use `--url http://localhost:8000` to target a server that is already running. See `python scripts/loadtest.py --help` for the endpoint, batch size, context length, `--cpus` limit and error-rate threshold options.
 
 ## License
 
