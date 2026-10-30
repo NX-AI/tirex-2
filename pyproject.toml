@@ -10,30 +10,10 @@ license = { text = "Apache-2.0" }
 requires-python = ">=3.11"
 dependencies = [
 	"torch>=2.8.0",
-	"torch>=2.10.0; python_version >= '3.14'",
 	"numpy>=2.1.3",
-	"numpy>=2.3.3; python_version >= '3.14'",
 	"huggingface-hub>=0.35.3",
 	"safetensors>=0.6",
 	"narwhals>=2.0",
-]
-
-[project.optional-dependencies]
-examples = [
-	"matplotlib>=3.10.0",
-	"plotly",
-	"jupyterlab",
-]
-
-fev = [
-	"fev",
-	"datasets>=4.4.0,<5",
-	"pyarrow>=22.0.0",
-]
-
-gluonts = [
-	"gluonts>=0.16.2",
-	"pandas~=2.3.3",
 ]
 
 [build-system]
@@ -53,7 +33,7 @@ platforms = [
   { name = "win-64-cuda-126", platform = "win-64", cuda = "12.6" },
   { name = "linux-64-cpu", platform = "linux-64" },
   { name = "win-64-cpu", platform = "win-64" },
-  { name = "osx-arm64", platform = "osx-arm64" },
+  { name = "osx-arm64-macos14", platform = "osx-arm64", macos = "14.0" },
 ]
 # security: exclude packages newer than 7 days
 exclude-newer = "7 days"
@@ -65,13 +45,14 @@ ca-certificates = "0d"
 
 [tool.pixi.pypi-exclude-newer]
 certifi = "0d"
+torch = "1d"
 
 [tool.pixi.pypi-options]
 # security: disable building wheels for dependencies
 no-build = true
 
 [tool.pixi.dependencies]
-python = ">=3.11"
+python = ">=3.11,<3.15"
 ca-certificates = ">=2026.10.19"
 
 [tool.pixi.pypi-dependencies]
@@ -109,18 +90,18 @@ torch = { version = "*", index = "https://download.pytorch.org/whl/cu132" }
 torch = { version = "*", index = "https://download.pytorch.org/whl/cu126" }
 
 [tool.pixi.target.osx.pypi-dependencies]
-# resolve torch (cpu) for macOS platforms
-torch = { version = "*", index = "https://download.pytorch.org/whl/cpu" }
+# resolve torch from PyPI for macOS platforms
+torch = { version = "*", index = "https://pypi.org/simple" }
 
 [tool.pixi.environments]
 default = []
-test = ["test"]
+test = ["test", "fev", "gluonts"]
 examples = ["examples"]
+benchmark = ["benchmark", "fev", "gluonts"]
 docs = ["docs"]
 pypi-build = ["pypi-build"]
 
 [tool.pixi.feature.test.pypi-dependencies]
-tirex-2 = { path = ".", editable = true, extras = ["gluonts", "fev"] }
 pytest = "*"
 # The dataframe adapter is backend-agnostic (narwhals is a core dependency), so the concrete
 # dataframe libraries are a test-only concern
@@ -129,10 +110,21 @@ polars = ">=1.0"
 pyarrow = ">=15.0"
 
 [tool.pixi.feature.examples.pypi-dependencies]
-# examples/fevbench reads its task list from YAML
-pyyaml = ">=6"
-tirex-2 = { path = ".", editable = true, extras = ["examples", "gluonts", "fev"] }
+matplotlib = ">=3.10.0"
+plotly = "*"
+jupyterlab = "*"
+
+[tool.pixi.feature.fev.pypi-dependencies]
+fev = "*"
+datasets = ">=4.4.0,<5"
+
+[tool.pixi.feature.gluonts.pypi-dependencies]
+gluonts = ">=0.16.2"
+
+[tool.pixi.feature.benchmark.pypi-dependencies]
 toolz = ">=0.12.1"
+# examples/fevbench reads its task list from YAML
+pyyaml = ">=6.0"
 
 [tool.pixi.feature.docs.dependencies]
 python = ">=3.11,<3.14"
@@ -149,11 +141,11 @@ test = { cmd = "pytest test/", default-environment = "test" }
 notebook = { cmd = "jupyter lab examples/getting_started.ipynb", default-environment = "examples" }
 # benchmarking tasks:
 # requires the path to the gifteval storage and a model type; examples/gifteval is added to PYTHONPATH for its local helper modules
-gifteval = { cmd = "python examples/gifteval/run_gifteval.py", default-environment = "examples" }
-gifteval-download = { cmd = "hf download Salesforce/GiftEval --repo-type=dataset --local-dir ", default-environment = "examples" }
+gifteval = { cmd = "python examples/gifteval/run_gifteval.py", default-environment = "benchmark" }
+gifteval-download = { cmd = "hf download Salesforce/GiftEval --repo-type=dataset --local-dir ", default-environment = "benchmark" }
 # requires the path to the fev-bench storage
-fevbench = { cmd = "python examples/fevbench/run_fevbench.py", default-environment = "examples" }
-fevbench-download = { cmd = "hf download autogluon/fev_datasets --repo-type=dataset --local-dir ", default-environment = "examples" }
+fevbench = { cmd = "python examples/fevbench/run_fevbench.py", default-environment = "benchmark" }
+fevbench-download = { cmd = "hf download autogluon/fev_datasets --repo-type=dataset --local-dir ", default-environment = "benchmark" }
 # docs tasks:
 # preview the docs site locally
 docs = { cmd = "mkdocs serve", default-environment = "docs" }
@@ -166,7 +158,7 @@ python = ">=3.11,<3.14"
 [tool.pixi.feature.pypi-build.pypi-dependencies]
 build = "*"
 
-[tool.pixi.feature.examples.activation.env]
+[tool.pixi.feature.benchmark.activation.env]
 PYTHONPATH = "$PIXI_PROJECT_ROOT/examples/gifteval:$PYTHONPATH"
 
 [tool.pixi.target."*-cuda*".tasks]
