@@ -122,3 +122,36 @@ def test_gradients_reach_every_parameter_on_cuda(model):
     model(batch).sum().backward()
     missing = [name for name, p in model.named_parameters() if p.requires_grad and (p.grad is None or not p.grad.any())]
     assert not missing
+
+
+def test_cuda_graph_cache_miss_returns_warmup_without_replay(monkeypatch):
+    from tirex2.model.cuda_graph import CUDAGraphRunner
+
+    replays = []
+    replay = torch.cuda.CUDAGraph.replay
+
+    def counted_replay(graph):
+        replays.append(graph)
+        return replay(graph)
+
+    monkeypatch.setattr(torch.cuda.CUDAGraph, "replay", counted_replay)
+    runner = CUDAGraphRunner(lambda: lambda x: x.square() + 1, max_graphs=1)
+    x = torch.arange(8, device="cuda", dtype=torch.float32)
+    first = runner(x)
+    torch.testing.assert_close(first, x.square() + 1)
+    assert len(replays) == 0
+
+    x.add_(2)
+    second = runner(x)
+    torch.testing.assert_close(second, x.square() + 1)
+    assert len(replays) == 1
+    torch.testing.assert_close(first, torch.arange(8, device="cuda").square().float() + 1)
+
+    # A new shape evicts the old graph; both returned outputs must remain valid.
+    y = torch.arange(4, device="cuda", dtype=torch.float32)
+    torch.testing.assert_close(runner(y), y.square() + 1)
+    assert len(runner) == 1
+    assert len(replays) == 1
+    torch.testing.assert_close(runner(x), x.square() + 1)
+    assert len(replays) == 1
+    torch.testing.assert_close(second, x.square() + 1)

@@ -35,9 +35,13 @@ class CUDAGraphRunner:
     def __call__(self, x: torch.Tensor, *structure: torch.Tensor | None) -> torch.Tensor:
         key = (tuple(x.shape), x.dtype, x.device, *map(_key, structure))
         if key not in self._graphs:
-            self._graphs[key] = self._capture(x, structure)
+            self._graphs[key], warmup_output = self._capture(x, structure)
             if len(self._graphs) > self.max_graphs:
                 self._graphs.popitem(last=False)
+            # The warm-up already computed this input; capture only records operations.
+            # Protect its side-stream storage while the caller stream clones it.
+            warmup_output.record_stream(torch.cuda.current_stream(x.device))
+            return warmup_output.clone()
         self._graphs.move_to_end(key)
 
         graph, static_input, static_output, _ = self._graphs[key]
@@ -53,11 +57,11 @@ class CUDAGraphRunner:
         # Warm up outside the capture, which also runs lazy compilation and autotuning.
         self._stream.wait_stream(torch.cuda.current_stream(x.device))
         with torch.cuda.stream(self._stream):
-            fn(static_input)
+            warmup_output = fn(static_input)
         torch.cuda.current_stream(x.device).wait_stream(self._stream)
 
         graph = torch.cuda.CUDAGraph()
         with torch.cuda.graph(graph, pool=self._pool):
             static_output = fn(static_input)
         # The graph reads tensors by address: keep the structure and what fn closes over alive.
-        return graph, static_input, static_output, (constants, fn)
+        return (graph, static_input, static_output, (constants, fn)), warmup_output
