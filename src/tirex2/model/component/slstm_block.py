@@ -176,7 +176,10 @@ class sLSTMLayer(nn.Module):
 
         B, T, G, H, D = Wx.shape
         x = Wx.permute(0, 1, 3, 2, 4).contiguous()  # [B, T, H, G, D]
-        weight = R.permute(0, 2, 3, 1).to(torch.bfloat16, memory_format=torch.contiguous_format)  # [H, G, D_out, D_in]
+        # Enforce layout even when R is already BF16 and .to() returns the same view.
+        weight = (
+            R.permute(0, 2, 3, 1).to(torch.bfloat16, memory_format=torch.contiguous_format).contiguous()
+        )  # [H, G, D_out, D_in]
         bias = b.to(torch.float32).contiguous()
         if states is None:
             states = torch.zeros((B, H, G, D), dtype=torch.float32, device=Wx.device)

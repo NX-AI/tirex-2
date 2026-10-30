@@ -76,7 +76,8 @@ def test_cuda_graphs_are_not_used_with_gradients_training_or_after_moving(model)
 
 @pytest.mark.parametrize("D", [32, 128])
 @pytest.mark.parametrize("resident_weights", [True, False])
-def test_triton_slstm_matches_the_pytorch_implementation(D, resident_weights, monkeypatch):
+@pytest.mark.parametrize("weight_dtype", [torch.float32, torch.bfloat16])
+def test_triton_slstm_matches_the_pytorch_implementation(D, resident_weights, weight_dtype, monkeypatch):
     from tirex2.model.component.kernel import slstm_triton
 
     if resident_weights and 4 * D * D * 2 + slstm_triton.SMEM_HEADROOM > slstm_triton._max_shared_mem(0):
@@ -90,6 +91,7 @@ def test_triton_slstm_matches_the_pytorch_implementation(D, resident_weights, mo
     states = torch.randn(4, B, 1, H, D)
     states[2] = states[2].abs() + 1  # normalizer n >= 1
     Wx, R, b, states = (t.cuda() for t in (Wx, R, b, states))
+    R = R.to(weight_dtype)
 
     for s in (None, states):
         expected_y, expected_last = sLSTMLayer.slstm_kernels(Wx, R, b, s, backend="torch")
