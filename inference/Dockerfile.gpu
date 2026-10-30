@@ -20,7 +20,8 @@ RUN python -m pip install --no-cache-dir --no-deps "pip @ https://files.pythonho
     python -m pip install --no-cache-dir --upgrade "pip>=26.2.2" setuptools wheel
 
 COPY requirements.txt ./requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+# Pinned like Dockerfile.cpu: Triton 3.9 (torch 2.15) removed tl.make_block_ptr, which the mLSTM kernels still use.
+RUN pip install --no-cache-dir "torch==2.14.0" -r requirements.txt
 
 # Bundle the default checkpoint without loading the model or requiring a GPU.
 RUN hf download NX-AI/TiRex-2 config.json model.safetensors \
