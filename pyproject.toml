@@ -15,7 +15,6 @@ dependencies = [
 	"numpy>=2.3.3; python_version >= '3.14'",
 	"flashrnn>=1.0.8",
 	"mlstm_kernels>=2.0.6",
-	"PyYAML>=6",
 	"huggingface-hub>=0.35.3",
 	"safetensors>=0.6",
 	"narwhals>=2.0",
@@ -134,6 +133,8 @@ polars = ">=1.0"
 pyarrow = ">=15.0"
 
 [tool.pixi.feature.examples.pypi-dependencies]
+# examples/fevbench reads its task list from YAML
+pyyaml = ">=6"
 tirex-2 = { path = ".", editable = true, extras = ["examples", "gluonts", "fev"] }
 toolz = ">=0.12.1"
 
