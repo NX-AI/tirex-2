@@ -44,6 +44,7 @@ requires-pixi = ">=0.82.1"
 
 [tool.pixi.pypi-exclude-newer]
 # Emergency updates here:
+torch = "1 day"
 
 [tool.pixi.pypi-options]
 # security: disable building wheels for dependencies
@@ -52,6 +53,8 @@ no-build = true
 [tool.pixi.dependencies]
 python = ">=3.11,<3.15"
 ca-certificates = ">=2026.10.19"
+# huggingface-hub and fev require PyYAML
+pyyaml = { version = ">=6.0", channel = "conda-forge" }
 
 [tool.pixi.pypi-dependencies]
 tirex-2 = { path = ".", editable = true }
@@ -121,8 +124,6 @@ gluonts = { version = ">=0.16.2", env-markers = "python_version < '3.15'" }
 
 [tool.pixi.feature.benchmark.pypi-dependencies]
 toolz = ">=0.12.1"
-# examples/fevbench reads its task list from YAML
-pyyaml = ">=6.0"
 
 [tool.pixi.feature.docs.dependencies]
 python = ">=3.11,<3.14"
