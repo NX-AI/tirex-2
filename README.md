@@ -83,7 +83,7 @@ Start a new session and ask to forecast with TiRex-2.
 
 ## Getting started
 
-The most easy way for you to get started is by checking out our ["Getting Started" notebook](examples/getting_started.ipynb). Moreover, you can jump straight into testing out TiRex using [Google Colab](https://colab.research.google.com/github/NX-AI/tirex-2/blob/main/examples/getting_started.ipynb). If you have cloned this repository, you can also easily start the notebook via Pixi by running:
+The most easy way for you to get started is by checking out our ["Getting Started" notebook](examples/getting_started.ipynb). Moreover, you can jump straight into testing out TiRex using [Google Colab](https://colab.research.google.com/github/NX-AI/tirex-2/blob/main/examples/getting_started.ipynb). If you have cloned this repository, you can also easily start the notebook via [Pixi](https://pixi.prefix.dev/latest/#installation) by running:
 ```bash
 pixi run notebook
 ```
