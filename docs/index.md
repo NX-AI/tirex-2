@@ -38,10 +38,16 @@ for background and the [paper](https://arxiv.org/pdf/2607.01204) for details.
 - **Small active footprint** — TiRex-2 activates 38.4M parameters in univariate mode and an
   additional 44.1M parameters for multivariate forecasting.
 
+## Installation
+
+Install [PyTorch](https://pytorch.org/get-started/locally/) for your CPU or GPU, then TiRex-2:
+
+```bash
+pip install tirex-2
+```
+
 ## Where to go next
 
-- [Installation](getting-started/install.md) — `pip install tirex-2`, Pixi setup, and gated
-  Hugging Face weight access.
 - [Quickstart](getting-started/quickstart.md) — minimal sine-wave and covariate examples.
 - [How-to guides](how-to/forecasting.md) — univariate/multivariate forecasting, covariates in
   depth, and what streaming does (and doesn't) mean in this open-source release.

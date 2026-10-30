@@ -1,7 +1,7 @@
 # Plotting
 
 Requires either `matplotlib` or `plotly` to be installed, e.g. via
-`pip install "tirex-2[examples]"`.
+`pip install matplotlib plotly`.
 
 ::: tirex2.plotting.plot_multivariate
 

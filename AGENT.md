@@ -11,7 +11,7 @@ Use Pixi unless the user explicitly asks for conda/mamba.
 - The default Linux and Windows CUDA 13.0 platforms are `linux-64-cuda` and `win-64-cuda`.
 - CUDA 13.2 platforms end in `-cuda-132`; CUDA 12.6 platforms end in `-cuda-126`.
 - CPU-only platforms are `linux-64-cpu` and `win-64-cpu`.
-- The macOS platform is `osx-arm64`.
+- The macOS platform is `osx-arm64-macos14` (macOS 14 or newer).
 - Select a named platform with `--platform` (or `-p`) and an environment with `--environment` (or `-e`).
 
 Common commands:
@@ -44,7 +44,7 @@ forecast = model.forecast([ts], prediction_length=64, output_type="torch", batch
 
 For future-known covariates, pass `future_covariates` with shape `[num_covariates, context_length + prediction_length]`. Past-only covariates use `past_covariates` with shape `[num_covariates, context_length]`.
 
-Supported output types: `"torch"`, `"numpy"`, `"gluonts"`, and `"fev"` where the latter two require the optional dependencies/envs. Extra kwargs passed to `forecast(...)` are forwarded to `TiRex2.predict`, e.g. `tta_diff=False` or `tta_sign_flip=True`.
+Supported output types: `"torch"`, `"numpy"`, and `"fev"` where the latter two require the optional dependencies/envs. Extra kwargs passed to `forecast(...)` are forwarded to `TiRex2.predict`, e.g. `tta_diff=False` or `tta_sign_flip=True`.
 
 ## Local examples
 

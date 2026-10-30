@@ -50,29 +50,12 @@ multivariate forecasting with past and future covariates.
   for multivariate forecasting.
 
 ## Installation
-### Via Pip
+
+Install [PyTorch](https://pytorch.org/get-started/locally/) for your CPU or GPU, then TiRex-2:
+
 ```bash
 pip install tirex-2
 ```
-
-Install with additional dependencies:
-
-```bash
-pip install "tirex-2[examples,fev,gluonts]"
-```
-
-The Python package installation is currently only tested on Linux and macOS. Docker usage is documented separately and includes Linux, macOS, and Windows Docker Desktop instructions.
-
-### Via Pixi
-We use [Pixi](https://pixi.prefix.dev/latest/) for our development and benchmarking environment to ensure that it is set up correctly. Run the following command to install it on your machine (Linux/macOS):
-```bash
-# install Pixi
-curl -fsSL https://pixi.sh/install.sh | sh
-# install dependencies for TiRex-2
-pixi install
-```
-Pixi selects a compatible platform automatically (PyTorch w/ CUDA 13.0 for Linux/Windows, PyTorch w/ default for macOS), or you can choose one explicitly, for example `-p linux-64-cuda-126`. Both environments and platforms are defined in
-[`pyproject.toml`](pyproject.toml).
 
 ## FAQ
 
