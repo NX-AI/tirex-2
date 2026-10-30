@@ -39,13 +39,11 @@ platforms = [
 exclude-newer = "7 days"
 requires-pixi = ">=0.82.1"
 
-# Emergency CA updates must bypass the normal seven-day cooldown.
 [tool.pixi.exclude-newer]
-ca-certificates = "0d"
+# Emergency updates here:
 
 [tool.pixi.pypi-exclude-newer]
-certifi = "0d"
-torch = "1d"
+# Emergency updates here:
 
 [tool.pixi.pypi-options]
 # security: disable building wheels for dependencies
@@ -119,7 +117,7 @@ fev = "*"
 datasets = ">=4.4.0,<5"
 
 [tool.pixi.feature.gluonts.pypi-dependencies]
-gluonts = ">=0.16.2"
+gluonts = { version = ">=0.16.2", env-markers = "python_version < '3.15'" }
 
 [tool.pixi.feature.benchmark.pypi-dependencies]
 toolz = ">=0.12.1"
