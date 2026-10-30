@@ -9,7 +9,6 @@ import torch
 from huggingface_hub.errors import LocalEntryNotFoundError
 from safetensors.torch import load_file as load_safetensors, save_model
 
-from tirex2._state_dict import expand_shared_duplicates, shared_tensor_groups
 from tirex2.base import (
     _LEGACY_CONVERTER_URL,
     CKPT_FILENAME,
@@ -21,8 +20,8 @@ from tirex2.base import (
 )
 from tirex2.model.tirex2 import TiRex2
 
-# Both block types are needed: ``bi-mlstm`` contributes the ``rev_cell``/``fwd_cell``
-# module aliases and ``bi-slstm`` additionally the ``ParameterProxy`` parameter aliases.
+# Both block types: historical checkpoints stored aliases for the reverse cell
+# and the sLSTM recurrent kernel.
 RECIPE = ["small_mlstm", "small_slstm"]
 
 
@@ -32,11 +31,19 @@ def aliased_model(build_small_model) -> TiRex2:
     return build_small_model("cpu", recipe=RECIPE)
 
 
+def _legacy_state_dict(model: TiRex2) -> dict[str, torch.Tensor]:
+    """``model``'s state dict with the alias names older checkpoints also store."""
+    state_dict = model.state_dict()
+    aliases = {name.replace(".fwd_cell.", ".rev_cell."): t for name, t in state_dict.items() if ".fwd_cell." in name}
+    aliases |= {name.replace("._recurrent_kernel_", ".recurrent_kernel"): t for name, t in state_dict.items()}
+    return state_dict | aliases
+
+
 def _write_legacy_checkpoint(directory: Path, model: TiRex2, config: dict) -> Path:
     directory.mkdir(parents=True, exist_ok=True)
     # JSON is valid YAML; these files are only used to test legacy rejection.
     (directory / LEGACY_CONFIG_FILENAME).write_text(json.dumps(config))
-    torch.save(model.state_dict(), directory / CKPT_FILENAME)
+    torch.save(_legacy_state_dict(model), directory / CKPT_FILENAME)
     return directory
 
 
@@ -51,64 +58,6 @@ def _assert_same_parameters(actual: TiRex2, expected: TiRex2) -> None:
     assert actual_state.keys() == expected_state.keys()
     for name, tensor in expected_state.items():
         torch.testing.assert_close(actual_state[name], tensor, rtol=0, atol=0, msg=f"{name} differs")
-
-
-def test_shared_tensor_groups_are_derived_from_tensor_identity(aliased_model):
-    groups = shared_tensor_groups(aliased_model)
-    state_dict = aliased_model.state_dict()
-
-    assert groups, "the test model is expected to share tensors across state_dict names"
-    for group in groups:
-        assert len(group) > 1
-        assert all(name in state_dict for name in group)
-        # Every member is literally the same tensor object, which is why safetensors
-        # refuses to store them separately.
-        tensors = [state_dict[name] for name in group]
-        assert all(tensor.data_ptr() == tensors[0].data_ptr() for tensor in tensors)
-
-    # A name may only belong to one group.
-    names = [name for group in groups for name in group]
-    assert len(names) == len(set(names))
-
-
-def test_expand_restores_safetensors_shared_parameters(tmp_path, aliased_model):
-    state_dict = aliased_model.state_dict()
-
-    weights_file = tmp_path / WEIGHTS_FILENAME
-    save_model(aliased_model, str(weights_file))
-    kept = load_safetensors(weights_file)
-    dropped = set(state_dict) - set(kept)
-
-    assert dropped, "the test model is expected to have redundant alias names"
-    assert set(kept) | set(dropped) == set(state_dict)
-    assert not set(kept) & set(dropped)
-
-    restored = expand_shared_duplicates(aliased_model, kept)
-
-    assert restored.keys() == state_dict.keys()
-    for name, tensor in state_dict.items():
-        assert torch.equal(restored[name], tensor)
-
-
-def test_expand_shared_duplicates_rejects_alias_names_that_disagree(aliased_model):
-    state_dict = dict(aliased_model.state_dict())
-    canonical, duplicate = shared_tensor_groups(aliased_model)[0][:2]
-    state_dict[duplicate] = state_dict[canonical] + 1.0
-
-    with pytest.raises(ValueError, match="alias the same tensor"):
-        expand_shared_duplicates(aliased_model, state_dict)
-
-
-def test_expand_shared_duplicates_keeps_wholly_absent_groups_missing(aliased_model):
-    group = shared_tensor_groups(aliased_model)[0]
-    state_dict = {name: tensor for name, tensor in aliased_model.state_dict().items() if name not in group}
-
-    expanded = expand_shared_duplicates(aliased_model, state_dict)
-
-    # Nothing is invented, so a strict load still reports the genuine gap.
-    assert not set(group) & set(expanded)
-    with pytest.raises(RuntimeError, match="Missing key"):
-        aliased_model.load_state_dict(expanded, strict=True)
 
 
 def test_load_model_loads_safetensors(tmp_path, aliased_model, small_model_kwargs):
@@ -275,3 +224,22 @@ def test_hub_cache_miss_without_snapshot_path_is_preserved(monkeypatch):
     with pytest.raises(LocalEntryNotFoundError) as raised:
         _resolve_ckpt_dir("review/model", hf_kwargs={"local_files_only": True})
     assert raised.value is error
+
+
+def test_legacy_state_dict_with_alias_names_loads(aliased_model, build_small_model):
+    legacy = _legacy_state_dict(aliased_model)
+    assert any(".rev_cell." in name for name in legacy) and any(name.endswith(".recurrent_kernel") for name in legacy)
+
+    model = build_small_model("cpu", recipe=RECIPE)
+    model.load_state_dict(legacy, strict=True)
+    _assert_same_parameters(model, aliased_model)
+
+
+def test_safetensors_stores_each_parameter_once(tmp_path, aliased_model):
+    weights_file = tmp_path / WEIGHTS_FILENAME
+    state_dict = aliased_model.state_dict()
+    save_model(aliased_model, str(weights_file))
+    written = load_safetensors(weights_file)
+    assert written.keys() == state_dict.keys()
+    for name, tensor in written.items():
+        torch.testing.assert_close(tensor, state_dict[name], rtol=0, atol=0)

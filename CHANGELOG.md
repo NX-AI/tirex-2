@@ -6,14 +6,28 @@ All notable changes to TiRex-2 are documented here.
 
 ### Improvements
 
+- ⭐️🚀 **Faster CUDA inference** with CUDA Graphs and improved Triton kernels in [#80](https://github.com/NX-AI/tirex-2/pull/80), contributed by [Martin Loretz](https://github.com/martinloretzzz) and [Zhihao Dai](https://github.com/daidahao):
+    - Graphs replays accelerate small batches by up to 5×. Enabled by default for up to 32 variate rows on CUDA; disable with `load_model(..., cuda_graphs=False)`.
+    - Triton sLSTM kernels replace FlashRNN, with FP32 states and PyTorch fallbacks. Removed the `flashrnn` dependency.
+    - Triton mLSTM kernels replace `mlstm_kernels`. Removed the `mlstm_kernels` dependency.
+    - CUDA Toolkit is no longer required. On Linux, a C compiler is needed for kernel compilation; on Windows, PyTorch fallbacks are used. See [FAQ](https://nx-ai.github.io/tirex-2/faq/#how-do-i-run-tirex-2-on-cuda) for details.
+    - Fused sLSTM gate and mLSTM input projections; existing checkpoints adapt on load.
+    - Added kernel and CUDA Graph tests. Benchmark scores remain unchanged.
 - ⭐️🤖 **Forecasting skill**: Added a forecasting skill with Claude Code and Codex plugins, including dataframe and tensor examples in [#84](https://github.com/NX-AI/tirex-2/pull/84), contributed by [Zhihao Dai](https://github.com/daidahao).
 - ⭐️📦 **Offline Docker images**: Docker images for CPU/GPU inference servers now include the default model weights for offline deployment in [#82](https://github.com/NX-AI/tirex-2/pull/82), contributed by [Zhihao Dai](https://github.com/daidahao).
 - ‼️‼️ **Legacy checkpoint support removed**: Checkpoints must be in `json` and `safetensors` formats. Legacy `yaml` and `ckpt` formats are no longer supported onwards. Use `tirex-2<=0.4.0` for legacy checkpoints, or convert them locally with [this script](https://github.com/NX-AI/tirex-2/blob/b16f761e160dab75bb8ea5b74ace008419c2d121/scripts/convert_checkpoint.py), in [#112](https://github.com/NX-AI/tirex-2/pull/112), contributed by [Martin Loretz](https://github.com/martinloretzzz) and [Zhihao Dai](https://github.com/daidahao).
 - **Monotonic quantile forecasts**: Sort predictions across quantile levels to prevent quantile crossings in [#101](https://github.com/NX-AI/tirex-2/pull/101), contributed by [Martin Loretz](https://github.com/martinloretzzz).
 - PyYAML is no longer a direct runtime dependency; it remains explicitly required in the Pixi test and example environments, in [#112](https://github.com/NX-AI/tirex-2/pull/112), contributed by [Martin Loretz](https://github.com/martinloretzzz) and [Zhihao Dai](https://github.com/daidahao).
 
+
 ### Documentation and development
 
+- Simplified model code and tests in [#80](https://github.com/NX-AI/tirex-2/pull/80), contributed by [Martin Loretz](https://github.com/martinloretzzz):
+  - Replaced the FlashRNN layer with `sLSTMLayer` in `slstm_block.py`.
+  - Removed `xLSTMMixedConfig` and `xLSTMLargeConfig`; `BiXLSTM` now takes plain arguments.
+  - Renamed `conv_mLSTMLayerConfig` to `mLSTMLayerConfig`.
+  - Removed unused feed-forward and norm options.
+  - Switched CPU reference tests to relative norms to tolerate BF16 rounding differences across machines.
 - Removed the legacy conversion script in [#113](https://github.com/NX-AI/tirex-2/pull/113). Use the [archived version](https://github.com/NX-AI/tirex-2/blob/b16f761e160dab75bb8ea5b74ace008419c2d121/scripts/convert_checkpoint.py).
 
 

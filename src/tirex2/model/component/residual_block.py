@@ -6,7 +6,7 @@
 import torch
 from torch import nn
 
-from .norm import LayerNorm
+from .norm import RMSNorm
 
 
 @torch.compile
@@ -32,7 +32,7 @@ class ResidualBlock(nn.Module):
 
         self.use_layer_norm = use_layer_norm
         if use_layer_norm:
-            self.layer_norm = LayerNorm(out_dim)
+            self.layer_norm = RMSNorm(out_dim)
 
     def forward(self, x: torch.Tensor):
         """Apply hidden MLP, residual projection, and optional layer norm."""

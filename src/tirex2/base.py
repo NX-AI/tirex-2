@@ -11,11 +11,10 @@ import torch
 from huggingface_hub import snapshot_download
 from safetensors.torch import load_file as load_safetensors
 
-from ._state_dict import expand_shared_duplicates
 from .api_adapter import ForecastModel
 from .model import TiRex2
-from .model.component.flashrnn_slstm import _FlashRNNLayer
 from .model.component.mlstm_block import mLSTMLayer
+from .model.component.slstm_block import sLSTMLayer
 
 CONFIG_FILENAME = "config.json"
 WEIGHTS_FILENAME = "model.safetensors"
@@ -91,6 +90,7 @@ def load_model(
     hf_kwargs: dict[str, Any] | None = None,
     use_flex_attention: bool | None = None,
     compile: bool = False,
+    cuda_graphs: bool | None = None,
 ) -> ForecastModel:
     """Load an inference-ready :class:`TiRex2` from a checkpoint directory or HF repo.
 
@@ -109,14 +109,15 @@ def load_model(
         Extra keyword arguments forwarded to ``snapshot_download`` for Hugging
         Face paths, e.g. ``{"revision": "main", "local_files_only": True}``.
     use_flex_attention : bool, optional
-        Override every variate mixer's checkpoint setting. ``True`` enables
-        block-sparse FlexAttention, which can reduce the cost of large grouped
-        multivariate batches on CUDA but adds first-call compilation overhead.
-        ``False`` forces dense attention. Leave as ``None`` to preserve the
-        checkpoint configuration and package defaults.
+        If ``True``, enable block-sparse FlexAttention in variate mixers;
+        otherwise, use the default dense attention. FlexAttention may speed up
+        large grouped batches on CUDA but adds compilation overhead.
     compile : bool
-        If True, ``torch.compile`` the recurrent layers: mLSTM always, and sLSTM
+        If ``True``, ``torch.compile`` the recurrent layers: mLSTM always, and sLSTM
         only on CPU/MPS.
+    cuda_graphs : bool, optional
+        Replay the forward pass from a CUDA graph per input shape, which removes
+        the kernel launch overhead. Defaults to ``True`` on CUDA.
 
     Returns
     -------
@@ -153,11 +154,12 @@ def load_model(
     model = TiRex2(**config)
 
     state_dict = load_safetensors(weights_file, device="cpu")
-    model.load_state_dict(expand_shared_duplicates(model, state_dict), strict=True)
+    model.load_state_dict(state_dict, strict=True)
+    model.use_cuda_graphs = device.startswith("cuda") if cuda_graphs is None else cuda_graphs
     model.eval()
     if compile:
-        # slSTM compiled on cpu/mps only.
-        targets = (mLSTMLayer,) if device == "cuda" else (mLSTMLayer, _FlashRNNLayer)
+        # sLSTM compiled on cpu/mps only.
+        targets = (mLSTMLayer,) if device.startswith("cuda") else (mLSTMLayer, sLSTMLayer)
         for module in model.modules():
             if isinstance(module, targets):
                 module.compile()

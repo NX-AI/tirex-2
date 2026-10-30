@@ -1065,7 +1065,7 @@ def test_forecast_without_context_padding_feeds_shorter_input(build_small_model)
 
 
 @pytest.mark.parametrize("context", [1, 3, 7, 10])
-def test_forecast_without_context_padding_rounds_context_up_to_whole_patches(build_small_model, context):
+def test_forecast_without_context_padding_rounds_context_up_to_four_patches(build_small_model, context):
     torch.manual_seed(0)
     backbone = build_small_model("cpu").eval()
     adapter = ForecastModel(backbone)
@@ -1086,10 +1086,10 @@ def test_forecast_without_context_padding_rounds_context_up_to_whole_patches(bui
     backbone.tokenizer.input_transform = spy_input_transform
     forecast = adapter.forecast(series, prediction_length=4, pad_context=False)[0]
 
-    padded_length = -(-length // patch) * patch
-    assert input_lengths == [length]
+    # Padded to a multiple of 4 patches, which bounds the shapes to compile, capped at the full length.
+    padded_length = min(-(-length // (4 * patch)) * 4 * patch, backbone.context_len + backbone.future_len)
+    assert input_lengths == [padded_length]
     assert num_patches == [padded_length // patch]
-    assert 0 < padded_length - length < patch
     assert forecast.shape == (1, backbone.num_quantiles, 4)
     assert torch.isfinite(forecast).all()
 

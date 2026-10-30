@@ -27,20 +27,33 @@ model = load_model("NX-AI/TiRex-2", device="cpu")  # or device="cuda"
 the backbone; unknown attributes fall through to the underlying model, so
 `model.quantiles` and similar backbone attributes remain reachable directly.
 
-`use_flex_attention` overrides every variate mixer's checkpoint setting. `True` enables block-sparse FlexAttention, which can reduce the cost of large grouped multivariate batches on CUDA but adds first-call compilation overhead. `False` forces dense attention. Leave it unset to keep the checkpoint configuration.
+Extra keyword arguments to `load_model` can override the default checkpoint configuration:
 
-```python
-model = load_model("NX-AI/TiRex-2", device="cuda", use_flex_attention=True)
-```
+- `use_flex_attention=True` enables block-sparse FlexAttention in variate mixers. This could speed
+    up large grouped batches on CUDA but adds compilation overhead. Leave it unset to use the
+    default dense attention.
 
-`compile` applies `torch.compile` to the mLSTM on every device, and sLSTM
-on CPU/MPS only. Compilation happens on the first forecast per input shape, so it pays off for repeated calls rather than one-shot use. It applies per model instance.
+    ```python
+    model = load_model("NX-AI/TiRex-2", device="cuda", use_flex_attention=True)
+    ```
 
-```python
-model = load_model("NX-AI/TiRex-2", device="cpu", compile=True)
-```
+- `compile=True` applies `torch.compile` to the mLSTM on every device, and sLSTM on CPU/MPS only.
+    Compilation happens on the first forecast per input shape, so it pays off for repeated calls
+    rather than one-shot use.
 
-See [#47](https://github.com/NX-AI/tirex-2/pull/47) for the change and its CPU/CUDA benchmarks.
+    ```python
+    model = load_model("NX-AI/TiRex-2", device="cpu", compile=True)
+    ```
+
+    See [#47](https://github.com/NX-AI/tirex-2/pull/47) for the change and its CPU/CUDA benchmarks.
+
+- `cuda_graphs` defaults to `True` on CUDA to replay the forward pass from a CUDA graph per input
+    shape. This removes the kernel launch overhead for repeated small batches. Set it to `False` for
+    eager execution; it is ignored on other devices.
+
+    ```python
+    model = load_model("NX-AI/TiRex-2", device="cuda", cuda_graphs=False)
+    ```
 
 ## Univariate forecasting
 
@@ -190,7 +203,7 @@ context length (2,048) are left-padded with NaN, as in training. Setting `pad_co
 skips padding to the model's full context length, reducing the number of input patches and
 speeding up inference for short contexts at the cost of a small loss in forecast accuracy.
 Shorter series are still left-padded with NaN to the longest context in their batch, and
-the tokenizer adds any left-padding needed to form whole patches.
+the context is left-padded to a multiple of 4 patches (128 time steps).
 
 ```python
 forecast = model.forecast([ts], prediction_length=64, pad_context=False)

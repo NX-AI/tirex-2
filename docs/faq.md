@@ -2,15 +2,16 @@
 
 ??? question "How do I run TiRex-2 on CUDA?"
 
-    With `device="cuda"`, TiRex-2 builds its fused sLSTM kernel (FlashRNN) with `nvcc` on the
-    first forecast. In order to run TiRex-2 on CUDA you need:
+    On both platforms, you need a supported NVIDIA GPU, a compatible NVIDIA driver,
+    and a [CUDA build of PyTorch](https://pytorch.org/get-started/locally/).
+    Then load the model with `device="cuda"`. No separate CUDA Toolkit is needed.
 
-    1. **A CUDA Toolkit installed and discoverable** — `nvcc` must be on `PATH` or reachable
-       via `CUDA_HOME`.
-    2. **A CUDA Toolkit whose major version matches your PyTorch build** — any 12.x toolkit
-       for a `cu12x` torch wheel, any 13.x toolkit for a `cu13x` one. Check with
-       `python -c "import torch; print(torch.version.cuda)"`.
-    3. **A CUDA Toolkit no newer than your driver supports.**
+    - **Linux:** Install a C compiler such as `gcc`. PyTorch's CUDA wheels include
+      Triton, which compiles the fast recurrence kernels on first use.
+    - **Windows:** Standard PyTorch wheels do not include Triton, so TiRex-2 uses
+      slower PyTorch recurrence kernels. No C compiler is needed for this fallback.
+      For faster inference, try [triton-windows](https://github.com/triton-lang/triton-windows#installation),
+      following its installation guide to match your PyTorch version.
 
 ??? question "Which NVIDIA GPU architectures does TiRex-2 support?"
 
@@ -31,8 +32,8 @@
 
     Pass `pad_context=False` to `forecast(...)` to skip padding to the model's full context
     length (2,048), reducing inference time for short contexts at the cost of a small loss
-    in forecast accuracy. Padding to the longest context in each batch and to whole patches
-    still applies. The default is `pad_context=True`.
+    in forecast accuracy. Padding to the longest context in each batch and to a multiple of
+    4 patches (128 time steps) still applies. The default is `pad_context=True`.
 
     See [Forecasting](how-to/forecasting.md#context-padding) for details and
     [#57](https://github.com/NX-AI/tirex-2/pull/57) for the benchmarks.
