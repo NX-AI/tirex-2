@@ -109,17 +109,15 @@ def load_model(
         Extra keyword arguments forwarded to ``snapshot_download`` for Hugging
         Face paths, e.g. ``{"revision": "main", "local_files_only": True}``.
     use_flex_attention : bool, optional
-        Override every variate mixer's checkpoint setting. ``True`` enables
-        block-sparse FlexAttention, which can reduce the cost of large grouped
-        multivariate batches on CUDA but adds first-call compilation overhead.
-        ``False`` forces dense attention. Leave as ``None`` to preserve the
-        checkpoint configuration and package defaults.
+        If ``True``, enable block-sparse FlexAttention in variate mixers;
+        otherwise, use the default dense attention. FlexAttention may speed up
+        large grouped batches on CUDA but adds compilation overhead.
     compile : bool
-        If True, ``torch.compile`` the recurrent layers: mLSTM always, and sLSTM
+        If ``True``, ``torch.compile`` the recurrent layers: mLSTM always, and sLSTM
         only on CPU/MPS.
     cuda_graphs : bool, optional
         Replay the forward pass from a CUDA graph per input shape, which removes
-        the kernel launch overhead. Defaults to True on CUDA.
+        the kernel launch overhead. Defaults to ``True`` on CUDA.
 
     Returns
     -------
