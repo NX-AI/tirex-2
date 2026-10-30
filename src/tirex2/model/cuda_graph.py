@@ -53,8 +53,7 @@ class CUDAGraphRunner:
         # Warm up outside the capture, which also runs lazy compilation and autotuning.
         self._stream.wait_stream(torch.cuda.current_stream(x.device))
         with torch.cuda.stream(self._stream):
-            for _ in range(2):
-                fn(static_input)
+            fn(static_input)
         torch.cuda.current_stream(x.device).wait_stream(self._stream)
 
         graph = torch.cuda.CUDAGraph()
