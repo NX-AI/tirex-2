@@ -10,11 +10,10 @@ exposes ``recurrent_kernel``/``bias`` as ``ParameterProxy`` aliases of
 ``_recurrent_kernel_``/``_bias_``.
 
 ``safetensors`` deliberately refuses to serialize tensors that share storage,
-so a checkpoint can only store one name per alias group. Both directions are
-driven by :func:`shared_tensor_groups`: ``scripts/convert_checkpoint.py``
-writes one name per group, and :func:`expand_shared_duplicates` restores the
-others when loading, so the writer and the reader cannot drift apart. Only the
-reading side ships with the package.
+so a checkpoint can only store one name per alias group. The historical
+`conversion script <https://github.com/NX-AI/tirex-2/blob/b16f761e160dab75bb8ea5b74ace008419c2d121/scripts/convert_checkpoint.py>`_
+wrote one name per group. :func:`expand_shared_duplicates` restores the
+others when loading. Only the reading side ships with the package.
 
 Alias groups are derived from the live module graph by tensor identity rather
 than from name patterns, so a newly shared module is handled automatically.

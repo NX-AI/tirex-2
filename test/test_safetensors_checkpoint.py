@@ -1,19 +1,17 @@
-"""Safetensors checkpoint conversion and loading."""
+"""Safetensors checkpoint loading and legacy-format rejection."""
 
-import datetime
 import json
-import sys
 import warnings
 from pathlib import Path
 
 import pytest
 import torch
-import yaml
 from huggingface_hub.errors import LocalEntryNotFoundError
-from safetensors.torch import load_file as load_safetensors, save_file as save_safetensors
+from safetensors.torch import load_file as load_safetensors, save_model
 
 from tirex2._state_dict import expand_shared_duplicates, shared_tensor_groups
 from tirex2.base import (
+    _LEGACY_CONVERTER_URL,
     CKPT_FILENAME,
     CONFIG_FILENAME,
     LEGACY_CONFIG_FILENAME,
@@ -22,11 +20,6 @@ from tirex2.base import (
     load_model,
 )
 from tirex2.model.tirex2 import TiRex2
-
-# ``scripts`` is repo tooling rather than a package, so make the converter importable.
-sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
-
-from convert_checkpoint import MANIFEST_FILENAME, convert, drop_shared_duplicates, write_config  # noqa: E402
 
 # Both block types are needed: ``bi-mlstm`` contributes the ``rev_cell``/``fwd_cell``
 # module aliases and ``bi-slstm`` additionally the ``ParameterProxy`` parameter aliases.
@@ -41,10 +34,16 @@ def aliased_model(build_small_model) -> TiRex2:
 
 def _write_legacy_checkpoint(directory: Path, model: TiRex2, config: dict) -> Path:
     directory.mkdir(parents=True, exist_ok=True)
-    with (directory / LEGACY_CONFIG_FILENAME).open("w") as f:
-        yaml.safe_dump(config, f)
+    # JSON is valid YAML; these files are only used to test legacy rejection.
+    (directory / LEGACY_CONFIG_FILENAME).write_text(json.dumps(config))
     torch.save(model.state_dict(), directory / CKPT_FILENAME)
     return directory
+
+
+def _write_safetensors_checkpoint(directory: Path, model: TiRex2, config: dict) -> None:
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / CONFIG_FILENAME).write_text(json.dumps(config))
+    save_model(model, str(directory / WEIGHTS_FILENAME))
 
 
 def _assert_same_parameters(actual: TiRex2, expected: TiRex2) -> None:
@@ -72,10 +71,13 @@ def test_shared_tensor_groups_are_derived_from_tensor_identity(aliased_model):
     assert len(names) == len(set(names))
 
 
-def test_drop_then_expand_round_trips_the_state_dict(aliased_model):
+def test_expand_restores_safetensors_shared_parameters(tmp_path, aliased_model):
     state_dict = aliased_model.state_dict()
 
-    kept, dropped = drop_shared_duplicates(aliased_model, state_dict)
+    weights_file = tmp_path / WEIGHTS_FILENAME
+    save_model(aliased_model, str(weights_file))
+    kept = load_safetensors(weights_file)
+    dropped = set(state_dict) - set(kept)
 
     assert dropped, "the test model is expected to have redundant alias names"
     assert set(kept) | set(dropped) == set(state_dict)
@@ -86,15 +88,6 @@ def test_drop_then_expand_round_trips_the_state_dict(aliased_model):
     assert restored.keys() == state_dict.keys()
     for name, tensor in state_dict.items():
         assert torch.equal(restored[name], tensor)
-
-
-def test_drop_shared_duplicates_rejects_alias_names_that_disagree(aliased_model):
-    state_dict = dict(aliased_model.state_dict())
-    canonical, duplicate = shared_tensor_groups(aliased_model)[0][:2]
-    state_dict[duplicate] = state_dict[canonical] + 1.0
-
-    with pytest.raises(ValueError, match="deduplication would lose information"):
-        drop_shared_duplicates(aliased_model, state_dict)
 
 
 def test_expand_shared_duplicates_rejects_alias_names_that_disagree(aliased_model):
@@ -118,64 +111,8 @@ def test_expand_shared_duplicates_keeps_wholly_absent_groups_missing(aliased_mod
         aliased_model.load_state_dict(expanded, strict=True)
 
 
-def test_convert_writes_one_tensor_per_alias_group(tmp_path, aliased_model, small_model_kwargs):
-    config = small_model_kwargs("cpu", RECIPE)
-    _write_legacy_checkpoint(tmp_path, aliased_model, config)
-    state_dict = aliased_model.state_dict()
-    num_aliases = sum(len(group) - 1 for group in shared_tensor_groups(aliased_model))
-
-    weights_file = convert(str(tmp_path), None, should_verify=True)
-
-    assert weights_file == tmp_path / WEIGHTS_FILENAME
-    written = load_safetensors(weights_file, device="cpu")
-    assert len(written) == len(state_dict) - num_aliases
-    assert set(written) < set(state_dict)
-    for name, tensor in written.items():
-        assert torch.equal(tensor, state_dict[name])
-
-    manifest = json.loads((tmp_path / MANIFEST_FILENAME).read_text())
-    assert manifest["num_tensors_in_checkpoint"] == len(state_dict)
-    assert manifest["num_tensors_written"] == len(written)
-    assert len(manifest["dropped_keys"]) == num_aliases
-
-    assert json.loads((tmp_path / CONFIG_FILENAME).read_text()) == config
-
-
-def test_convert_config_only_needs_no_legacy_weights(tmp_path, aliased_model, small_model_kwargs):
-    config = small_model_kwargs("cpu", RECIPE)
-    _write_legacy_checkpoint(tmp_path, aliased_model, config)
-    (tmp_path / CKPT_FILENAME).unlink()
-
-    config_file = convert(str(tmp_path), None, should_verify=True, config_only=True)
-
-    assert config_file == tmp_path / CONFIG_FILENAME
-    assert json.loads(config_file.read_text()) == config
-    assert not (tmp_path / WEIGHTS_FILENAME).exists()
-
-
-@pytest.mark.parametrize(
-    "config, match",
-    [
-        ({"released": datetime.date(2026, 1, 1)}, "cannot be represented as JSON"),
-        ({"eps": float("nan")}, "cannot be represented as JSON"),
-        ({"templates": {1: "mlstm"}}, "changes when written as JSON"),
-    ],
-    ids=["date", "nan", "int-key"],
-)
-def test_write_config_rejects_what_json_cannot_store_faithfully(tmp_path, config, match):
-    config_file = tmp_path / CONFIG_FILENAME
-
-    with pytest.raises(ValueError, match=match):
-        write_config(config, config_file)
-
-    assert not config_file.exists()
-
-
-def test_load_model_loads_converted_safetensors(tmp_path, aliased_model, small_model_kwargs):
-    _write_legacy_checkpoint(tmp_path, aliased_model, small_model_kwargs("cpu", RECIPE))
-    convert(str(tmp_path), None, should_verify=False)
-    (tmp_path / CKPT_FILENAME).unlink()
-    (tmp_path / LEGACY_CONFIG_FILENAME).unlink()
+def test_load_model_loads_safetensors(tmp_path, aliased_model, small_model_kwargs):
+    _write_safetensors_checkpoint(tmp_path, aliased_model, small_model_kwargs("cpu", RECIPE))
 
     loaded = load_model(str(tmp_path), device="cpu")
 
@@ -189,9 +126,7 @@ def test_load_model_prefers_safetensors_over_the_legacy_checkpoint(
     _write_legacy_checkpoint(tmp_path, aliased_model, small_model_kwargs("cpu", RECIPE))
     torch.manual_seed(7)
     other_model = build_small_model("cpu", recipe=RECIPE)
-    kept, _ = drop_shared_duplicates(other_model, other_model.state_dict())
-    save_safetensors(kept, str(tmp_path / WEIGHTS_FILENAME))
-    write_config(small_model_kwargs("cpu", RECIPE), tmp_path / CONFIG_FILENAME)
+    _write_safetensors_checkpoint(tmp_path, other_model, small_model_kwargs("cpu", RECIPE))
 
     loaded = load_model(str(tmp_path), device="cpu")
 
@@ -200,7 +135,7 @@ def test_load_model_prefers_safetensors_over_the_legacy_checkpoint(
 
 def test_load_model_does_not_warn_for_safetensors(tmp_path, aliased_model, small_model_kwargs):
     _write_legacy_checkpoint(tmp_path, aliased_model, small_model_kwargs("cpu", RECIPE))
-    convert(str(tmp_path), None, should_verify=False)
+    _write_safetensors_checkpoint(tmp_path, aliased_model, small_model_kwargs("cpu", RECIPE))
 
     with warnings.catch_warnings():
         warnings.simplefilter("error", FutureWarning)
@@ -212,13 +147,14 @@ def test_load_model_rejects_legacy_checkpoints_with_the_last_release_that_loads_
 ):
     _write_legacy_checkpoint(tmp_path, aliased_model, small_model_kwargs("cpu", RECIPE))
 
-    with pytest.raises(FileNotFoundError, match=r"tirex-2<=0\.4\.0.*convert_checkpoint\.py"):
+    with pytest.raises(FileNotFoundError, match=r"tirex-2<=0\.4\.0") as error:
         load_model(str(tmp_path), device="cpu")
+    assert _LEGACY_CONVERTER_URL in str(error.value)
 
 
 def test_load_model_reports_the_missing_weights(tmp_path, aliased_model, small_model_kwargs):
     _write_legacy_checkpoint(tmp_path, aliased_model, small_model_kwargs("cpu", RECIPE))
-    convert(str(tmp_path), None, should_verify=False)
+    _write_safetensors_checkpoint(tmp_path, aliased_model, small_model_kwargs("cpu", RECIPE))
     (tmp_path / WEIGHTS_FILENAME).unlink()
 
     with pytest.raises(FileNotFoundError, match=WEIGHTS_FILENAME):
@@ -226,8 +162,7 @@ def test_load_model_reports_the_missing_weights(tmp_path, aliased_model, small_m
 
 
 def test_load_model_reports_the_missing_config_without_a_legacy_hint(tmp_path, aliased_model):
-    kept, _ = drop_shared_duplicates(aliased_model, aliased_model.state_dict())
-    save_safetensors(kept, str(tmp_path / WEIGHTS_FILENAME))
+    save_model(aliased_model, str(tmp_path / WEIGHTS_FILENAME))
 
     with pytest.raises(FileNotFoundError, match=CONFIG_FILENAME) as error:
         load_model(str(tmp_path), device="cpu")
@@ -264,7 +199,7 @@ def test_load_model_downloads_only_the_current_format_when_the_repo_has_both(
 ):
     repo, requests = fake_hub
     _write_legacy_checkpoint(repo, aliased_model, small_model_kwargs("cpu", RECIPE))
-    convert(str(repo), None, should_verify=False)
+    _write_safetensors_checkpoint(repo, aliased_model, small_model_kwargs("cpu", RECIPE))
 
     loaded = load_model("NX-AI/TiRex-2", device="cpu")
 
@@ -284,17 +219,6 @@ def test_load_model_does_not_download_the_legacy_checkpoint(fake_hub, tmp_path, 
     assert requests == [[CONFIG_FILENAME, WEIGHTS_FILENAME]]
 
 
-def test_convert_downloads_the_legacy_checkpoint_it_reads(fake_hub, tmp_path, aliased_model, small_model_kwargs):
-    repo, requests = fake_hub
-    _write_legacy_checkpoint(repo, aliased_model, small_model_kwargs("cpu", RECIPE))
-
-    convert("NX-AI/TiRex-2", tmp_path / "out", should_verify=True)
-
-    assert requests == [[LEGACY_CONFIG_FILENAME, CKPT_FILENAME]]
-    assert (tmp_path / "out" / WEIGHTS_FILENAME).is_file()
-    assert (tmp_path / "out" / CONFIG_FILENAME).is_file()
-
-
 @pytest.fixture
 def offline_hub_cache(tmp_path, aliased_model, small_model_kwargs):
     # Older supported Hub clients do not have the completeness check that caused
@@ -304,7 +228,7 @@ def offline_hub_cache(tmp_path, aliased_model, small_model_kwargs):
     commit = "a" * 40
     snapshot = repo / "snapshots" / commit
     _write_legacy_checkpoint(snapshot, aliased_model, small_model_kwargs("cpu", RECIPE))
-    convert(str(snapshot), None, should_verify=False)
+    _write_safetensors_checkpoint(snapshot, aliased_model, small_model_kwargs("cpu", RECIPE))
     (repo / "refs").mkdir()
     (repo / "refs" / "main").write_text(commit)
     tree_cache.write_tree_cache(
