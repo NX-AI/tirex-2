@@ -5,8 +5,8 @@
 
 Vendored from https://github.com/NX-AI/mlstm_kernels (``mlstm_kernels==2.0.6``), reduced to the forward
 pass of the ``chunkwise--triton_limit_chunk`` kernel used by ``mLSTMBackend`` in ``train_with_padding``
-mode without initial or last states. The computations and their order are kept as upstream, so the
-results are bitwise identical. See ``mlstm_native.py`` for the notation.
+mode without initial or last states. Arithmetic and dtype casts follow upstream; memory accesses
+use explicit offsets and masks. See ``mlstm_native.py`` for the notation.
 """
 
 import torch
@@ -36,25 +36,23 @@ def _recurrent_fw_C_kernel(
     DTYPE: tl.constexpr,
 ):
     """Computes the states (C, n, m) entering each chunk."""
-    idx_b_DHQK, idx_b_DHHV, idx_b_BNH = tl.program_id(0), tl.program_id(1), tl.program_id(2)
+    idx_b_DHQK, idx_b_DHHV = tl.program_id(0), tl.program_id(1)
+    idx_b_BNH = tl.program_id(2).to(tl.int64)
+    offs_qk = idx_b_DHQK * siz_b_DHQK + tl.arange(0, siz_b_DHQK)
+    offs_hv = idx_b_DHHV * siz_b_DHHV + tl.arange(0, siz_b_DHHV)
+    mask_c = (offs_qk[:, None] < DHQK) & (offs_hv[None, :] < DHHV)
 
     matC_k_val = tl.zeros((siz_b_DHQK, siz_b_DHHV), dtype=tl.float32)
     vecN_k_val = tl.zeros((siz_b_DHQK,), dtype=tl.float32)
     scaM_k_val = 0.0
 
     for k in range(NC):
-        matC_k_ptr = tl.make_block_ptr(
-            base=matC_states + (idx_b_BNH * NC + k) * DHQK * DHHV,
-            shape=(DHQK, DHHV),
-            strides=(DHHV, 1),
-            offsets=(idx_b_DHQK * siz_b_DHQK, idx_b_DHHV * siz_b_DHHV),
-            block_shape=(siz_b_DHQK, siz_b_DHHV),
-            order=(1, 0),
-        )
-        tl.store(matC_k_ptr, matC_k_val, boundary_check=(0, 1))
+        offs_t = k * L + tl.arange(0, L)
+        matC_k_ptr = matC_states + (idx_b_BNH * NC + k) * DHQK * DHHV + offs_qk[:, None] * DHHV + offs_hv[None, :]
+        tl.store(matC_k_ptr, matC_k_val, mask=mask_c)
         if idx_b_DHHV == 0:
-            vecN_k_ptr = vecN_states + (idx_b_BNH * NC + k) * DHQK + idx_b_DHQK * siz_b_DHQK + tl.arange(0, siz_b_DHQK)
-            tl.store(vecN_k_ptr, vecN_k_val)
+            vecN_k_ptr = vecN_states + (idx_b_BNH * NC + k) * DHQK + offs_qk
+            tl.store(vecN_k_ptr, vecN_k_val, mask=offs_qk < DHQK)
         if (idx_b_DHQK == 0) and (idx_b_DHHV == 0):
             tl.store(scaM_states + idx_b_BNH * NC + k, scaM_k_val.to(tl.float32))
 
@@ -68,24 +66,10 @@ def _recurrent_fw_C_kernel(
         scaM_next_val = tl.maximum(scaG_k_val + scaM_k_val, tl.max(vecA_k_val))
 
         # load matK transposed (siz_b_DHQK, L) and matV (L, siz_b_DHHV)
-        matK_k_ptr = tl.make_block_ptr(
-            base=matK + idx_b_BNH * S * DHQK,
-            shape=(DHQK, S),
-            strides=(1, DHQK),
-            offsets=(idx_b_DHQK * siz_b_DHQK, k * L),
-            block_shape=(siz_b_DHQK, L),
-            order=(0, 1),
-        )
-        matV_k_ptr = tl.make_block_ptr(
-            base=matV + idx_b_BNH * S * DHHV,
-            shape=(S, DHHV),
-            strides=(DHHV, 1),
-            offsets=(k * L, idx_b_DHHV * siz_b_DHHV),
-            block_shape=(L, siz_b_DHHV),
-            order=(1, 0),
-        )
-        matK_k_val = tl.load(matK_k_ptr, boundary_check=(0, 1)).to(tl.float32)
-        matV_k_val = tl.load(matV_k_ptr, boundary_check=(0, 1)).to(DTYPE)
+        matK_k_ptr = matK + idx_b_BNH * S * DHQK + offs_qk[:, None] + offs_t[None, :] * DHQK
+        matV_k_ptr = matV + idx_b_BNH * S * DHHV + offs_t[:, None] * DHHV + offs_hv[None, :]
+        matK_k_val = tl.load(matK_k_ptr, mask=(offs_qk[:, None] < DHQK) & (offs_t[None, :] < S), other=0).to(tl.float32)
+        matV_k_val = tl.load(matV_k_ptr, mask=(offs_t[:, None] < S) & (offs_hv[None, :] < DHHV), other=0).to(DTYPE)
 
         vecAbar_k_val = tl.exp(vecA_k_val - scaM_next_val)
         scaGbar_k_val = tl.exp(scaG_k_val + scaM_k_val - scaM_next_val)
@@ -119,7 +103,11 @@ def _parallel_fw_H_kernel(
     EPS: tl.constexpr,
 ):
     """Computes the outputs H of one chunk from the chunk's inputs and the state entering it."""
-    idx_b_DHHV, idx_b_NC, idx_b_BNH = tl.program_id(0), tl.program_id(1), tl.program_id(2)
+    idx_b_DHHV, idx_b_NC = tl.program_id(0), tl.program_id(1)
+    idx_b_BNH = tl.program_id(2).to(tl.int64)
+    offs_t = idx_b_NC * L + tl.arange(0, L)
+    offs_hv = idx_b_DHHV * siz_b_DHHV + tl.arange(0, siz_b_DHHV)
+    mask_hv = (offs_t[:, None] < S) & (offs_hv[None, :] < DHHV)
 
     vecBI_offset = idx_b_BNH * S + idx_b_NC * L
     vecB_val = tl.load(vecB + vecBI_offset + tl.arange(0, L)).to(tl.float32)
@@ -138,54 +126,30 @@ def _parallel_fw_H_kernel(
     matH_inter_val = tl.zeros((L, siz_b_DHHV), dtype=tl.float32)
     vecH_inter_denom_val = tl.zeros((L,), dtype=tl.float32)
     for idx_b_DHQK in range(tl.cdiv(DHQK, siz_b_DHQK)):
-        matQ_ptr = tl.make_block_ptr(
-            base=matQ + idx_b_BNH * S * DHQK,
-            shape=(S, DHQK),
-            strides=(DHQK, 1),
-            offsets=(idx_b_NC * L, idx_b_DHQK * siz_b_DHQK),
-            block_shape=(L, siz_b_DHQK),
-            order=(1, 0),
+        offs_qk = idx_b_DHQK * siz_b_DHQK + tl.arange(0, siz_b_DHQK)
+        mask_q = (offs_t[:, None] < S) & (offs_qk[None, :] < DHQK)
+        mask_k = (offs_qk[:, None] < DHQK) & (offs_t[None, :] < S)
+        mask_c = (offs_qk[:, None] < DHQK) & (offs_hv[None, :] < DHHV)
+        matQ_ptr = matQ + idx_b_BNH * S * DHQK + offs_t[:, None] * DHQK + offs_qk[None, :]
+        matK_ptr = matK + idx_b_BNH * S * DHQK + offs_qk[:, None] + offs_t[None, :] * DHQK
+        matC_km1_ptr = (
+            matC_states + (idx_b_BNH * NC + idx_b_NC) * DHQK * DHHV + offs_qk[:, None] * DHHV + offs_hv[None, :]
         )
-        matK_ptr = tl.make_block_ptr(
-            base=matK + idx_b_BNH * S * DHQK,
-            shape=(DHQK, S),
-            strides=(1, DHQK),
-            offsets=(idx_b_DHQK * siz_b_DHQK, idx_b_NC * L),
-            block_shape=(siz_b_DHQK, L),
-            order=(0, 1),
-        )
-        matC_km1_ptr = tl.make_block_ptr(
-            base=matC_states + (idx_b_BNH * NC + idx_b_NC) * DHQK * DHHV,
-            shape=(DHQK, DHHV),
-            strides=(DHHV, 1),
-            offsets=(idx_b_DHQK * siz_b_DHQK, idx_b_DHHV * siz_b_DHHV),
-            block_shape=(siz_b_DHQK, siz_b_DHHV),
-            order=(1, 0),
-        )
-        vecN_km1_ptr = (
-            vecN_states + (idx_b_BNH * NC + idx_b_NC) * DHQK + idx_b_DHQK * siz_b_DHQK + tl.arange(0, siz_b_DHQK)
-        )
+        vecN_km1_ptr = vecN_states + (idx_b_BNH * NC + idx_b_NC) * DHQK + offs_qk
 
-        matQ_val = tl.load(matQ_ptr, boundary_check=(0, 1)).to(DTYPE)
-        matK_val = tl.load(matK_ptr, boundary_check=(0, 1)).to(DTYPE)
+        matQ_val = tl.load(matQ_ptr, mask=mask_q, other=0).to(DTYPE)
+        matK_val = tl.load(matK_ptr, mask=mask_k, other=0).to(DTYPE)
         matS_val += (tl.dot(matQ_val, matK_val) * qk_scale).to(DTYPE)
 
         matQbar_val = (matQ_val * vecBbar_val[:, None] * qk_scale).to(DTYPE)
-        matC_km1_val = tl.load(matC_km1_ptr, boundary_check=(0, 1)).to(DTYPE)
+        matC_km1_val = tl.load(matC_km1_ptr, mask=mask_c, other=0).to(DTYPE)
         matH_inter_val += tl.dot(matQbar_val, matC_km1_val)
-        vecN_km1_val = tl.load(vecN_km1_ptr).to(DTYPE)
+        vecN_km1_val = tl.load(vecN_km1_ptr, mask=offs_qk < DHQK, other=0).to(DTYPE)
         vecH_inter_denom_val += tl.sum((matQbar_val * vecN_km1_val[None, :]).to(tl.float32), axis=1)
 
     matSbar_val = (matS_val * matDbar_val).to(DTYPE)
-    matV_ptr = tl.make_block_ptr(
-        base=matV + idx_b_BNH * S * DHHV,
-        shape=(S, DHHV),
-        strides=(DHHV, 1),
-        offsets=(idx_b_NC * L, idx_b_DHHV * siz_b_DHHV),
-        block_shape=(L, siz_b_DHHV),
-        order=(1, 0),
-    )
-    matV_val = tl.load(matV_ptr, boundary_check=(0, 1)).to(DTYPE)
+    matV_ptr = matV + idx_b_BNH * S * DHHV + offs_t[:, None] * DHHV + offs_hv[None, :]
+    matV_val = tl.load(matV_ptr, mask=mask_hv, other=0).to(DTYPE)
     matH_intra_val = tl.dot(matSbar_val, matV_val)
     vecH_intra_denom_val = tl.sum(matSbar_val.to(tl.float32), axis=1)
 
@@ -193,15 +157,8 @@ def _parallel_fw_H_kernel(
     vecH_denom_val = tl.maximum(tl.abs(vecH_inter_denom_val + vecH_intra_denom_val), tl.exp(-vecM_combine_val))
     matH_val = matH_num_val / (vecH_denom_val[:, None] + EPS)
 
-    matH_ptr = tl.make_block_ptr(
-        base=matH + idx_b_BNH * S * DHHV,
-        shape=(S, DHHV),
-        strides=(DHHV, 1),
-        offsets=(idx_b_NC * L, idx_b_DHHV * siz_b_DHHV),
-        block_shape=(L, siz_b_DHHV),
-        order=(1, 0),
-    )
-    tl.store(matH_ptr, matH_val.to(DTYPE), boundary_check=(0, 1))
+    matH_ptr = matH + idx_b_BNH * S * DHHV + offs_t[:, None] * DHHV + offs_hv[None, :]
+    tl.store(matH_ptr, matH_val.to(DTYPE), mask=mask_hv)
 
 
 _TRITON_DTYPES = {torch.float32: tl.float32, torch.float16: tl.float16, torch.bfloat16: tl.bfloat16}
