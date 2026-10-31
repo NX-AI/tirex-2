@@ -83,7 +83,7 @@ docs = ["docs"]
 pypi-build = ["pypi-build"]
 
 [tool.pixi.feature.test.pypi-dependencies]
-pytest = "*"
+pytest = ">=7.2.0"
 # The dataframe adapter is backend-agnostic (narwhals is a core dependency), so the concrete
 # dataframe libraries are a test-only concern
 pandas = ">=2.2.2"
@@ -92,8 +92,8 @@ pyarrow = ">=21.0.0"
 
 [tool.pixi.feature.examples.pypi-dependencies]
 matplotlib = ">=3.10.0"
-plotly = "*"
-jupyterlab = "*"
+plotly = ">=5.12.0"
+jupyterlab = ">=3.5.0"
 
 [tool.pixi.feature.fev.pypi-dependencies]
 fev = ">=0.8.0"
@@ -134,7 +134,7 @@ docs-build = { cmd = "mkdocs build --strict", default-environment = "docs" }
 build = { cmd = "python -m build", default-environment = "pypi-build" }
 
 [tool.pixi.feature.pypi-build.pypi-dependencies]
-build = "*"
+build = ">=0.8.0"
 
 [tool.pixi.feature.benchmark.activation.env]
 PYTHONPATH = "$PIXI_PROJECT_ROOT/examples/gifteval:$PYTHONPATH"
