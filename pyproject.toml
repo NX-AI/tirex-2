@@ -44,13 +44,15 @@ requires-pixi = ">=0.82.1"
 
 [tool.pixi.pypi-exclude-newer]
 # Emergency updates here:
+torch = "1 day"
+triton = "1 day"
 
 [tool.pixi.pypi-options]
 # security: disable building wheels for dependencies
 no-build = true
 
 [tool.pixi.dependencies]
-python = ">=3.11,<3.15"
+python = ">=3.11"
 ca-certificates = ">=2026.10.19"
 # huggingface-hub and fev require PyYAML
 pyyaml = { version = ">=6.0", channel = "conda-forge" }
