@@ -5,16 +5,32 @@ Development and documentation contribution guidelines.
 ## Environment Setup
 
 - **Pixi** (recommended): install [Pixi](https://pixi.prefix.dev/latest/), then run `pixi install`.
-  Environments select a use case (`default`, `test`, `examples`, `docs`, or `pypi-build`), while named
-  platforms select the operating system and accelerator (e.g. `linux-64-cuda`,
-  `linux-64-cuda-126`, or `linux-64-cpu`). Both are defined in
-  [`pyproject.toml`](pyproject.toml). Select a platform with `--platform`, for example
-  `pixi run --platform linux-64-cuda test`.
-- **pip**: create a virtual environment and install the package in editable mode:
-  `python -m venv .venv && source .venv/bin/activate && pip install -e ".[examples,fev,gluonts]"`
-- **Tooling**: run `pre-commit install` once, then `pre-commit run --all-files` and `pixi run --platform linux-64-cuda test`
-  (or `pytest test/` in a pip environment) before opening a PR.
-  CUDA Pixi test platforms require an available CUDA runtime; use a named CPU platform for CPU-only checks.
+  Configuration lives in [`pyproject.toml`](pyproject.toml).
+
+  - **Environments** select a use case with `-e`: `default`, `test`, `examples`, `benchmark`,
+    `docs`, or `pypi-build`. Both `test` and `benchmark` include FEV and GluonTS;
+    `examples` provides plotting and Jupyter, also included in `benchmark`.
+  - **Platforms** select the operating system and accelerator with `-p`, such as
+    `linux-64-cuda`, `linux-64-cuda-126`, `linux-64-cpu`, or `osx-arm64-macos14`.
+    For example: `pixi run -p linux-64-cuda test`.
+  - **Tasks** run common workflows with `pixi run <task>`, such as `test`, `notebook`,
+    `gifteval`, `fevbench`, or `docs-build`. Each task selects its default environment.
+
+- **pip**: install dependencies manually; package extras are no longer provided.
+
+  - **Environment**: create and activate a virtual environment with
+    `python -m venv .venv && source .venv/bin/activate` (Linux/macOS).
+  - **PyTorch**: install the appropriate [CPU or GPU build](https://pytorch.org/get-started/locally/).
+  - **Package**: run `pip install -e .` from the repository root for editable development.
+  - **Tests**: run `pip install pytest pandas polars pyarrow fev datasets gluonts`, then `pytest test/`.
+
+- **Tooling**:
+
+  - **Setup**: run `pre-commit install` once to enable Git hooks.
+  - **Checks**: before opening a PR, run `pre-commit run --all-files` and
+    `pixi run test` (or `pytest test/` in a pip environment).
+  - **CUDA**: CUDA test platforms require an available CUDA runtime. Use
+    `pixi run -p linux-64-cpu test` for CPU-only checks.
 
 ## Workflow Overview
 

@@ -248,7 +248,10 @@ def test_forecast_timestamps_preserve_timezone_and_local_frequency(backend, star
     timestamps = nw.from_native(result, eager_only=True)["timestamp"]
 
     assert timestamps.dtype.time_zone == timezone
-    np.testing.assert_array_equal(pd.DatetimeIndex(timestamps.to_list()).asi8, expected.asi8)
+    np.testing.assert_array_equal(
+        pd.DatetimeIndex(timestamps.to_list()).as_unit("ns").asi8,
+        expected.as_unit("ns").asi8,
+    )
 
 
 @_needs_df_adapter
