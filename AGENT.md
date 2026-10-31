@@ -9,8 +9,7 @@ Use Pixi unless the user explicitly asks for conda/mamba.
 - Install/update environments: `pixi install`
 - Environments select use cases: `default`, `test`, `examples`, `benchmark`, `docs`, and `pypi-build`.
 - `test` and `benchmark` include the shared `fev` and `gluonts` features; `examples` contains plotting and Jupyter.
-- The default Linux and Windows CUDA 13.0 platforms are `linux-64-cuda` and `win-64-cuda`.
-- CUDA 13.2 platforms end in `-cuda-132`; CUDA 12.6 platforms end in `-cuda-126`.
+- The Linux and Windows CUDA platforms are `linux-64-cuda` and `win-64-cuda`.
 - CPU-only platforms are `linux-64-cpu` and `win-64-cpu`.
 - The macOS platform is `osx-arm64-macos14` (macOS 14 or newer).
 - Select a named platform with `--platform` (or `-p`) and an environment with `--environment` (or `-e`).
@@ -18,8 +17,8 @@ Use Pixi unless the user explicitly asks for conda/mamba.
 Common commands:
 
 ```bash
-pixi run --platform linux-64-cuda test      # test environment on CUDA 13.0
-pixi run --platform linux-64-cuda-126 test  # test environment on CUDA 12.6
+pixi run --platform linux-64-cuda test  # test environment on CUDA
+pixi run --platform linux-64-cpu test   # test environment on CPU
 pixi run -e examples -p linux-64-cpu python examples/sine_wave.py
 pixi run -e examples -p linux-64-cpu python examples/covariate_forecasts.py
 ```
@@ -110,12 +109,6 @@ Useful options:
 - `--as_univariate` to ignore covariates and forecast each target independently.
 - `--model_name NAME` to set the model name in the output CSV.
 - The script retries CUDA OOM by halving batch size; reduce `--batch_size` if needed.
-
-Use CUDA 12.6 if required by the machine/cluster:
-
-```bash
-pixi run --platform linux-64-cuda-126 fevbench --tasks examples/fevbench/tasks-mini.yaml
-```
 
 ## GiftEval
 

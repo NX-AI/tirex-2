@@ -37,7 +37,7 @@ multivariate dataset into independent univariate channels, matching the official
 protocol:
 
 ```bash
-pixi run --platform linux-64-cuda-126 gifteval \
+pixi run --platform linux-64-cuda gifteval \
     /path/to/gifteval_storage pretrained --eval-mode univariate
 ```
 
