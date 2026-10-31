@@ -3930,7 +3930,7 @@ packages:
   - torch>=2.8.0
   - numpy>=2.1.3
   - huggingface-hub>=0.35.3
-  - safetensors>=0.6
+  - safetensors>=0.6.1
   - narwhals>=2.0
   requires_python: '>=3.11'
 - pypi: https://download-r2.pytorch.org/whl/cpu/torch-2.15.0%2Bcpu-cp313-cp313-manylinux_2_28_x86_64.whl
