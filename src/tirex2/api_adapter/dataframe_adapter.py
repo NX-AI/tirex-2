@@ -15,6 +15,7 @@ consecutive difference.
 
 import warnings
 from collections.abc import Sequence
+from contextlib import nullcontext
 from functools import lru_cache
 from types import ModuleType
 from typing import TYPE_CHECKING
@@ -101,8 +102,15 @@ def _infer_time_step(timestamps: nw.Series | None):
         # to_numpy() converts timezone-aware values to naive UTC, which can turn
         # local month starts into month ends and hide daylight-saving changes.
         index = pd.DatetimeIndex(timestamps.to_list())
+        # Opt into offset returns where supported; older pandas returns strings.
+        context = (
+            pd.option_context("future.infer_freq_returns_offset", True)
+            if hasattr(getattr(pd.options, "future", None), "infer_freq_returns_offset")
+            else nullcontext()
+        )
         try:
-            inferred = pd.infer_freq(index)
+            with context:
+                inferred = pd.infer_freq(index)
         except ValueError:  # infer_freq needs at least 3 timestamps
             inferred = None
         if inferred is None:
