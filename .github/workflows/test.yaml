@@ -90,3 +90,23 @@ jobs:
 
       - name: Run tests on CPU
         run: pixi run test
+
+  core-tests-preview:
+    name: core-tests preview (py3.15, ubuntu-latest)
+    runs-on: ubuntu-latest
+    # Preview dependency availability and compatibility should not block stable CI.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.15"
+          activate-environment: true
+
+      - name: Install preview Python and CPU test dependencies
+        run: |
+          uv pip install --torch-backend cpu -e . pytest pandas "polars>=1.0" "pyarrow>=15.0" fev "datasets>=4.4.0,<5"
+          # GluonTS is excluded on Python 3.15; its tests skip when it is absent.
+
+      - name: Run tests on CPU
+        run: uv run --no-sync python -m pytest
