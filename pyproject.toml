@@ -116,7 +116,7 @@ jupyterlab = "*"
 
 [tool.pixi.feature.fev.pypi-dependencies]
 fev = "*"
-datasets = ">=4.4.0,<5"
+datasets = ">=4.4.0"
 
 [tool.pixi.feature.gluonts.pypi-dependencies]
 gluonts = { version = ">=0.16.2", env-markers = "python_version < '3.15'" }
