@@ -25,12 +25,8 @@ build-backend = "setuptools.build_meta"
 channels = ["conda-forge", "pytorch"]
 platforms = [
   # cuda platforms are listed first, so they win platform selection on a machine with a CUDA driver.
-  { name = "linux-64-cuda", platform = "linux-64", cuda = "13.0" },
-  { name = "win-64-cuda", platform = "win-64", cuda = "13.0" },
-  { name = "linux-64-cuda-132", platform = "linux-64", cuda = "13.2" },
-  { name = "win-64-cuda-132", platform = "win-64", cuda = "13.2" },
-  { name = "linux-64-cuda-126", platform = "linux-64", cuda = "12.6" },
-  { name = "win-64-cuda-126", platform = "win-64", cuda = "12.6" },
+  { name = "linux-64-cuda", platform = "linux-64", cuda = "13.2" },
+  { name = "win-64-cuda", platform = "win-64", cuda = "13.2" },
   { name = "linux-64-cpu", platform = "linux-64" },
   { name = "win-64-cpu", platform = "win-64" },
   { name = "osx-arm64-macos14", platform = "osx-arm64", macos = "14.0" },
@@ -59,41 +55,21 @@ pyyaml = { version = ">=6.0", channel = "conda-forge" }
 
 [tool.pixi.pypi-dependencies]
 tirex-2 = { path = ".", editable = true }
-# resolve torch (cuda/cpu) for cuda/macOS platforms
-# as of Sep 2026, default cuda version for PyTorch on PyPI is 13.0
+# resolve torch (cuda/cpu) for all platforms
 torch = { version = "*" }
-
-[tool.pixi.target."*-cuda".dependencies]
-cuda-nvcc = "13.0.*"
-cuda-libraries-dev = "13.0.*"
-
-[tool.pixi.target."*-cuda-132".dependencies]
-cuda-nvcc = "13.2.*"
-cuda-libraries-dev = "13.2.*"
-
-[tool.pixi.target."*-cuda-126".dependencies]
-cuda-nvcc = "12.6.*"
-cuda-libraries-dev = "12.6.*"
 
 [tool.pixi.target."*-cuda".pypi-dependencies]
 # resolve torch (cuda) for the default CUDA platforms
-torch = { version = "*", index = "https://download.pytorch.org/whl/cu130" }
+# as of Nov 2026, default cuda version for PyTorch on PyPI is 13.2
+torch = { version = "*", index = "https://download.pytorch.org/whl/cu132" }
 
 [tool.pixi.target."*-cpu".pypi-dependencies]
 # resolve torch (cpu) for cpu platforms
 torch = { version = "*", index = "https://download.pytorch.org/whl/cpu" }
 
-[tool.pixi.target."*-cuda-132".pypi-dependencies]
-# resolve torch (cuda) for cuda platforms
-torch = { version = "*", index = "https://download.pytorch.org/whl/cu132" }
-
-[tool.pixi.target."*-cuda-126".pypi-dependencies]
-# resolve torch (cuda) for cuda platforms
-torch = { version = "*", index = "https://download.pytorch.org/whl/cu126" }
-
 [tool.pixi.target.osx.pypi-dependencies]
 # resolve torch from PyPI for macOS platforms
-torch = { version = "*", index = "https://pypi.org/simple" }
+torch = { version = "*" }
 
 [tool.pixi.environments]
 default = []
@@ -151,9 +127,6 @@ fevbench-download = { cmd = "hf download autogluon/fev_datasets --repo-type=data
 docs = { cmd = "mkdocs serve", default-environment = "docs" }
 # build the docs site for deployment
 docs-build = { cmd = "mkdocs build --strict", default-environment = "docs" }
-
-[tool.pixi.feature.pypi-build.dependencies]
-python = ">=3.11,<3.14"
 
 [tool.pixi.feature.pypi-build.pypi-dependencies]
 build = "*"
