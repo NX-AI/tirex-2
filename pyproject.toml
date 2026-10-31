@@ -71,6 +71,9 @@ torch = { version = "*", index = "https://download.pytorch.org/whl/cpu" }
 # resolve torch from PyPI for macOS platforms
 torch = { version = "*" }
 
+[tool.pixi.activation.env]
+TRITON_DEFAULT_FP_FUSION = "1"
+
 [tool.pixi.environments]
 default = []
 test = ["test", "fev", "gluonts"]
