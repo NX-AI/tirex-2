@@ -3,5 +3,5 @@ pytest>=9.1.1
 pytest-asyncio>=1.4.0
 numpy>=2.5.4
 paho-mqtt==2.1.0
-fastmcp==4.0.10
+fastmcp==4.1.3
 requests==2.34.2
