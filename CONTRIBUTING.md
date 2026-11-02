@@ -10,8 +10,9 @@ Development and documentation contribution guidelines.
   - **Environments** select a use case with `-e`: `default`, `test`, `examples`, `benchmark`,
     `docs`, or `pypi-build`. Both `test` and `benchmark` include FEV and GluonTS;
     `examples` provides plotting and Jupyter, also included in `benchmark`.
-  - **Platforms** select the operating system and accelerator with `-p`, such as
-    `linux-64-cuda`, `linux-64-cuda-126`, `linux-64-cpu`, or `osx-arm64-macos14`.
+  - **Platforms** select the operating system and accelerator with `-p`: CUDA
+    (`linux-64-cuda`, `win-64-cuda`), CPU (`linux-64-cpu`, `win-64-cpu`),
+    or Apple Silicon on macOS 14+ (`osx-arm64-macos14`).
     For example: `pixi run -p linux-64-cuda test`.
   - **Tasks** run common workflows with `pixi run <task>`, such as `test`, `notebook`,
     `gifteval`, `fevbench`, or `docs-build`. Each task selects its default environment.
