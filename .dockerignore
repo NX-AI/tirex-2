@@ -1,0 +1,9 @@
+# Temporary
+*
+!pyproject.toml
+!README.md
+!LICENSE
+!NOTICE
+!src
+**/__pycache__
+**/*.egg-info
