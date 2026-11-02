@@ -10,18 +10,21 @@ instructions live in the repository next to the benchmark code:
   reproduce results on the [fev-bench](https://huggingface.co/spaces/autogluon/fev-bench)
   leaderboard.
 
+Run commands from the repository root. Benchmark tasks use the `benchmark` environment,
+which includes the shared `fev` and `gluonts` features.
+
 ## GIFT-Eval
 
 Download the dataset once:
 
 ```bash
-pixi run -e examples --platform linux-64-cuda huggingface-cli download Salesforce/GiftEval --repo-type=dataset --local-dir PATH_TO_SAVE
+pixi run --platform linux-64-cuda gifteval-download PATH_TO_SAVE
 ```
 
 Run the benchmark, choosing a model type:
 
 ```bash
-pixi run -e examples --platform linux-64-cuda python examples/gifteval/run_gifteval.py </path/to/gifteval_storage> pretrained
+pixi run --platform linux-64-cuda gifteval /path/to/gifteval_storage pretrained
 ```
 
 - `pretrained` loads `NX-AI/TiRex-2-gifteval-pretrain`.
@@ -34,19 +37,19 @@ multivariate dataset into independent univariate channels, matching the official
 protocol:
 
 ```bash
-pixi run -e examples --platform linux-64-cuda-126 python examples/gifteval/run_gifteval.py \
-    </path/to/gifteval_storage> <ckpt_dir> --eval-mode univariate
+pixi run --platform linux-64-cuda-126 gifteval \
+    /path/to/gifteval_storage pretrained --eval-mode univariate
 ```
 
-An interactive notebook is also available: start `pixi run --platform linux-64-cuda notebook` and open
-`examples/gifteval/gifteval.ipynb`.
+For the interactive notebook, run `pixi run -e benchmark jupyter lab examples/gifteval/gifteval.ipynb`
+The `benchmark` environment includes Jupyter and all benchmark dependencies.
 
 ## fev-bench
 
 Optionally pre-download the data:
 
 ```bash
-pixi run -e examples --platform linux-64-cuda huggingface-cli download autogluon/fev_datasets --repo-type=dataset --local-dir </path/to/fevbench/store>
+pixi run --platform linux-64-cuda fevbench-download /path/to/fevbench/store
 ```
 
 Run the benchmark — this always loads `NX-AI/TiRex-2-fevbench` from Hugging Face:

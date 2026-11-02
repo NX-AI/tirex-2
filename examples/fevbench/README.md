@@ -3,6 +3,9 @@
 Evaluate TiRex2 on the [FEV-Benchmark](https://huggingface.co/spaces/autogluon/fev-bench)
 benchmark.
 
+Run commands from the repository root. The tasks use the `benchmark` environment,
+including the shared `fev` and `gluonts` features.
+
 ## Data
 Data can be downloaded beforehand using:
 ```bash
@@ -11,8 +14,8 @@ pixi run fevbench-download PATH_TO_STORAGE
 
 #### Tips: Platform Selection
 
-Pixi selects a compatible platform automatically (PyTorch w/ CUDA 13.0 for Linux/Windows, PyTorch w/ default for macOS), or you can choose one explicitly, for example `pixi run -p linux-64-cuda-126 ...`. Platforms are defined in
-[`pyproject.toml`](pyproject.toml).
+Pixi selects a compatible platform automatically (PyTorch w/ CUDA 13.0 for Linux/Windows, PyTorch from PyPI for macOS 14+), or you can choose one explicitly, for example `pixi run -p linux-64-cuda-126 ...`. Platforms are defined in
+[`pyproject.toml`](../../pyproject.toml).
 
 ## Run
 The script always loads `NX-AI/TiRex-2-fevbench` from Hugging Face:

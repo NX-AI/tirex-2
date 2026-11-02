@@ -90,24 +90,3 @@ jobs:
 
       - name: Run tests on CPU
         run: pixi run test
-
-  core-tests-preview:
-    name: core-tests preview (py3.15, ubuntu-latest)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
-        with:
-          pixi-version: v0.83.0
-          run-install: false
-          cache: false
-
-      - name: Select preview Python version for the test environment
-        # Preview dependency availability and compatibility should not block stable CI.
-        continue-on-error: true
-        run: |
-          pixi workspace channel add --feature test conda-forge/label/python_rc --priority=-1 --no-install
-          pixi add --feature test --platform linux-64-cpu "python=3.15.*" --no-install
-
-      - name: Run tests on CPU
-        run: pixi run test

@@ -22,6 +22,7 @@ All notable changes to TiRex-2 are documented here.
 
 ### Documentation and development
 
+- Moved example and benchmark dependencies from pip extras to Pixi environments and updated setup docs and notebooks in [#115](https://github.com/NX-AI/tirex-2/pull/115), contributed by [Zhihao Dai](https://github.com/daidahao).
 - Simplified model code and tests in [#80](https://github.com/NX-AI/tirex-2/pull/80), contributed by [Martin Loretz](https://github.com/martinloretzzz):
   - Replaced the FlashRNN layer with `sLSTMLayer` in `slstm_block.py`.
   - Removed `xLSTMMixedConfig` and `xLSTMLargeConfig`; `BiXLSTM` now takes plain arguments.
