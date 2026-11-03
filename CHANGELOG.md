@@ -14,7 +14,7 @@ All notable changes to TiRex-2 are documented here.
 
 ### Forecasting and performance
 
-- ⭐️🚀 **Faster CUDA inference** with CUDA Graphs and improved Triton kernels in [#80](https://github.com/NX-AI/tirex-2/pull/80), contributed by [Martin Loretz](https://github.com/martinloretzzz) and [Zhihao Dai](https://github.com/daidahao):
+- ⭐️🚀 **Faster GPU inference for small batches** with CUDA Graphs and improved Triton kernels in [#80](https://github.com/NX-AI/tirex-2/pull/80), contributed by [Martin Loretz](https://github.com/martinloretzzz) and [Zhihao Dai](https://github.com/daidahao):
     - Graph replays accelerate small batches by up to 5×. Enabled by default for up to 32 variate rows on CUDA; disable with `load_model(..., cuda_graphs=False)`.
     - Triton sLSTM kernels replace FlashRNN, with FP32 states and PyTorch fallbacks. Removed the `flashrnn` dependency.
     - Triton mLSTM kernels replace `mlstm_kernels`. Removed the `mlstm_kernels` dependency.
@@ -22,19 +22,20 @@ All notable changes to TiRex-2 are documented here.
     - Fused sLSTM gate and mLSTM input projections; existing checkpoints adapt on load.
     - `pad_context=False` now pads to a multiple of 4 patches to reduce compilation and CUDA Graph capture overhead.
     - Added kernel and CUDA Graph tests. Benchmark scores remain unchanged.
-- ⭐️🚀 **Faster batched GPU forecasts**: Preprocessing now runs on the CPU and handles all target rows at once, with trend detection via a closed-form least-squares fit instead of `np.polyfit` per row. GPU forecasts of 32–512 series are 1.5–1.9x faster with identical outputs, in [#111](https://github.com/NX-AI/tirex-2/pull/111), contributed by [Daniil Yefimov](https://github.com/DaniilYefimov).
-- **Monotonic quantile forecasts**: Sort predictions across quantile levels to prevent quantile crossings in [#101](https://github.com/NX-AI/tirex-2/pull/101), contributed by [Martin Loretz](https://github.com/martinloretzzz).
+- ⭐️🚀 **Faster GPU inference for medium batches**: Preprocessing now runs on the CPU and handles all target rows at once, with trend detection via a closed-form least-squares fit. GPU forecasts of 32–512 series are 1.5–1.9× faster with identical outputs, in [#111](https://github.com/NX-AI/tirex-2/pull/111), contributed by [Daniil Yefimov](https://github.com/DaniilYefimov).
 - ⭐️🤖 **Forecasting skill**: Added a forecasting skill with Claude Code and Codex plugins, including dataframe and tensor examples in [#84](https://github.com/NX-AI/tirex-2/pull/84), contributed by [Zhihao Dai](https://github.com/daidahao).
+- **Monotonic quantile forecasts**: Sort predictions across quantile levels to prevent quantile crossings in [#101](https://github.com/NX-AI/tirex-2/pull/101), contributed by [Martin Loretz](https://github.com/martinloretzzz).
 
 ### Deployment
 
-- ⭐️🚀 **Inference server batching and workers**: Concurrent requests are queued and batched across configurable model workers (`MODEL_WORKERS`), increasing throughput by up to 33× on CPU and 22× on GPU. Requests that exceed the queue wait limit (`MAX_QUEUE_WAIT_S`) receive HTTP 503, in [#114](https://github.com/NX-AI/tirex-2/pull/114), contributed by [Martin Loretz](https://github.com/martinloretzzz).
+- ⭐️🚀 **Inference server request queuing**: Concurrent requests are queued and batched across configurable model workers (`MODEL_WORKERS`), increasing throughput by up to 33× on CPU and 22× on GPU. Requests that exceed the queue wait limit (`MAX_QUEUE_WAIT_S`) receive HTTP 503, in [#114](https://github.com/NX-AI/tirex-2/pull/114), contributed by [Martin Loretz](https://github.com/martinloretzzz).
 - ⭐️📦 **Offline Docker images**: Docker images for CPU/GPU inference servers now include the default model weights for offline deployment in [#82](https://github.com/NX-AI/tirex-2/pull/82), contributed by [Zhihao Dai](https://github.com/daidahao).
-- Added an [ONNX inference guide](https://nx-ai.github.io/tirex-2/how-to/onnx/) for univariate and multivariate forecasts on CPU and GPU in [#75](https://github.com/NX-AI/tirex-2/pull/75), contributed by [Suad0](https://github.com/Suad0).
+- ⭐️🔄 **ONNX inference**: Added an [📙 ONNX inference guide](https://nx-ai.github.io/tirex-2/how-to/onnx/) for univariate and multivariate forecasts on CPU and GPU in [#75](https://github.com/NX-AI/tirex-2/pull/75), contributed by [Suad0](https://github.com/Suad0).
 
 ### Breaking changes
 
-- ‼️‼️ **Legacy checkpoint support removed**: Checkpoints must be in `json` and `safetensors` formats. Legacy `yaml` and `ckpt` formats are no longer supported. Use `tirex-2<=0.4.0` for legacy checkpoints, or convert them locally with [this script](https://github.com/NX-AI/tirex-2/blob/b16f761e160dab75bb8ea5b74ace008419c2d121/scripts/convert_checkpoint.py), in [#112](https://github.com/NX-AI/tirex-2/pull/112), contributed by [Martin Loretz](https://github.com/martinloretzzz) and [Zhihao Dai](https://github.com/daidahao).
+- ‼️‼️ **Legacy checkpoint support removed**: Checkpoints must be in `json` and `safetensors` formats, in [#112](https://github.com/NX-AI/tirex-2/pull/112), contributed by [Martin Loretz](https://github.com/martinloretzzz) and [Zhihao Dai](https://github.com/daidahao).
+    - Legacy `yaml` and `ckpt` formats are no longer supported. Use `tirex-2<=0.4.0` for legacy checkpoints, or convert them locally with [this script](https://github.com/NX-AI/tirex-2/blob/b16f761e160dab75bb8ea5b74ace008419c2d121/scripts/convert_checkpoint.py).
 - Removed the legacy conversion script in [#113](https://github.com/NX-AI/tirex-2/pull/113). Use the [archived version](https://github.com/NX-AI/tirex-2/blob/b16f761e160dab75bb8ea5b74ace008419c2d121/scripts/convert_checkpoint.py).
 - Moved example and benchmark dependencies from pip extras to Pixi environments and updated setup docs and notebooks in [#115](https://github.com/NX-AI/tirex-2/pull/115), contributed by [Zhihao Dai](https://github.com/daidahao).
 
@@ -56,7 +57,6 @@ All notable changes to TiRex-2 are documented here.
 - Added plugin CI checks for manifest validation, Codex installation, package contents, and version bumps in [#100](https://github.com/NX-AI/tirex-2/pull/100), contributed by [Zhihao Dai](https://github.com/daidahao).
 - Simplified Docker image builds and consolidated CI to test CPU/GPU images before publishing in [#82](https://github.com/NX-AI/tirex-2/pull/82), contributed by [Zhihao Dai](https://github.com/daidahao).
 - Updated CA certificates and CI tooling for the eMudhra/emSign security incident in [#83](https://github.com/NX-AI/tirex-2/pull/83), contributed by [Zhihao Dai](https://github.com/daidahao).
-
 - Changed Dependabot updates to monthly and disabled separate inference dependency updates in [#96](https://github.com/NX-AI/tirex-2/pull/96) and [#108](https://github.com/NX-AI/tirex-2/pull/108), contributed by [Zhihao Dai](https://github.com/daidahao) and [Daniil Yefimov](https://github.com/DaniilYefimov).
 
 ## [0.4.0] - 2026-10-20

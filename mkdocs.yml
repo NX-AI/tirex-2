@@ -6,6 +6,9 @@ repo_url: https://github.com/NX-AI/tirex-2
 edit_uri: edit/main/docs/
 copyright: Copyright &copy; NXAI GmbH
 
+watch:
+  - CHANGELOG.md
+
 theme:
   name: material
   logo: images/tirex.svg
