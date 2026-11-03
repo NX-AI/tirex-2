@@ -46,7 +46,7 @@ follow `type(scope): summary` with one of `chore`, `ci`, `docs`, `feat`, `fix`, 
 
 ## Documentation Specifics
 
-The MkDocs site lives in [`docs/`](docs/) and publishes to [GitHub Pages](https://nx-ai.github.io/tirex-2/) via [`.github/workflows/docs.yml`](.github/workflows/docs.yml). To contribute:
+The Zensical site lives in [`docs/`](docs/) and publishes to [GitHub Pages](https://nx-ai.github.io/tirex-2/) via [`.github/workflows/docs.yml`](.github/workflows/docs.yml). To contribute:
 
 - Add guides under `docs/` and register them in [`mkdocs.yml`](mkdocs.yml) under `nav`.
 - Update [API reference](docs/api/) content through docstrings in `src/tirex2/`, including runnable examples for public functions and classes.

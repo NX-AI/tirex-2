@@ -7,7 +7,7 @@ edit_uri: edit/main/docs/
 copyright: Copyright &copy; NXAI GmbH
 
 theme:
-  name: material
+  variant: classic
   logo: images/tirex.svg
   favicon: images/tirex.svg
   palette:
