@@ -3,7 +3,6 @@ on:
   pull_request:
     paths:
       - 'inference/**'
-      - '.dockerignore'
       - '.github/workflows/docker-build.yaml'
   workflow_run:
     workflows: ['Publish Python Package']
@@ -142,8 +141,6 @@ jobs:
       with:
         platforms: linux/amd64
         context: inference
-        # Temporary until the next tirex-2 release: the GPU image installs tirex-2 from source.
-        build-contexts: tirex2-repo=.
         file: inference/Dockerfile.gpu
         load: true
         tags: tirex2-gpu:test
@@ -192,8 +189,6 @@ jobs:
       with:
         platforms: linux/amd64
         context: inference
-        # Temporary until the next tirex-2 release: the GPU image installs tirex-2 from source.
-        build-contexts: tirex2-repo=.
         file: inference/Dockerfile.gpu
         tags: |
           ghcr.io/nx-ai/tirex2-gpu:${{ steps.get_version.outputs.version }}

@@ -18,9 +18,6 @@ RUN python -m pip install --no-cache-dir --no-deps "pip @ https://files.pythonho
     python -m pip install --no-cache-dir --upgrade "pip>=26.2.2" setuptools wheel
 
 COPY requirements.txt ./requirements.txt
-# Temporary until the next tirex-2 release: install tirex-2 from the source
-RUN --mount=type=bind,from=tirex2-repo,target=/tmp/tirex-2,rw \
-    cd /tmp/tirex-2 && pip install --no-cache-dir .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Bundle the default checkpoint without loading the model or requiring a GPU.
