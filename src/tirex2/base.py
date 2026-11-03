@@ -24,8 +24,8 @@ CKPT_FILENAME = "model.ckpt"
 #: Files fetched from a Hugging Face repo, see :func:`_resolve_ckpt_dir`.
 SAFETENSORS_PATTERNS = [CONFIG_FILENAME, WEIGHTS_FILENAME]
 LEGACY_PATTERNS = [LEGACY_CONFIG_FILENAME, CKPT_FILENAME]
-#: The last release that loads the legacy files.
-_LAST_LEGACY_RELEASE = "0.4.0"
+#: The first release that no longer loads the legacy files.
+_LEGACY_REMOVAL_VERSION = "0.5.0"
 _LEGACY_CONVERTER_URL = (
     "https://github.com/NX-AI/tirex-2/blob/b16f761e160dab75bb8ea5b74ace008419c2d121/scripts/convert_checkpoint.py"
 )
@@ -77,7 +77,7 @@ def _resolve_file(ckpt_dir: Path, filename: str, kind: str) -> Path:
     if any((ckpt_dir / legacy).is_file() for legacy in LEGACY_PATTERNS):
         message += (
             f" {ckpt_dir} holds a legacy checkpoint ({LEGACY_CONFIG_FILENAME}, {CKPT_FILENAME}), which this "
-            f"version no longer loads: use tirex-2<={_LAST_LEGACY_RELEASE} for it, or convert it with "
+            f"version no longer loads: use tirex-2<{_LEGACY_REMOVAL_VERSION} for it, or convert it with "
             f"the archived conversion script at {_LEGACY_CONVERTER_URL}."
         )
     raise FileNotFoundError(message)
@@ -100,7 +100,7 @@ def load_model(
         Hugging Face repo id (``org/repo`` or ``hf://org/repo``), downloaded with
         ``huggingface_hub``, or a local directory containing ``config.json`` and
         ``model.safetensors``. Legacy ``model-config.yaml`` / ``model.ckpt``
-        checkpoints need ``tirex-2<=0.4.0``.
+        checkpoints need ``tirex-2<0.5.0``.
     device : {"cpu", "cuda", "mps"}
         Runtime device and recurrent-kernel family to use. This overrides any
         device/backend stored in the checkpoint config. ``"mps"`` runs on Apple
