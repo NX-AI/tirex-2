@@ -35,7 +35,7 @@ All notable changes to TiRex-2 are documented here.
 ### Breaking changes
 
 - ‼️‼️ **Legacy checkpoint support removed**: Checkpoints must be in `json` and `safetensors` formats, in [#112](https://github.com/NX-AI/tirex-2/pull/112), contributed by [Martin Loretz](https://github.com/martinloretzzz) and [Zhihao Dai](https://github.com/daidahao).
-    - Legacy `yaml` and `ckpt` formats are no longer supported. Use `tirex-2<=0.4.0` for legacy checkpoints, or convert them locally with [this script](https://github.com/NX-AI/tirex-2/blob/b16f761e160dab75bb8ea5b74ace008419c2d121/scripts/convert_checkpoint.py).
+    - Legacy `yaml` and `ckpt` formats are no longer supported. Use `tirex-2<0.5.0` for legacy checkpoints, or convert them locally with [this script](https://github.com/NX-AI/tirex-2/blob/b16f761e160dab75bb8ea5b74ace008419c2d121/scripts/convert_checkpoint.py).
 - Removed the legacy conversion script in [#113](https://github.com/NX-AI/tirex-2/pull/113). Use the [archived version](https://github.com/NX-AI/tirex-2/blob/b16f761e160dab75bb8ea5b74ace008419c2d121/scripts/convert_checkpoint.py).
 - Moved example and benchmark dependencies from pip extras to Pixi environments and updated setup docs and notebooks in [#115](https://github.com/NX-AI/tirex-2/pull/115), contributed by [Zhihao Dai](https://github.com/daidahao).
 
