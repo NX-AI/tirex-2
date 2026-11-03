@@ -52,6 +52,8 @@ The Zensical site lives in [`docs/`](docs/) and publishes to [GitHub Pages](http
 - Update [API reference](docs/api/) content through docstrings in `src/tirex2/`, including runnable examples for public functions and classes.
 - Preview locally: `pixi run docs`.
 - Build with warnings treated as errors (as CI does): `pixi run --frozen docs-build`.
+- Zensical reads the existing `mkdocs.yml`; MkDocs is no longer the site builder.
+- If generated pages appear stale, clear the cache with `pixi run docs-build-clean`.
 
 ## Agent plugin checks
 
@@ -68,7 +70,7 @@ pixi run python -m unittest discover -s scripts/tests
 ## Commit & Review Etiquette
 
 - Avoid committing generated artifacts (e.g. `.pixi/`, `output/`, `model`, `*.csv`,
-  `*.egg-info`, `site/` — see [`.gitignore`](.gitignore)) unless they are intended changes.
+  `*.egg-info`, `site/`, `.cache/` — see [`.gitignore`](.gitignore)) unless they are intended changes.
 - Rebase (don't merge) when syncing from `main`.
 - Respond to every review comment; clarify disagreements rather than ignoring them.
 
