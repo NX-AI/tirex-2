@@ -8,12 +8,11 @@ from fastmcp import FastMCP
 from pydantic import BaseModel
 
 from app.config import Settings
-from app.model import Tirex2Model
+from app.model_pool import ModelPool, QueueFullError
 from tirex2 import TimeseriesType
 
 settings = Settings()
-model = Tirex2Model(settings)
-model.warmup()
+model_pool = ModelPool(settings)
 
 
 app = FastAPI(title="TiRex V2 API")
@@ -24,6 +23,16 @@ MEDIAN_QUANTILE_INDEX = 4
 @app.get("/health")
 def health():
     return {"message": "OK"}
+
+
+@app.exception_handler(QueueFullError)
+def queue_full_handler(request: Request, exc: QueueFullError) -> JSONResponse:
+    return JSONResponse(status_code=503, content={"error_code": 503, "error_message": str(exc)})
+
+
+@app.exception_handler(ValueError)
+def invalid_input_handler(request: Request, exc: ValueError) -> JSONResponse:
+    return JSONResponse(status_code=422, content={"error_code": 422, "error_message": str(exc)})
 
 
 @app.exception_handler(Exception)
@@ -70,15 +79,15 @@ class UnivariateForecastRequest(BaseModel):
 
 
 @app.post("/univariate/forecast/mean")
-def forecast_mean(req: UnivariateForecastRequest) -> list[list[float]]:
-    forecasts = model.predict(req.to_timeseries(), req.prediction_length)
+async def forecast_mean(req: UnivariateForecastRequest) -> list[list[float]]:
+    forecasts = await model_pool.predict(req.to_timeseries(), req.prediction_length)
     # forecasts: [variate, quantile, timestep]; single variate -> f[0].
     return [f[0, MEDIAN_QUANTILE_INDEX, :].tolist() for f in forecasts]
 
 
 @app.post("/univariate/forecast/quantiles")
-def forecast_quantiles(req: UnivariateForecastRequest) -> list[list[list[float]]]:
-    forecasts = model.predict(req.to_timeseries(), req.prediction_length)
+async def forecast_quantiles(req: UnivariateForecastRequest) -> list[list[list[float]]]:
+    forecasts = await model_pool.predict(req.to_timeseries(), req.prediction_length)
     # forecasts: [variate, quantile, timestep]; single variate -> f[0].
     return [f[0].tolist() for f in forecasts]
 
@@ -99,17 +108,17 @@ class MultivariateForecastRequest(BaseModel):
 
 
 @app.post("/multivariate/forecast/mean")
-def multivariate_forecast_mean(req: MultivariateForecastRequest) -> list[list[list[float]]]:
+async def multivariate_forecast_mean(req: MultivariateForecastRequest) -> list[list[list[float]]]:
     contexts = [s.to_timeseries() for s in req.context]
-    forecasts = model.predict(contexts, req.prediction_length)
+    forecasts = await model_pool.predict(contexts, req.prediction_length)
     # forecasts: [variate, quantile, timestep]; keep all variates -> f[:, ...].
     return [f[:, MEDIAN_QUANTILE_INDEX, :].tolist() for f in forecasts]
 
 
 @app.post("/multivariate/forecast/quantiles")
-def multivariate_forecast_quantiles(req: MultivariateForecastRequest) -> list[list[list[list[float]]]]:
+async def multivariate_forecast_quantiles(req: MultivariateForecastRequest) -> list[list[list[list[float]]]]:
     contexts = [s.to_timeseries() for s in req.context]
-    forecasts = model.predict(contexts, req.prediction_length)
+    forecasts = await model_pool.predict(contexts, req.prediction_length)
     # forecasts: [variate, quantile, timestep]; keep all variates -> f.
     return [f.tolist() for f in forecasts]
 
@@ -135,7 +144,7 @@ async def tirex_model(context: list[float], prediction_length: int) -> str:
 
     input_length = len(context)
     ts = TimeseriesType(target=_to_tensor([context]), past_covariates=None, future_covariates=None)
-    forecasts = model.predict([ts], prediction_length)
+    forecasts = await model_pool.predict([ts], prediction_length)
     # forecast: [variate, quantile, timestep]; single variate -> [0], median quantile.
     mean = forecasts[0][0, MEDIAN_QUANTILE_INDEX, :].tolist()
 
@@ -168,7 +177,7 @@ async def tirex_model_multivariate(
         past_covariates=_to_tensor(past_covariates),
         future_covariates=_to_tensor(future_covariates),
     )
-    forecasts = model.predict([ts], prediction_length)
+    forecasts = await model_pool.predict([ts], prediction_length)
     # forecast: [variate, quantile, timestep]; take the median quantile per variate.
     mean = forecasts[0][:, MEDIAN_QUANTILE_INDEX, :].tolist()
 
