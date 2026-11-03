@@ -70,7 +70,7 @@ jobs:
         run: pixi run --frozen test
 
   core-tests-lowest-bound:
-    name: core-tests lowest bound (py3.11, torch2.8.0)
+    name: core-tests lowest bound (py3.11, torch2.8)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -80,16 +80,17 @@ jobs:
           run-install: false
           cache: false
 
-      - name: Select lowest supported Python and CPU torch versions
+      - name: Select lowest supported runtime dependencies
         run: |
           # PyTorch 2.8 imports setuptools from torch.utils.cpp_extension.
           pixi add --feature test "python=3.11.*" "setuptools>=68" --no-install
           pixi add --feature test --platform linux-64-cpu --pypi "torch==2.8.0" --index https://download.pytorch.org/whl/cpu --no-install
-          # Match PyTorch 2.8's Triton version; flashrnn otherwise pulls an unconstrained version.
-          pixi add --feature test --platform linux-64-cpu --pypi "triton==3.4.0" --no-install
+          # Match PyTorch 2.8's Triton version.
+          pixi add --feature test --platform linux-64-cpu --pypi "triton==3.4.0" "numpy==2.1.3" "huggingface-hub==0.35.3" "safetensors==0.6.1" "narwhals==2.0.0" --no-install
+          pixi add --feature test --platform linux-64-cpu --pypi "pandas==2.2.2" "polars==1.1.0" "pyarrow==21.0.0" "gluonts==0.16.2" "fev==0.8.0" "datasets==4.4.0" --no-install
 
       - name: Run tests on CPU
-        run: pixi run test
+        run: pixi run -p linux-64-cpu test
 
   core-tests-preview:
     name: core-tests preview (py3.15, ubuntu-latest)

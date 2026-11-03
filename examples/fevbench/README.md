@@ -14,7 +14,9 @@ pixi run fevbench-download PATH_TO_STORAGE
 
 #### Tips: Platform Selection
 
-Pixi selects a compatible platform automatically (PyTorch w/ CUDA 13.0 for Linux/Windows, PyTorch from PyPI for macOS 14+), or you can choose one explicitly, for example `pixi run -p linux-64-cuda-126 ...`. Platforms are defined in
+Pixi selects a compatible platform automatically. Linux and Windows support CUDA or CPU;
+Apple Silicon supports macOS 14+. Choose explicitly with `-p`, for example
+`pixi run -p linux-64-cuda ...`. Platforms are defined in
 [`pyproject.toml`](../../pyproject.toml).
 
 ## Run
