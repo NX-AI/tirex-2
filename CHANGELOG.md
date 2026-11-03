@@ -125,7 +125,8 @@ All notable changes to TiRex-2 are documented here.
 
 Initial TiRex-2 release, contributed by [martinloretzzz](https://github.com/martinloretzzz) in the [initial commit](https://github.com/NX-AI/tirex-2/commit/abdf2898162482cc5c862905a406fc1134fbae67).
 
-[Unreleased]: https://github.com/NX-AI/tirex-2/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/NX-AI/tirex-2/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/NX-AI/tirex-2/releases/tag/v0.5.0
 [0.4.0]: https://github.com/NX-AI/tirex-2/releases/tag/v0.4.0
 [0.3.1]: https://github.com/NX-AI/tirex-2/releases/tag/v0.3.1
 [0.3.0]: https://github.com/NX-AI/tirex-2/releases/tag/v0.3.0
