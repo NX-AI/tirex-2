@@ -168,8 +168,8 @@ retried, without affecting the rest of the call.
 | :------------ | :------ | :------- |
 | `"torch"` (default) | list of `torch.Tensor`, shape `(V, 9, H)` | — |
 | `"numpy"` | list of `numpy.ndarray`, shape `(V, 9, H)` | — |
-| `"gluonts"` | list of GluonTS `QuantileForecast` | `pip install "tirex-2[gluonts]"` |
-| `"fev"` | a `datasets.DatasetDict` for `fev.Task.evaluation_summary` | `pip install "tirex-2[fev]"` |
+| `"gluonts"` | list of GluonTS `QuantileForecast` | `pip install gluonts` |
+| `"fev"` | a `datasets.DatasetDict` for `fev.Task.evaluation_summary` | `pip install fev` |
 | `"dataframe"` | one long-format frame, in the input's dataframe library | a dataframe library |
 | `"pandas"` | the same frame, always as pandas | `pip install pandas` |
 

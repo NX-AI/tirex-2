@@ -61,8 +61,7 @@ ENV TRITON_CACHE_DIR=/var/cache/triton \
     TORCHINDUCTOR_CACHE_DIR=/var/cache/torchinductor \
     NVIDIA_VISIBLE_DEVICES=all \
     NVIDIA_DRIVER_CAPABILITIES=compute,utility \
-    MODEL_DEVICE=cuda \
-    MODEL_COMPILE=1
+    MODEL_DEVICE=cuda
 
 # Load the bundled checkpoint locally, including when running without network access.
 COPY --from=build --chown=appuser:appuser /opt/models/tirex2 /opt/models/tirex2

@@ -45,7 +45,6 @@ nav:
       - Intended use: intended-use.md
   - Introduction: introduction.md
   - Getting started:
-      - Installation: getting-started/install.md
       - Quickstart: getting-started/quickstart.md
   - How-to guides:
       - Forecasting: how-to/forecasting.md
