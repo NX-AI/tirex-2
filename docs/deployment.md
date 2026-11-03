@@ -52,10 +52,7 @@ To start a container from either image, run:
 
 ??? tip "Using another model checkpoint"
 
-    Set `MODEL_PATH` to a Hugging Face model ID to download a different checkpoint at runtime (requires network access). The cache path differs by image:
-
-    - **CPU image**: runs as `appuser` (UID 1000), home `/home/appuser`.
-    - **GPU image**: runs as `ubuntu`, home `/home/ubuntu`.
+    Set `MODEL_PATH` to a Hugging Face model ID to download a different checkpoint at runtime (requires network access). Both images run as `appuser` (UID 1000), home `/home/appuser`.
 
     The cache lands at the default location (`~/.cache/huggingface`) under that user's home. Mount a
     volume there to reuse downloaded weights when recreating containers. Replace `ORG/MODEL`
@@ -75,7 +72,7 @@ To start a container from either image, run:
         ```bash
         docker run -it --gpus 1 -p 8000:8000 \
           -e MODEL_PATH=ORG/MODEL \
-          -v tirex2-cache:/home/ubuntu/.cache/huggingface \
+          -v tirex2-cache:/home/appuser/.cache/huggingface \
           ghcr.io/nx-ai/tirex2-gpu
         ```
 
