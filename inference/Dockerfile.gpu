@@ -11,8 +11,10 @@ ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-RUN python3.12 -m venv /opt/venv
+RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:${PATH}"
+WORKDIR /app
+
 # Bootstrap pip with the advisory SHA256 before fetching other packages.
 RUN python -m pip install --no-cache-dir --no-deps "pip @ https://files.pythonhosted.org/packages/3f/06/3e4420302363fbb71be3c7f35ce042f54bfca330e3e66b3a2e3c4cca579f/pip-26.2.2-py3-none-any.whl#sha256=fd7f4dfa8190e014013b9f08f3e973f4e4c26ffd179a204895533a7254813a70" && \
     python -m pip install --no-cache-dir --upgrade "pip>=26.2.2" setuptools wheel
@@ -27,13 +29,13 @@ RUN hf download NX-AI/TiRex-2 config.json model.safetensors \
     test -f /opt/models/tirex2/model.safetensors
 
 # -------------------------
-# Runtime
+# Stage 2: Runtime
 # -------------------------
 FROM python:3.12-slim AS runtime
 
 ARG DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update && apt-get install -y g++ --no-install-recommends ca-certificates \
+RUN apt-get update && apt-get install -y --no-install-recommends g++ ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy the Python environment and app packages from the build stage.
@@ -46,15 +48,14 @@ RUN useradd --create-home --uid 1000 --shell /bin/bash appuser
 # Create a writable workdir owned by appuser
 RUN install -d -o appuser -g appuser /home/appuser/app
 
-# Set WORKDIR
 WORKDIR /home/appuser/app
 
 COPY THIRD-PARTY-LICENSES.md .
 
-# Keep your existing project layout (app/main.py, etc.)
+# Copy the application code.
 COPY --chown=appuser:appuser app/ ./app/
 
-# Optional: centralize JIT caches so you can persist them
+# Keep GPU compilation caches writable and mountable.
 RUN mkdir -p /var/cache/triton /var/cache/torchinductor && \
     chown -R appuser:appuser /var/cache/triton /var/cache/torchinductor
 ENV TRITON_CACHE_DIR=/var/cache/triton \
@@ -70,9 +71,7 @@ ENV MODEL_PATH=/opt/models/tirex2
 USER appuser
 EXPOSE 8000
 
-# Simple healthcheck; adjust if you expose a /health endpoint instead
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-        CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=10)"
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=10)"
 
-# Start exactly like before to preserve imports inside app/
 CMD ["python", "-m", "app.main"]
