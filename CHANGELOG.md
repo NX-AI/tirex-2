@@ -28,12 +28,14 @@ All notable changes to TiRex-2 are documented here.
 
 ### Deployment
 
+- ⭐️📦 **Smaller GPU Docker image**: Switching to `python:3.12-slim` without the CUDA Toolkit reduces image size by about 60% (26.3 GB → 10.3 GB). CPU/GPU images now share the same virtualenv setup and healthcheck, in [#119](https://github.com/NX-AI/tirex-2/pull/119), contributed by [Daniil Yefimov](https://github.com/DaniilYefimov).
 - ⭐️🚀 **Inference server request queuing**: Concurrent requests are queued and batched across configurable model workers (`MODEL_WORKERS`), increasing throughput by up to 33× on CPU and 22× on GPU. Requests that exceed the queue wait limit (`MAX_QUEUE_WAIT_S`) receive HTTP 503, in [#114](https://github.com/NX-AI/tirex-2/pull/114), contributed by [Martin Loretz](https://github.com/martinloretzzz).
 - ⭐️📦 **Offline Docker images**: Docker images for CPU/GPU inference servers now include the default model weights for offline deployment in [#82](https://github.com/NX-AI/tirex-2/pull/82), contributed by [Zhihao Dai](https://github.com/daidahao).
 - ⭐️🔄 **ONNX inference**: Added an [📙 ONNX inference guide](https://nx-ai.github.io/tirex-2/how-to/onnx/) for univariate and multivariate forecasts on CPU and GPU in [#75](https://github.com/NX-AI/tirex-2/pull/75), contributed by [Suad0](https://github.com/Suad0).
 
 ### Breaking changes
 
+- ‼️ **GPU Docker user changed**: Both images run as `appuser` (UID 1000). Update GPU volume mounts from `/home/ubuntu/...` to `/home/appuser/...`, in [#119](https://github.com/NX-AI/tirex-2/pull/119), contributed by [Daniil Yefimov](https://github.com/DaniilYefimov).
 - ‼️‼️ **Legacy checkpoint support removed**: Checkpoints must be in `json` and `safetensors` formats, in [#112](https://github.com/NX-AI/tirex-2/pull/112), contributed by [Martin Loretz](https://github.com/martinloretzzz) and [Zhihao Dai](https://github.com/daidahao).
     - Legacy `yaml` and `ckpt` formats are no longer supported. Use `tirex-2<0.5.0` for legacy checkpoints, or convert them locally with [this script](https://github.com/NX-AI/tirex-2/blob/b16f761e160dab75bb8ea5b74ace008419c2d121/scripts/convert_checkpoint.py).
 - Removed the legacy conversion script in [#113](https://github.com/NX-AI/tirex-2/pull/113). Use the [archived version](https://github.com/NX-AI/tirex-2/blob/b16f761e160dab75bb8ea5b74ace008419c2d121/scripts/convert_checkpoint.py).
