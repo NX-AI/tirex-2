@@ -16,5 +16,6 @@ dist/
 .ipynb_checkpoints/
 .idea/
 /venv
+.venv
 
 .DS_Store

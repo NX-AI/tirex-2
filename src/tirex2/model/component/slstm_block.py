@@ -227,17 +227,18 @@ class sLSTMLayer(nn.Module):
     def forward(
         self,
         x: torch.Tensor,
+        state: torch.Tensor | None = None,
         **kwargs,
-    ) -> torch.Tensor:
+    ) -> tuple[torch.Tensor, torch.Tensor | None]:
         """Process a full sequence through the sLSTM."""
         Wx = self.gate_preacts(x)
-        y, _ = self.recurrence(Wx)
+        y, last_state = self.recurrence(Wx, states=state)
         y = y[0]
 
         y = self.dropout(y)
 
         out = self.group_norm(y)
-        return out
+        return out, None if state is None else last_state
 
 
 def _slstm_backend(device: Literal["cpu", "cuda", "mps"]) -> str:

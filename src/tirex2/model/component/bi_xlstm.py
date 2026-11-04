@@ -117,16 +117,22 @@ class BiXLSTM(nn.Module):
             del state_dict[key]
         super()._load_from_state_dict(state_dict, prefix, *args, **kwargs)
 
-    def forward(self, x: torch.Tensor, reverse_idx: torch.Tensor):
-        """Run the bidirectional xLSTM block; ``reverse_idx`` are the variates of the reverse cell."""
+    def forward(self, x: torch.Tensor, reverse_idx: torch.Tensor, state=None):
+        """Run the bidirectional xLSTM block; ``reverse_idx`` are the variates of the reverse cell.
+
+        ``state`` is the state the forward cell starts from (see the cell's ``forward``); given one, the forward
+        cell's last state is returned, else None. The reverse cell always starts from zeros at the end of the
+        sequence.
+        """
         x_norm = self.norm_lstm(x)
 
         x_fwd, x_rev, fwd_idc, rev_idc = self._split(x_norm, reverse_idx)
 
-        x_fwd = self.fwd_cell(x_fwd) if x_fwd.shape[0] > 0 else x_fwd
+        if x_fwd.shape[0] > 0:
+            x_fwd, state = self.fwd_cell(x_fwd, state=state)
         if x_rev.shape[0] > 0:
             x_rev_flipped = torch.flip(x_rev, dims=(1,)).contiguous()
-            x_rev_out = self.rev_cell(x_rev_flipped)
+            x_rev_out, _ = self.rev_cell(x_rev_flipped)
             x_rev = torch.flip(x_rev_out, dims=(1,))
 
         out = self._recombine(x_fwd, x_rev, fwd_idc, rev_idc, x)
@@ -137,7 +143,7 @@ class BiXLSTM(nn.Module):
         # ffn with residual connection
         out = out + self.ffn(self.norm_ffn(out))
 
-        return out
+        return out, state
 
     def _split_variates(
         self, x: torch.Tensor, known_idc: torch.Tensor
