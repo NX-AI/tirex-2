@@ -26,6 +26,7 @@ All notable changes to TiRex-2 are documented here.
 
 ### Documentation and development
 
+- Migrated the documentation site to Zensical, preserving the classic theme, API reference, and existing preview/build commands, and added `pixi run docs-build-clean` in [#123](https://github.com/NX-AI/tirex-2/pull/123), contributed by [Zhihao Dai](https://github.com/daidahao).
 - Simplified Pixi CUDA setup, removed CUDA Toolkit dependencies, added `pixi run build`, and validated minimum dependency versions in [#117](https://github.com/NX-AI/tirex-2/pull/117), contributed by [Zhihao Dai](https://github.com/daidahao).
 - Added Python 3.15 preview testing and refreshed Pixi dependencies in [#116](https://github.com/NX-AI/tirex-2/pull/116), contributed by [Zhihao Dai](https://github.com/daidahao).
 - Moved example and benchmark dependencies from pip extras to Pixi environments and updated setup docs and notebooks in [#115](https://github.com/NX-AI/tirex-2/pull/115), contributed by [Zhihao Dai](https://github.com/daidahao).
