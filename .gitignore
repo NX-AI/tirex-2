@@ -12,6 +12,7 @@ output/
 build/
 dist/
 /site/
+/.cache/
 
 .ipynb_checkpoints/
 .idea/

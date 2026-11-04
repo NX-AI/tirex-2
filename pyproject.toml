@@ -109,10 +109,8 @@ toolz = ">=0.12.1"
 python = ">=3.11,<3.14"
 
 [tool.pixi.feature.docs.pypi-dependencies]
-mkdocs = ">=1.6,<2"
-mkdocs-material = ">=9.5"
+zensical = ">=0.0.70,<0.1"
 mkdocstrings = { version = ">=0.26", extras = ["python"] }
-mkdocs-material-extensions = ">=1.3"
 ruff = ">=0.11"
 
 [tool.pixi.tasks]
@@ -127,9 +125,10 @@ fevbench = { cmd = "python examples/fevbench/run_fevbench.py", default-environme
 fevbench-download = { cmd = "hf download autogluon/fev_datasets --repo-type=dataset --local-dir ", default-environment = "benchmark" }
 # docs tasks:
 # preview the docs site locally
-docs = { cmd = "mkdocs serve", default-environment = "docs" }
+docs = { cmd = "zensical serve", default-environment = "docs" }
 # build the docs site for deployment
-docs-build = { cmd = "mkdocs build --strict", default-environment = "docs" }
+docs-build = { cmd = "zensical build --strict", default-environment = "docs" }
+docs-build-clean = { cmd = "zensical build --clean --strict", default-environment = "docs" }
 # build tasks:
 build = { cmd = "python -m build", default-environment = "pypi-build" }
 

@@ -46,12 +46,14 @@ follow `type(scope): summary` with one of `chore`, `ci`, `docs`, `feat`, `fix`, 
 
 ## Documentation Specifics
 
-The MkDocs site lives in [`docs/`](docs/) and publishes to [GitHub Pages](https://nx-ai.github.io/tirex-2/) via [`.github/workflows/docs.yml`](.github/workflows/docs.yml). To contribute:
+The Zensical site lives in [`docs/`](docs/) and publishes to [GitHub Pages](https://nx-ai.github.io/tirex-2/) via [`.github/workflows/docs.yml`](.github/workflows/docs.yml). To contribute:
 
 - Add guides under `docs/` and register them in [`mkdocs.yml`](mkdocs.yml) under `nav`.
 - Update [API reference](docs/api/) content through docstrings in `src/tirex2/`, including runnable examples for public functions and classes.
 - Preview locally: `pixi run docs`.
 - Build with warnings treated as errors (as CI does): `pixi run --frozen docs-build`.
+- Zensical reads the existing `mkdocs.yml`; MkDocs is no longer the site builder.
+- If generated pages appear stale, clear the cache with `pixi run docs-build-clean`.
 
 ## Agent plugin checks
 
@@ -68,7 +70,7 @@ pixi run python -m unittest discover -s scripts/tests
 ## Commit & Review Etiquette
 
 - Avoid committing generated artifacts (e.g. `.pixi/`, `output/`, `model`, `*.csv`,
-  `*.egg-info`, `site/` — see [`.gitignore`](.gitignore)) unless they are intended changes.
+  `*.egg-info`, `site/`, `.cache/` — see [`.gitignore`](.gitignore)) unless they are intended changes.
 - Rebase (don't merge) when syncing from `main`.
 - Respond to every review comment; clarify disagreements rather than ignoring them.
 
