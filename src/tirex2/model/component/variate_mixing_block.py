@@ -159,7 +159,7 @@ class MultivariateBlock(nn.Module):
             Optional group ids used when attention is the variate mixer. Should broadcast to the
             variate dimension after reshaping (e.g., [B*V] or [B*V, 1])
             state : dict, optional
-            Optional state returned from a previous call. Keys: ``time_mixer`` and ``variate_mixer``
+            Optional state returned from a previous call, to continue the sequence from. Key: ``time_mixer``
             indices : tuple, optional
             :func:`variate_indices` of the masks, computed when omitted.
             return_svd : bool, optional
@@ -170,7 +170,8 @@ class MultivariateBlock(nn.Module):
         -------
         tuple[torch.Tensor, dict[str, Any]] or tuple[torch.Tensor, dict[str, Any], dict[str, torch.Tensor]]
         If return_svd is False, returns (tokens, state) where tokens has shape [B*V, L, P]
-        and state is a dict with keys 'time_mixer' and 'variate_mixer'.
+        and state is a dict with the time mixer's state after the last step under 'time_mixer' if a state was
+        given, else empty.
         If return_svd is True, returns (tokens, state, svd_vals) where svd_vals contains
         the singular values of the first batch element for each sub-block.
         """
@@ -179,7 +180,8 @@ class MultivariateBlock(nn.Module):
 
         # Stage 1: Time Mixing [B*V, L, P] -> [B*V, L, P]
         # Each variate is processed independently across its time dimension
-        time_output, _ = _unwrap_output(self.time_mixer(x, reverse_idx))
+        time_state = None if state is None else state["time_mixer"]
+        time_output, time_state = _unwrap_output(self.time_mixer(x, reverse_idx, state=time_state))
 
         # Stage 2: Variate Mixing
         # Transpose for variate mixing: [B*V, L, P] -> [L, B*V, P]
@@ -195,7 +197,7 @@ class MultivariateBlock(nn.Module):
         # Transpose back: [L, B*V, P] -> [B*V, L, P]
         x = variate_output.permute(1, 0, 2)
 
-        return x, {}
+        return x, {} if time_state is None else {"time_mixer": time_state}
 
     def _build_time_mixer(self, config: TimeMixerConfig, block_idx: int, num_blocks: int) -> nn.Module:
         """Instantiate time mixing model from configuration.
