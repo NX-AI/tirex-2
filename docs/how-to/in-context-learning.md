@@ -1,5 +1,12 @@
 # In-context learning
 
+<video autoplay loop muted playsinline controls preload="metadata"
+       aria-label="Pressure forecasts with and without motor power as context grows from one to five cycles"
+       style="width:100%; height:auto;">
+  <source src="../../images/in-context/forecast-covariate-animation.mp4" type="video/mp4">
+  <a href="../../images/in-context/forecast-covariate-animation.mp4">Download the forecast animation (MP4)</a>.
+</video>
+
 **In-context learning (ICL)** allows TiRex-2 to adapt to your data using only the context you provide, without additional training or fine-tuning. A richer context can improve forecast accuracy in two complementary ways:
 
 1. By extending the **historical timeline** to capture recurring patterns;
@@ -47,7 +54,6 @@ We give TiRex-2 the first cycle as context repeated *n* times and ask for predic
 points:
 
 ```python
-import torch
 from tirex2 import TimeseriesType, load_model
 
 model = load_model("NX-AI/TiRex-2", device="cpu")  # or device="cuda"
