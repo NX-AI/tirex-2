@@ -165,14 +165,15 @@ See the full feature comparison in the [docs](https://nx-ai.github.io/tirex-2/pr
 If you use TiRex in your research, please cite our work:
 
 ```bibtex
-@misc{podest2026tirex2generalizingtirexmultivariate,
-      title={TiRex-2: Generalizing TiRex to Multivariate Data and Streaming},
-      author={Patrick Podest and Marco Pichler and Elias Bürger and Levente Zólyomi and Bernhard Voggenberger and Wilhelm Berghammer and Daniel Klotz and Sebastian Böck and Günter Klambauer and Sepp Hochreiter},
-      year={2026},
-      eprint={2607.01204},
-      archivePrefix={arXiv},
-      primaryClass={cs.LG},
-      url={https://arxiv.org/abs/2607.01204},
+@inproceedings{podest2026tirex2,
+  title     = {{TiRex-2}: Generalizing {TiRex} to Multivariate Data and Streaming},
+  author    = {Podest, Patrick and Pichler, Marco and B{\"u}rger, Elias and Z{\'o}lyomi, Levente and Voggenberger, Bernhard and Berghammer, Wilhelm and Klotz, Daniel and B{\"o}ck, Sebastian and Klambauer, G{\"u}nter and Hochreiter, Sepp},
+  booktitle = {Advances in Neural Information Processing Systems},
+  year      = {2026},
+  eprint    = {2607.01204},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.LG},
+  url       = {https://arxiv.org/abs/2607.01204}
 }
 ```
 
