@@ -26,7 +26,7 @@ All notable changes to TiRex-2 are documented here.
 
 ### Documentation and development
 
-- ⭐️📖 Added an in-context learning guide with interactive forecasts, a minimal dataset, and examples of extending context and adding covariates in [#69](https://github.com/NX-AI/tirex-2/pull/69), contributed by [Maria Zuliani](https://github.com/uruthia) and [Zhihao Dai](https://github.com/daidahao).
+- ⭐️📖 Added an In-Context Learning guide: how extending the context and adding covariates improves forecasting in [#69](https://github.com/NX-AI/tirex-2/pull/69), contributed by [Maria Zuliani](https://github.com/uruthia) and [Zhihao Dai](https://github.com/daidahao).
 - Migrated the documentation site to Zensical, preserving the classic theme, API reference, and existing preview/build commands, and added `pixi run docs-build-clean` in [#123](https://github.com/NX-AI/tirex-2/pull/123), contributed by [Zhihao Dai](https://github.com/daidahao).
 - Simplified Pixi CUDA setup, removed CUDA Toolkit dependencies, added `pixi run build`, and validated minimum dependency versions in [#117](https://github.com/NX-AI/tirex-2/pull/117), contributed by [Zhihao Dai](https://github.com/daidahao).
 - Added Python 3.15 preview testing and refreshed Pixi dependencies in [#116](https://github.com/NX-AI/tirex-2/pull/116), contributed by [Zhihao Dai](https://github.com/daidahao).
