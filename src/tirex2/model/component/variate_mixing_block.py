@@ -9,7 +9,6 @@ from torch import nn
 
 from .attention_block import AttentionBlock
 from .bi_xlstm import BiXLSTM
-from .xlstm_mixed_config import xLSTMMixedConfig
 
 
 def _unwrap_output(output: torch.Tensor | tuple[torch.Tensor, Any]) -> tuple[torch.Tensor, Any]:
@@ -28,6 +27,20 @@ def _unwrap_output(output: torch.Tensor | tuple[torch.Tensor, Any]) -> tuple[tor
     if isinstance(output, tuple):
         return output
     return output, None
+
+
+def variate_indices(group_vector, target_mask, known_covariate_mask) -> tuple[torch.Tensor, torch.Tensor | None]:
+    """Variates of the reverse xLSTM cell and of non-singleton attention groups.
+
+    Computed once per forward pass, as selecting by mask synchronizes with the
+    host, which would keep the block stack out of a CUDA graph.
+    """
+    reverse_idx = torch.where(~target_mask if known_covariate_mask is None else known_covariate_mask)[0]
+    attention_idx = None
+    if group_vector is not None:
+        _, inverse, counts = torch.unique(group_vector.flatten(), return_inverse=True, return_counts=True)
+        attention_idx = torch.where(counts[inverse] > 1)[0]
+    return reverse_idx, attention_idx
 
 
 @dataclass
@@ -127,6 +140,7 @@ class MultivariateBlock(nn.Module):
         known_covariate_mask: torch.Tensor | None = None,
         state: dict | None = None,
         *,
+        indices: tuple | None = None,
         return_svd: bool = False,
     ) -> tuple[torch.Tensor, dict[str, Any]] | tuple[torch.Tensor, dict[str, Any], dict[str, torch.Tensor]]:
         """Forward pass with three-stage mixing.
@@ -146,6 +160,8 @@ class MultivariateBlock(nn.Module):
             variate dimension after reshaping (e.g., [B*V] or [B*V, 1])
             state : dict, optional
             Optional state returned from a previous call. Keys: ``time_mixer`` and ``variate_mixer``
+            indices : tuple, optional
+            :func:`variate_indices` of the masks, computed when omitted.
             return_svd : bool, optional
             Enables computation of the singular values on the first batch element in each sub-block.
             `torch.svd_lowrank` is used to approximately compute the singular values (default: False)
@@ -159,15 +175,11 @@ class MultivariateBlock(nn.Module):
         the singular values of the first batch element for each sub-block.
         """
         BV, L, P = x.shape
+        reverse_idx, attention_idx = indices or variate_indices(group_vector, target_mask, known_covariate_mask)
 
         # Stage 1: Time Mixing [B*V, L, P] -> [B*V, L, P]
         # Each variate is processed independently across its time dimension
-        if known_covariate_mask is not None and isinstance(self.time_mixer, BiXLSTM):
-            time_output, _ = _unwrap_output(
-                self.time_mixer(x, target_mask=target_mask, known_covariate_mask=known_covariate_mask)
-            )
-        else:
-            time_output, _ = _unwrap_output(self.time_mixer(x, target_mask=target_mask))
+        time_output, _ = _unwrap_output(self.time_mixer(x, reverse_idx))
 
         # Stage 2: Variate Mixing
         # Transpose for variate mixing: [B*V, L, P] -> [L, B*V, P]
@@ -175,7 +187,9 @@ class MultivariateBlock(nn.Module):
         x_variate = time_output.permute(1, 0, 2)  # [L, B*V, P]
 
         variate_output, _ = _unwrap_output(
-            self.variate_mixer(x_variate, group_vector=group_vector, target_mask=target_mask)
+            self.variate_mixer(
+                x_variate, group_vector=group_vector, target_mask=target_mask, attention_idx=attention_idx
+            )
         )
 
         # Transpose back: [L, B*V, P] -> [B*V, L, P]
@@ -200,31 +214,19 @@ class MultivariateBlock(nn.Module):
         nn.Module
         Time mixing module (sLSTM, mLSTM, or attention)
         """
-        cfg = dict(
-            vocab_size=0,
-            num_heads=config.num_heads,
-            num_blocks=num_blocks,
-            embedding_dim=config.embedding_dim,
-            return_last_states=True,
-            slstm_at=[],
-        )
-
         match config.model_type:
             case "bi-slstm":
-                num_slstm_heads = config.num_slstm_heads if config.num_slstm_heads is not None else config.num_heads
-                cfg.update({"num_slstm_heads": num_slstm_heads})
-                cell_type = "slstm"
-
+                cell_type, num_heads = "slstm", config.num_slstm_heads or config.num_heads
             case "bi-mlstm":
-                cfg.update(dict(return_last_states=False, mode="train_with_padding", use_rope=False))
-                cell_type = "mlstm"
+                cell_type, num_heads = "mlstm", config.num_heads
             case _:
                 raise ValueError(
                     f"Unknown model_type for time mixer '{config.model_type}'. Allowed 'bi-slstm' and 'bi-mlstm'"
                 )
 
         return BiXLSTM(
-            xLSTMMixedConfig(**cfg),
+            config.embedding_dim,
+            num_heads,
             block_idx=block_idx,
             num_blocks=num_blocks,
             device=config.device,

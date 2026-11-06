@@ -50,37 +50,40 @@ multivariate forecasting with past and future covariates.
   for multivariate forecasting.
 
 ## Installation
-### Via Pip
+
+Install [PyTorch](https://pytorch.org/get-started/locally/) for your CPU or GPU, then TiRex-2:
+
 ```bash
 pip install tirex-2
 ```
-
-Install with additional dependencies:
-
-```bash
-pip install "tirex-2[examples,fev,gluonts]"
-```
-
-The Python package installation is currently only tested on Linux and macOS. Docker usage is documented separately and includes Linux, macOS, and Windows Docker Desktop instructions.
-
-### Via Pixi
-We use [Pixi](https://pixi.prefix.dev/latest/) for our development and benchmarking environment to ensure that it is set up correctly. Run the following command to install it on your machine (Linux/macOS):
-```bash
-# install Pixi
-curl -fsSL https://pixi.sh/install.sh | sh
-# install dependencies for TiRex-2
-pixi install
-```
-Pixi selects a compatible platform automatically (PyTorch w/ CUDA 13.0 for Linux/Windows, PyTorch w/ default for macOS), or you can choose one explicitly, for example `-p linux-64-cuda-126`. Both environments and platforms are defined in
-[`pyproject.toml`](pyproject.toml).
 
 ## FAQ
 
 See the [FAQ](https://nx-ai.github.io/tirex-2/faq/) in the documentation.
 
+## Agent plugin
+
+Forecast time series without training or writing code in Claude Code or Codex using the TiRex-2 plugin:
+
+**Claude Code**
+
+```bash
+claude plugin marketplace add NX-AI/tirex-2
+claude plugin install tirex2@tirex2-plugins
+```
+
+**Codex**
+
+```bash
+codex plugin marketplace add NX-AI/tirex-2
+codex plugin add tirex2@tirex2-plugins
+```
+
+Start a new session and ask to forecast with TiRex-2.
+
 ## Getting started
 
-The most easy way for you to get started is by checking out our ["Getting Started" notebook](examples/getting_started.ipynb). Moreover, you can jump straight into testing out TiRex using [Google Colab](https://colab.research.google.com/github/NX-AI/tirex-2/blob/main/examples/getting_started.ipynb). If you have cloned this repository, you can also easily start the notebook via Pixi by running:
+The most easy way for you to get started is by checking out our ["Getting Started" notebook](examples/getting_started.ipynb). Moreover, you can jump straight into testing out TiRex using [Google Colab](https://colab.research.google.com/github/NX-AI/tirex-2/blob/main/examples/getting_started.ipynb). If you have cloned this repository, you can also easily start the notebook via [Pixi](https://pixi.prefix.dev/latest/#installation) by running:
 ```bash
 pixi run notebook
 ```
@@ -162,14 +165,15 @@ See the full feature comparison in the [docs](https://nx-ai.github.io/tirex-2/pr
 If you use TiRex in your research, please cite our work:
 
 ```bibtex
-@misc{podest2026tirex2generalizingtirexmultivariate,
-      title={TiRex-2: Generalizing TiRex to Multivariate Data and Streaming},
-      author={Patrick Podest and Marco Pichler and Elias Bürger and Levente Zólyomi and Bernhard Voggenberger and Wilhelm Berghammer and Daniel Klotz and Sebastian Böck and Günter Klambauer and Sepp Hochreiter},
-      year={2026},
-      eprint={2607.01204},
-      archivePrefix={arXiv},
-      primaryClass={cs.LG},
-      url={https://arxiv.org/abs/2607.01204},
+@inproceedings{podest2026tirex2,
+  title     = {{TiRex-2}: Generalizing {TiRex} to Multivariate Data and Streaming},
+  author    = {Podest, Patrick and Pichler, Marco and B{\"u}rger, Elias and Z{\'o}lyomi, Levente and Voggenberger, Bernhard and Berghammer, Wilhelm and Klotz, Daniel and B{\"o}ck, Sebastian and Klambauer, G{\"u}nter and Hochreiter, Sepp},
+  booktitle = {Advances in Neural Information Processing Systems},
+  year      = {2026},
+  eprint    = {2607.01204},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.LG},
+  url       = {https://arxiv.org/abs/2607.01204}
 }
 ```
 

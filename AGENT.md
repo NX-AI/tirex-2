@@ -7,18 +7,18 @@ This repo contains TiRex-2 inference code. Packaging, dependencies, tasks, and P
 Use Pixi unless the user explicitly asks for conda/mamba.
 
 - Install/update environments: `pixi install`
-- Environments select use cases: `default`, `test`, `examples`, and `pypi-build`.
-- The default Linux and Windows CUDA 13.0 platforms are `linux-64-cuda` and `win-64-cuda`.
-- CUDA 13.2 platforms end in `-cuda-132`; CUDA 12.6 platforms end in `-cuda-126`.
+- Environments select use cases: `default`, `test`, `examples`, `benchmark`, `docs`, and `pypi-build`.
+- `test` and `benchmark` include the shared `fev` and `gluonts` features; `examples` contains plotting and Jupyter.
+- The Linux and Windows CUDA platforms are `linux-64-cuda` and `win-64-cuda`.
 - CPU-only platforms are `linux-64-cpu` and `win-64-cpu`.
-- The macOS platform is `osx-arm64`.
+- The macOS platform is `osx-arm64-macos14` (macOS 14 or newer).
 - Select a named platform with `--platform` (or `-p`) and an environment with `--environment` (or `-e`).
 
 Common commands:
 
 ```bash
-pixi run --platform linux-64-cuda test      # test environment on CUDA 13.0
-pixi run --platform linux-64-cuda-126 test  # test environment on CUDA 12.6
+pixi run --platform linux-64-cuda test  # test environment on CUDA
+pixi run --platform linux-64-cpu test   # test environment on CPU
 pixi run -e examples -p linux-64-cpu python examples/sine_wave.py
 pixi run -e examples -p linux-64-cpu python examples/covariate_forecasts.py
 ```
@@ -44,7 +44,7 @@ forecast = model.forecast([ts], prediction_length=64, output_type="torch", batch
 
 For future-known covariates, pass `future_covariates` with shape `[num_covariates, context_length + prediction_length]`. Past-only covariates use `past_covariates` with shape `[num_covariates, context_length]`.
 
-Supported output types: `"torch"`, `"numpy"`, `"gluonts"`, and `"fev"` where the latter two require the optional dependencies/envs. Extra kwargs passed to `forecast(...)` are forwarded to `TiRex2.predict`, e.g. `tta_diff=False` or `tta_sign_flip=True`.
+Supported output types: `"torch"`, `"numpy"`, `"gluonts"`, `"fev"`, `"dataframe"`, and `"pandas"`. GluonTS and FEV dependencies are included in the `test` and `benchmark` environments; dataframe output needs a dataframe library. Extra kwargs passed to `forecast(...)` are forwarded to `TiRex2.predict`, e.g. `tta_diff=False` or `tta_sign_flip=True`.
 
 ## Local examples
 
@@ -110,12 +110,6 @@ Useful options:
 - `--model_name NAME` to set the model name in the output CSV.
 - The script retries CUDA OOM by halving batch size; reduce `--batch_size` if needed.
 
-Use CUDA 12.6 if required by the machine/cluster:
-
-```bash
-pixi run --platform linux-64-cuda-126 fevbench --tasks examples/fevbench/tasks-mini.yaml
-```
-
 ## GiftEval
 
 Script: `examples/gifteval/run_gifteval.py`
@@ -123,9 +117,7 @@ Script: `examples/gifteval/run_gifteval.py`
 Download the GiftEval data once:
 
 ```bash
-pixi run -e examples --platform linux-64-cuda huggingface-cli download Salesforce/GiftEval \
-  --repo-type=dataset \
-  --local-dir /path/to/gifteval_storage
+pixi run --platform linux-64-cuda gifteval-download /path/to/gifteval_storage
 ```
 
 Run the benchmark:
@@ -138,13 +130,12 @@ pixi run --platform linux-64-cuda gifteval /path/to/gifteval_storage pretrained 
 
 Use `zero-shot` instead of `pretrained` to load `NX-AI/TiRex-2-gifteval-zs`.
 
-The script sets `GIFT_EVAL=/path/to/gifteval_storage` before importing the local GiftEval helpers. `examples/gifteval` is added to `PYTHONPATH` by the `example` Pixi feature so `gift_eval_utils` imports correctly.
+The script sets `GIFT_EVAL=/path/to/gifteval_storage` before importing the local GiftEval helpers. `examples/gifteval` is added to `PYTHONPATH` by the `benchmark` Pixi feature so `gift_eval_utils` imports correctly.
 
 Interactive notebook:
 
 ```bash
-pixi run --platform linux-64-cuda notebook
-# open examples/gifteval/gifteval.ipynb
+pixi run -e benchmark --platform linux-64-cuda jupyter lab examples/gifteval/gifteval.ipynb
 ```
 
 ## Tests and validation

@@ -1,0 +1,4 @@
+interface:
+  display_name: "TiRex-2 Time Series Forecasting"
+  short_description: "Forecast time series and quantiles with TiRex-2"
+  default_prompt: "Use $tirex2-forecasting to forecast my time series with TiRex-2 and evaluate a chronological holdout."

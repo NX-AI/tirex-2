@@ -8,11 +8,11 @@ from typing import Literal
 import torch
 from torch import nn
 
+from . import kernel
 from .feedforward import FeedForward
-from .flashrnn_slstm import init_cell as init_slstm_cell
-from .mlstm_block import init_cell as init_mlstm_cell
+from .mlstm_block import mLSTMLayer, mLSTMLayerConfig
 from .norm import RMSNorm
-from .xlstm_mixed_config import xLSTMMixedConfig
+from .slstm_block import _slstm_backend, sLSTMLayer, sLSTMLayerConfig
 
 
 class BiXLSTM(nn.Module):
@@ -42,8 +42,10 @@ class BiXLSTM(nn.Module):
 
     Parameters
     ----------
-    config : xLSTMMixedConfig
-        Shared xLSTM configuration object.
+    embedding_dim : int
+        Model dimension.
+    num_heads : int
+        Number of heads of the recurrent cell.
     block_idx : int
         Index of this block in the overall stack.
     num_blocks : int
@@ -62,7 +64,8 @@ class BiXLSTM(nn.Module):
 
     def __init__(
         self,
-        config: xLSTMMixedConfig,
+        embedding_dim: int,
+        num_heads: int,
         block_idx: int,
         num_blocks: int,
         device: Literal["cpu", "cuda", "mps"],
@@ -72,43 +75,53 @@ class BiXLSTM(nn.Module):
     ):
         super().__init__()
         self.cell_type = cell_type
-        self.norm_lstm = RMSNorm(
-            num_features=config.embedding_dim,
-            eps=config.norm_eps,
-            use_weight=True,
-            use_bias=config.use_bias,
-            force_float32_reductions=config.norm_reduction_force_float32,
-        )
+        self.norm_lstm = RMSNorm(embedding_dim, eps=1e-6)
         self._split = self._split_variates
         self._recombine = self._recombine_variates
 
         match cell_type:
             case "slstm":
-                self.fwd_cell = init_slstm_cell(config, block_idx, num_blocks, device)
+                slstm_config = sLSTMLayerConfig(
+                    embedding_dim=embedding_dim,
+                    num_heads=num_heads,
+                    recurrent_weight_init="zeros",
+                    bias_init="powerlaw_blockdependent",
+                    backend=_slstm_backend(device),
+                )
+                self.fwd_cell = sLSTMLayer(slstm_config, block_idx=block_idx, num_blocks=num_blocks)
             case "mlstm":
-                self.fwd_cell = init_mlstm_cell(config, device)
+                mlstm_config = mLSTMLayerConfig(
+                    embedding_dim=embedding_dim,
+                    num_heads=num_heads,
+                    # The native kernel is device-agnostic; Triton is unavailable on MPS and in some installs (Windows).
+                    mlstm_kernel="triton" if device == "cuda" and kernel.triton_available() else "native",
+                )
+                self.fwd_cell = mLSTMLayer(mlstm_config)
             case _:
                 raise ValueError(f"Unknown cell type '({cell_type})'. Allowed 'mlstm' or 'slstm'.")
 
-        self.rev_cell = self.fwd_cell
-
-        self.combination = nn.Linear(2 * config.embedding_dim, config.embedding_dim, bias=False)
+        self.combination = nn.Linear(2 * embedding_dim, embedding_dim, bias=False)
         self.combination_dropout = nn.Dropout(dropout)
 
-        self.norm_ffn = RMSNorm(
-            num_features=config.embedding_dim,
-            eps=config.norm_eps,
-            use_weight=True,
-            use_bias=config.use_bias,
-            force_float32_reductions=config.norm_reduction_force_float32,
-        )
-        self.ffn = FeedForward(config)
+        self.norm_ffn = RMSNorm(embedding_dim, eps=1e-6)
+        self.ffn = FeedForward(embedding_dim)
 
-    def forward(self, x: torch.Tensor, target_mask: torch.Tensor, known_covariate_mask: torch.Tensor | None = None):
-        """Run the bidirectional xLSTM block."""
+    @property
+    def rev_cell(self) -> nn.Module:
+        """The reverse direction shares the forward cell; it is registered (and stored) once."""
+        return self.fwd_cell
+
+    def _load_from_state_dict(self, state_dict, prefix, *args, **kwargs):
+        # Older checkpoints also store the shared cell under ``rev_cell``.
+        for key in [key for key in state_dict if key.startswith(f"{prefix}rev_cell.")]:
+            del state_dict[key]
+        super()._load_from_state_dict(state_dict, prefix, *args, **kwargs)
+
+    def forward(self, x: torch.Tensor, reverse_idx: torch.Tensor):
+        """Run the bidirectional xLSTM block; ``reverse_idx`` are the variates of the reverse cell."""
         x_norm = self.norm_lstm(x)
 
-        x_fwd, x_rev, fwd_idc, rev_idc = self._split(x_norm, target_mask, known_covariate_mask)
+        x_fwd, x_rev, fwd_idc, rev_idc = self._split(x_norm, reverse_idx)
 
         x_fwd = self.fwd_cell(x_fwd) if x_fwd.shape[0] > 0 else x_fwd
         if x_rev.shape[0] > 0:
@@ -127,16 +140,9 @@ class BiXLSTM(nn.Module):
         return out
 
     def _split_variates(
-        self,
-        x: torch.Tensor,
-        target_mask: torch.Tensor,
-        known_covariate_mask: torch.Tensor | None = None,
+        self, x: torch.Tensor, known_idc: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """Forward cell sees all variates, reverse sees only known covariates (non-NaN future)."""
-        if known_covariate_mask is None:
-            known_idc = torch.where(~target_mask)[0]
-        else:
-            known_idc = torch.where(known_covariate_mask)[0]
         return x, x[known_idc], torch.arange(x.shape[0], device=x.device), known_idc
 
     def _recombine_variates(

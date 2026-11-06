@@ -12,7 +12,6 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 import requests
-import torch
 
 start_server = int(os.getenv("TEST_START_SERVER", "1")) == 1
 base_host = os.getenv("TEST_HOST", "127.0.0.1")
@@ -86,10 +85,10 @@ def get_default_context():
 
 
 def assert_default_prediction_correct(forecast: list[float]):
-    data = torch.tensor(forecast, dtype=torch.float32)
-    data_ref = torch.tensor([[3.751096248, 4.562105178]], dtype=torch.float32)
+    data = np.asarray(forecast, dtype=np.float32)
+    data_ref = np.asarray([[3.751096248, 4.562105178]], dtype=np.float32)
     # bfloat16 tolerances to allow for small differences between CPU and CUDA
-    torch.testing.assert_close(data, data_ref, rtol=1.6e-2, atol=1e-5)
+    np.testing.assert_allclose(data, data_ref, rtol=1.6e-2, atol=1e-5, equal_nan=False, strict=True)
 
 
 # --------------------------------------------------------------------------- #
@@ -120,7 +119,7 @@ MEDIAN_QUANTILE_INDEX = 4
 
 
 def assert_forecast_close(actual, expected):
-    a = torch.as_tensor(np.asarray(actual, dtype=np.float32))
-    e = torch.as_tensor(np.asarray(expected, dtype=np.float32))
+    a = np.asarray(actual, dtype=np.float32)
+    e = np.asarray(expected, dtype=np.float32)
     assert a.shape == e.shape, f"shape {tuple(a.shape)} != {tuple(e.shape)}"
-    torch.testing.assert_close(a, e, rtol=1.6e-2, atol=1e-2)
+    np.testing.assert_allclose(a, e, rtol=1.6e-2, atol=1e-2, equal_nan=False, strict=True)

@@ -1,0 +1,14 @@
+{
+  "name": "tirex2-plugins",
+  "description": "Time series forecasting skills for TiRex-2.",
+  "owner": {
+    "name": "NXAI"
+  },
+  "plugins": [
+    {
+      "name": "tirex2",
+      "source": "./plugins/tirex2",
+      "description": "Time series forecasting with TiRex-2."
+    }
+  ]
+}

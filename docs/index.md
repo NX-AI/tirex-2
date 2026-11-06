@@ -38,15 +38,41 @@ for background and the [paper](https://arxiv.org/pdf/2607.01204) for details.
 - **Small active footprint** — TiRex-2 activates 38.4M parameters in univariate mode and an
   additional 44.1M parameters for multivariate forecasting.
 
+## Installation
+
+Install [PyTorch](https://pytorch.org/get-started/locally/) for your CPU or GPU, then TiRex-2:
+
+```bash
+pip install tirex-2
+```
+
 ## Where to go next
 
-- [Installation](getting-started/install.md) — `pip install tirex-2`, Pixi setup, and gated
-  Hugging Face weight access.
 - [Quickstart](getting-started/quickstart.md) — minimal sine-wave and covariate examples.
 - [How-to guides](how-to/forecasting.md) — univariate/multivariate forecasting, covariates in
   depth, and what streaming does (and doesn't) mean in this open-source release.
 - [Deployment](deployment.md) — the Docker-based HTTP/MQTT/MCP inference server.
 - [API reference](api/index.md) — generated reference for the public `tirex2` API.
+
+## Agent plugin
+
+Forecast time series without training or writing code in Claude Code or Codex using the TiRex-2 plugin:
+
+=== "Claude Code"
+
+    ```bash
+    claude plugin marketplace add NX-AI/tirex-2
+    claude plugin install tirex2@tirex2-plugins
+    ```
+
+=== "Codex"
+
+    ```bash
+    codex plugin marketplace add NX-AI/tirex-2
+    codex plugin add tirex2@tirex2-plugins
+    ```
+
+Start a new session and ask to forecast with TiRex-2.
 
 ## TiRex-2 PRO
 
@@ -69,14 +95,15 @@ See [TiRex-2 PRO](pro.md) for the full feature comparison, or contact
 If you use TiRex-2 in your research, please cite our work:
 
 ```bibtex
-@misc{podest2026tirex2generalizingtirexmultivariate,
-      title={TiRex-2: Generalizing TiRex to Multivariate Data and Streaming},
-      author={Patrick Podest and Marco Pichler and Elias Bürger and Levente Zólyomi and Bernhard Voggenberger and Wilhelm Berghammer and Daniel Klotz and Sebastian Böck and Günter Klambauer and Sepp Hochreiter},
-      year={2026},
-      eprint={2607.01204},
-      archivePrefix={arXiv},
-      primaryClass={cs.LG},
-      url={https://arxiv.org/abs/2607.01204},
+@inproceedings{podest2026tirex2,
+  title     = {{TiRex-2}: Generalizing {TiRex} to Multivariate Data and Streaming},
+  author    = {Podest, Patrick and Pichler, Marco and B{\"u}rger, Elias and Z{\'o}lyomi, Levente and Voggenberger, Bernhard and Berghammer, Wilhelm and Klotz, Daniel and B{\"o}ck, Sebastian and Klambauer, G{\"u}nter and Hochreiter, Sepp},
+  booktitle = {Advances in Neural Information Processing Systems},
+  year      = {2026},
+  eprint    = {2607.01204},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.LG},
+  url       = {https://arxiv.org/abs/2607.01204}
 }
 ```
 
