@@ -11,6 +11,7 @@ All notable changes to TiRex-2 are documented here.
 
 ### Documentation and development
 
+- Added an in-context learning guide with interactive forecasts, a minimal dataset, and examples of extending context and adding covariates in [#69](https://github.com/NX-AI/tirex-2/pull/69), contributed by [uruthia](https://github.com/uruthia) and [Zhihao Dai](https://github.com/daidahao).
 - Refactored the sLSTM recurrence interface to support future kernel implementations and decoupled its configuration from FlashRNN in [#70](https://github.com/NX-AI/tirex-2/pull/70), contributed by [Martin Loretz](https://github.com/martinloretzzz).
 - Added the Intended Use, Limitations and EU AI Act Notice (`INTENDED_USE.md`), linked from the README and the documentation, in [#67](https://github.com/NX-AI/tirex-2/pull/67), contributed by [Lukas Fischer](https://github.com/lukfischer) and [Yipeng Sun](https://github.com/sypsyp97).
 - Added [a script](https://github.com/NX-AI/tirex-2/tree/main/scripts/convert_checkpoint.py) to convert legacy checkpoints to new formats in [#55](https://github.com/NX-AI/tirex-2/pull/55), contributed by [Suad0](https://github.com/Suad0).

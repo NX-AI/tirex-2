@@ -10,11 +10,33 @@ This guide demonstrates both approaches using a real industrial signal. First, w
 !!! tip "The plots are interactive"
     Hover for exact values, click legend entries to show or hide traces, and use the sliders  to change the context length.
 
-## The data
+## Data
 
-The data comes from the UCI *Condition monitoring of hydraulic systems* dataset[^uci], from which we select two sensors: hydraulic pressure and motor power. We consider two consecutive, stable operating cycles, using the first as input context and the second as ground truth for the forecast. Each cycle captures a 60s run that has been averaged into 200 data points at a 0.3s resolution.
+The data comes from the UCI *hydraulic systems monitoring* dataset[^uci], from which we select two sensors: **hydraulic pressure** and **motor power**. We consider two consecutive, stable operating cycles, using the first as input context and the second as ground truth for the forecast. Each cycle captures a 60s run that has been averaged into 200 data points at a 0.3s resolution.
 
-<iframe src="../../images/in-context/context-vs-target.html" title="Context cycle 1787 vs. target cycle 1788"
+
+The [preprocessed CSV](../data/in-context-learning_dataset.csv) contains just these two signals and two cycles, with one row per signal and cycle. Load it directly with pandas and PyTorch:
+
+```python
+import pandas as pd
+import torch
+
+url = (
+    "https://raw.githubusercontent.com/NX-AI/tirex-2/main/"
+    "docs/data/in-context-learning_dataset.csv"
+)
+data = pd.read_csv(url).set_index(["sensor", "cycle"])
+
+def read_signal(sensor):
+    return torch.tensor(data.loc[sensor].to_numpy(), dtype=torch.float32)
+
+# Each signal has two cycles of 200 points
+pressure, motor = read_signal("pressure"), read_signal("motor")
+context_cycle, target_cycle = pressure
+motor_context, _ = motor
+```
+
+<iframe src="../../images/in-context/context-vs-target.html" title="Context cycle and next target cycle"
         loading="lazy" style="width:100%; height:620px; border:0;"></iframe>
 
 Each cycle follows the same fixed load profile, so the pattern repeats across both cycles. Although hydraulic pressure and motor power operate on very different scales, they vary together.
@@ -29,9 +51,6 @@ import torch
 from tirex2 import TimeseriesType, load_model
 
 model = load_model("NX-AI/TiRex-2", device="cpu")  # or device="cuda"
-
-context_cycle = torch.as_tensor(pressure[1787], dtype=torch.float32)
-target_cycle = torch.as_tensor(pressure[1788], dtype=torch.float32)
 
 n = 1                                       # number of repeated cycles in the context
 context = context_cycle.repeat(n)           # (n * 200,)
@@ -48,7 +67,7 @@ median, p10, p90 = forecast[0, 4], forecast[0, 0], forecast[0, 8]
 mae = (median - target_cycle).abs().mean().item()
 ```
 
-The 9 quantiles correspond to levels `0.1, 0.2, ..., 0.9`. We plot the median (index `4`) as the point forecast and use the `0.1` and `0.9` quantiles (indices `0` and `8`) to define the prediction band. Forecast accuracy is evaluated by comparing the median with the actual values of cycle 1788 using the **mean absolute error (MAE)**, which measures the average absolute difference between predicted and observed values.
+The 9 quantiles correspond to levels `0.1, 0.2, ..., 0.9`. We plot the median (index `4`) as the point forecast and use the `0.1` and `0.9` quantiles (indices `0` and `8`) to define the prediction band. Forecast accuracy is evaluated by comparing the median with the actual values of the next cycle using the **mean absolute error (MAE)**, which measures the average absolute difference between predicted and observed values.
 
 ## One cycle of context
 
@@ -59,9 +78,9 @@ With a single cycle of context, TiRex-2 has seen the shape only once:
 
 The forecast is flat and cautious, with a wide band (MAE = 11.02 bar). From one cycle alone, the model cannot tell that the pattern will repeat.
 
-## ICL: extending the context
+## ICL: context expansion
 
-The more cycles we include in the context, the more evidence the model has of how the signal evolves over time. By expanding the context from  *n* = 1 to 5 load cycles (`context_cycle.repeat(n)`), we can explore how additional history affects the model's ability to capture recurring patterns.
+In this demonstration, we expand the context from *n* = 1 to 5 copies of the observed cycle (`context_cycle.repeat(n)`). This replays a recurring pattern to help the model recognize its periodicity; it does not add newly observed history. The next cycle remains held out for evaluation.
 
 !!! tip "Try it"
     Move the slider or press play, to see how the forecast changes with *n*.
@@ -71,14 +90,14 @@ The more cycles we include in the context, the more evidence the model has of ho
 
 Extending the context from one to five cycles reduces the MAE by up to 88%, with most of the improvement occurring within the first three to four cycles.
 
-## ICL: expand the variates
+## ICL: variate expansion
 
 ICL can also benefit from information across variates, not just across time. TiRex-2 can use related time series to help forecast the target, so here we provide motor power (W) as a `past_covariates` for hydraulic pressure. Both signals cover the same historical window, allowing the model to use their relationship when making its forecast (see [Covariates](covariates.md)):
 
 ```python
 ts = TimeseriesType(
-    target=context_cycle.repeat(n).unsqueeze(0),                                         # (1, context_length)
-    past_covariates=torch.as_tensor(motor[1787], dtype=torch.float32).repeat(n).unsqueeze(0),  # (1, context_length)
+    target=context_cycle.repeat(n).unsqueeze(0),         # (1, context_length)
+    past_covariates=motor_context.repeat(n).unsqueeze(0), # (1, context_length)
     future_covariates=None,
 )
 
@@ -92,6 +111,9 @@ The green forecast uses hydraulic pressure **and** motor power, while the red on
         loading="lazy" style="width:100%; height:980px; border:0;"></iframe>
 
 Adding motor power as a covariate reduces the MAE by up to 42% compared with the univariate forecast, with the largest improvement at 2 cycles of context. The benefit gradually decreases to 19%, 13% and 5% as the hydraulic pressure history grows longer.
+
+!!! warning "Scope of this example"
+    Results reflect one context/target pair under stable conditions and may differ when operating under changing conditions. It is recommended to validate context length and covariates on held-out data from your application.
 
 ## Takeaways
 
