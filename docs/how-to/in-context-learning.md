@@ -3,8 +3,8 @@
 <video autoplay loop muted playsinline controls preload="metadata"
        aria-label="Pressure forecasts with and without motor power as context grows from one to five cycles"
        style="width:100%; height:auto;">
-  <source src="../../images/in-context/forecast-covariate-animation.mp4" type="video/mp4">
-  <a href="../../images/in-context/forecast-covariate-animation.mp4">Download the forecast animation (MP4)</a>.
+  <source src="../images/in-context/forecast-covariate-animation.mp4" type="video/mp4">
+  <a href="../images/in-context/forecast-covariate-animation.mp4">Download the forecast animation (MP4)</a>.
 </video>
 
 **In-context learning (ICL)** allows TiRex-2 to adapt to your data using only the context you provide, without additional training or fine-tuning. A richer context can improve forecast accuracy in two complementary ways:
@@ -43,7 +43,7 @@ context_cycle, target_cycle = pressure
 motor_context, _ = motor
 ```
 
-<iframe src="../../images/in-context/context-vs-target.html" title="Context cycle and next target cycle"
+<iframe src="../images/in-context/context-vs-target.html" title="Context cycle and next target cycle"
         loading="lazy" style="width:100%; height:620px; border:0;"></iframe>
 
 Each cycle follows the same fixed load profile, so the pattern repeats across both cycles. Although hydraulic pressure and motor power operate on very different scales, they vary together.
@@ -79,7 +79,7 @@ The 9 quantiles correspond to levels `0.1, 0.2, ..., 0.9`. We plot the median (i
 
 With a single cycle of context, TiRex-2 has seen the shape only once:
 
-<iframe src="../../images/in-context/forecast-one-cycle.html" title="Hydraulic pressure forecast from one cycle of context"
+<iframe src="../images/in-context/forecast-one-cycle.html" title="Hydraulic pressure forecast from one cycle of context"
         loading="lazy" style="width:100%; height:600px; border:0;"></iframe>
 
 The forecast is flat and cautious, with a wide band (MAE = 11.02 bar). From one cycle alone, the model cannot tell that the pattern will repeat.
@@ -91,7 +91,7 @@ In this demonstration, we expand the context from *n* = 1 to 5 copies of the obs
 !!! tip "Try it"
     Move the slider or press play, to see how the forecast changes with *n*.
 
-<iframe src="../../images/in-context/forecast-context-slider.html" title="Hydraulic pressure forecast as the context grows"
+<iframe src="../images/in-context/forecast-context-slider.html" title="Hydraulic pressure forecast as the context grows"
         loading="lazy" style="width:100%; height:800px; border:0;"></iframe>
 
 Extending the context from one to five cycles reduces the MAE by up to 88%, with most of the improvement occurring within the first three to four cycles.
@@ -113,7 +113,7 @@ forecast = model.forecast([ts], prediction_length=200, output_type="torch")[0]
 
 The green forecast uses hydraulic pressure **and** motor power, while the red one uses hydraulic pressure only. The lower panel shows the extra signal the model sees:
 
-<iframe src="../../images/in-context/forecast-covariate-slider.html" title="Univariate vs. covariate-informed hydraulic pressure forecast"
+<iframe src="../images/in-context/forecast-covariate-slider.html" title="Univariate vs. covariate-informed hydraulic pressure forecast"
         loading="lazy" style="width:100%; height:980px; border:0;"></iframe>
 
 Adding motor power as a covariate reduces the MAE by up to 42% compared with the univariate forecast, with the largest improvement at 2 cycles of context. The benefit gradually decreases to 19%, 13% and 5% as the hydraulic pressure history grows longer.
