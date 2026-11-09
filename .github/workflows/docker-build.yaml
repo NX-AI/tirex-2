@@ -7,7 +7,6 @@ on:
   workflow_run:
     workflows: ['Publish Python Package']
     types: [completed]
-    branches: [main]
   workflow_dispatch:
 
 jobs:
