@@ -10,6 +10,8 @@ All notable changes to TiRex-2 are documented here.
 
 ### Security and CI
 
+- Added Python 3.14 free-threading CPU tests that verify the GIL remains disabled in [#124](https://github.com/NX-AI/tirex-2/pull/124), contributed by [Zhihao Dai](https://github.com/daidahao).
+
 ## [0.5.0] - 2026-11-03
 
 ### Forecasting and performance

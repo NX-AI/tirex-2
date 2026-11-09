@@ -92,6 +92,22 @@ jobs:
       - name: Run tests on CPU
         run: pixi run -p linux-64-cpu test
 
+  core-tests-free-threading:
+    name: core-tests free-threading (py3.14t, ubuntu-latest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.14t"
+          activate-environment: true
+
+      - name: Install CPU test dependencies
+        run: uv pip install --torch-backend cpu --no-binary safetensors -e . pytest pandas "pyarrow>=21.0.0" "fev>=0.8.0" "datasets>=4.4.0"
+
+      - name: Run core tests with the GIL disabled
+        run: uv run --no-sync python scripts/test_free_threading.py
+
   core-tests-preview:
     name: core-tests preview (py3.15, ubuntu-latest)
     runs-on: ubuntu-latest
@@ -106,7 +122,7 @@ jobs:
 
       - name: Install preview Python and CPU test dependencies
         run: |
-          uv pip install --torch-backend cpu -e . pytest pandas "polars>=1.0" "pyarrow>=15.0" fev "datasets>=4.4.0,<5"
+          uv pip install --torch-backend cpu -e . pytest pandas "polars>=1.0" "pyarrow>=15.0" fev "datasets>=4.4.0"
           # GluonTS is excluded on Python 3.15; its tests skip when it is absent.
 
       - name: Run tests on CPU
