@@ -10,7 +10,7 @@ watch:
   - CHANGELOG.md
 
 theme:
-  name: material
+  variant: classic
   logo: images/tirex.svg
   favicon: images/tirex.svg
   palette:
@@ -54,6 +54,7 @@ nav:
       - Covariates: how-to/covariates.md
       - Streaming: how-to/streaming.md
       - Dataframes: how-to/dataframes.md
+      - In-context learning: how-to/in-context-learning.md
       - ONNX: how-to/onnx.md
   - FAQ: faq.md
   - Benchmarks: benchmarks.md
@@ -86,6 +87,7 @@ plugins:
 markdown_extensions:
   - attr_list
   - admonition
+  - footnotes
   - pymdownx.details
   - pymdownx.superfences
   - pymdownx.tabbed:
