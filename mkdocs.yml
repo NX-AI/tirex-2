@@ -6,6 +6,9 @@ repo_url: https://github.com/NX-AI/tirex-2
 edit_uri: edit/main/docs/
 copyright: Copyright &copy; NXAI GmbH
 
+watch:
+  - CHANGELOG.md
+
 theme:
   variant: classic
   logo: images/tirex.svg
@@ -51,6 +54,7 @@ nav:
       - Covariates: how-to/covariates.md
       - Streaming: how-to/streaming.md
       - Dataframes: how-to/dataframes.md
+      - In-context learning: how-to/in-context-learning.md
       - ONNX: how-to/onnx.md
   - FAQ: faq.md
   - Benchmarks: benchmarks.md
@@ -83,6 +87,7 @@ plugins:
 markdown_extensions:
   - attr_list
   - admonition
+  - footnotes
   - pymdownx.details
   - pymdownx.superfences
   - pymdownx.tabbed:
