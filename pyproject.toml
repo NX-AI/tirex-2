@@ -89,7 +89,7 @@ pytest = ">=7.2.0"
 pandas = ">=2.2.2"
 polars = ">=1.1.0"
 pyarrow = ">=21.0.0"
-pytest-cov = ">=7.1.0, <8"
+pytest-cov = ">=7.1.0"
 
 [tool.pixi.feature.examples.pypi-dependencies]
 matplotlib = ">=3.10.0"
@@ -196,16 +196,3 @@ testpaths = [
 # coverage
 [tool.coverage.run]
 source = ["src/tirex2"]
-omit = [
-    "test/*",
-    "tests/*",
-]
-
-[tool.coverage.report]
-exclude_lines = [
-    "pragma: no cover",
-    "def __repr__",
-    "if __name__ == .__main__.:",
-    "raise NotImplementedError",
-    "if TYPE_CHECKING:",
-]
