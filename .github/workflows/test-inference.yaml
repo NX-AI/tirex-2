@@ -47,7 +47,7 @@ jobs:
 
       - name: Run inference tests with coverage
         working-directory: ./inference
-        run: pytest tests --cov=app --cov-report=xml --cov-report=term -s
+        run: pytest tests --cov --cov-config=.coveragerc --cov-report=xml --cov-report=term -s
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1

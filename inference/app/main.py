@@ -3,6 +3,8 @@
 
 import atexit
 import multiprocessing as mp
+import os
+import signal
 import sys
 import time
 
@@ -39,7 +41,11 @@ def main():
     def stop_processes():
         for p in processes:
             if p.is_alive():
-                p.terminate()
+                # Allow servers to unwind and join their model workers on shutdown.
+                if os.name == "posix":
+                    os.kill(p.pid, signal.SIGINT)
+                else:
+                    p.terminate()
 
         for p in processes:
             if p.is_alive():

@@ -3,6 +3,7 @@
 
 import json
 import os
+import signal
 import subprocess
 import sys
 import time
@@ -68,9 +69,13 @@ def api_server():
     finally:
         if process is not None:
             if process.poll() is None:
-                process.terminate()
+                # Let the supervisor stop and join its workers before coverage is combined.
+                if os.name == "posix":
+                    process.send_signal(signal.SIGINT)
+                else:
+                    process.terminate()
                 try:
-                    process.wait(timeout=10)
+                    process.wait(timeout=30)
                 except subprocess.TimeoutExpired:
                     process.kill()
                     process.wait()
