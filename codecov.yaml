@@ -1,0 +1,43 @@
+# Codecov configuration
+# Documentation: https://docs.codecov.com/docs/codecovyml-reference
+
+codecov:
+  require_ci_to_pass: true
+
+coverage:
+  precision: 2
+  round: down
+  range: "70...100"
+
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 1%
+    patch:
+      default:
+        target: auto
+        threshold: 1%
+
+flags:
+  core:
+    paths:
+      - src/
+    carryforward: true
+  inference:
+    paths:
+      - inference/
+    carryforward: true
+
+comment:
+  layout: "reach, diff, flags, files"
+  behavior: default
+  require_changes: false
+
+ignore:
+  - "test/**/*"
+  - "tests/**/*"
+  - "docs/**/*"
+  - "examples/**/*"
+  - "site/**/*"
+  - "scripts/**/*"

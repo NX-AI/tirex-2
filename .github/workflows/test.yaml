@@ -52,8 +52,17 @@ jobs:
       - name: Select Python version for the test environment
         run: pixi add --feature test "python=${{ matrix.python-version }}.*" --no-install
 
-      - name: Run tests on CPU
-        run: pixi run test
+      - name: Run tests on CPU with coverage
+        run: pixi run test-coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@1e82608611fe064fc6747ecd49ef2c396c3f3f6b # v5.5.2
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.xml
+          flags: core
+          name: core-${{ matrix.os }}-py${{ matrix.python-version }}
+          fail_ci_if_error: false
 
   core-tests-frozen:
     name: core-tests frozen (ubuntu-latest)
