@@ -50,7 +50,7 @@ jobs:
         run: pytest tests --cov=app --cov-report=xml --cov-report=term -s
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@1e82608611fe064fc6747ecd49ef2c396c3f3f6b # v5.5.2
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./inference/coverage.xml
