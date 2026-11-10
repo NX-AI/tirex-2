@@ -45,6 +45,15 @@ jobs:
         working-directory: ./inference
         run: python -m compileall app tests
 
-      - name: Run inference tests
+      - name: Run inference tests with coverage
         working-directory: ./inference
-        run: pytest tests -s
+        run: pytest tests --cov --cov-config=.coveragerc --cov-report=xml --cov-report=term -s
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./inference/coverage.xml
+          flags: inference
+          name: inference-ubuntu-py3.12
+          fail_ci_if_error: false

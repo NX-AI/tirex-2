@@ -89,6 +89,7 @@ pytest = ">=7.2.0"
 pandas = ">=2.2.2"
 polars = ">=1.1.0"
 pyarrow = ">=21.0.0"
+pytest-cov = ">=7.1.0"
 
 [tool.pixi.feature.examples.pypi-dependencies]
 matplotlib = ">=3.10.0"
@@ -115,6 +116,7 @@ ruff = ">=0.11"
 
 [tool.pixi.tasks]
 test = { cmd = "pytest", default-environment = "test" }
+test-coverage = { cmd = "pytest --cov=tirex2 --cov-report=xml --cov-report=term", default-environment = "test" }
 notebook = { cmd = "jupyter lab examples/getting_started.ipynb", default-environment = "examples" }
 # benchmarking tasks:
 # requires the path to the gifteval storage and a model type; examples/gifteval is added to PYTHONPATH for its local helper modules
@@ -140,6 +142,7 @@ PYTHONPATH = "$PIXI_PROJECT_ROOT/examples/gifteval:$PYTHONPATH"
 
 [tool.pixi.target."*-cuda*".tasks]
 test = { cmd = "pytest --require-cuda", default-environment = "test" }
+test-coverage = { cmd = "pytest --require-cuda --cov=tirex2 --cov-report=xml --cov-report=term", default-environment = "test" }
 
 # ruff
 [tool.ruff]
@@ -189,3 +192,7 @@ where = ["src"]
 testpaths = [
     "test",
 ]
+
+# coverage
+[tool.coverage.run]
+source = ["src/tirex2"]

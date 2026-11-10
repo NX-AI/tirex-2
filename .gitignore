@@ -19,4 +19,12 @@ dist/
 .idea/
 /venv
 
+# Coverage & test caches
+.coverage
+.coverage.*
+coverage.xml
+coverage.json
+htmlcov/
+.pytest_cache/
+
 .DS_Store
