@@ -91,12 +91,12 @@ def test_load_model_does_not_warn_for_safetensors(tmp_path, aliased_model, small
         load_model(str(tmp_path), device="cpu")
 
 
-def test_load_model_rejects_legacy_checkpoints_with_the_last_release_that_loads_them(
+def test_load_model_rejects_legacy_checkpoints_with_a_supported_version_range(
     tmp_path, aliased_model, small_model_kwargs
 ):
     _write_legacy_checkpoint(tmp_path, aliased_model, small_model_kwargs("cpu", RECIPE))
 
-    with pytest.raises(FileNotFoundError, match=r"tirex-2<=0\.4\.0") as error:
+    with pytest.raises(FileNotFoundError, match=r"tirex-2<0\.5\.0") as error:
         load_model(str(tmp_path), device="cpu")
     assert _LEGACY_CONVERTER_URL in str(error.value)
 
