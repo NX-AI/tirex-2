@@ -10,6 +10,7 @@ All notable changes to TiRex-2 are documented here.
 
 ### Security and CI
 
+- Expanded checkpoint-loader tests for local and Hugging Face paths, download options, and unavailable devices, contributed by [Zhihao Dai](https://github.com/daidahao).
 - Added test coverage collection with `pytest-cov` and Codecov reports for core and inference tests, with PR comments and no Codecov status checks, in [#129](https://github.com/NX-AI/tirex-2/pull/129), contributed by [Maria Zuliani](https://github.com/uruthia) and [Zhihao Dai](https://github.com/daidahao).
 
 ## [0.5.0] - 2026-11-03
