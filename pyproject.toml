@@ -1,6 +1,6 @@
 [project]
 name = "tirex-2"
-version = "0.4.0"
+version = "0.5.0"
 description = "TiRex-2 time series forecasting inference"
 authors = [
 	{ name = "NXAI" }
@@ -89,6 +89,7 @@ pytest = ">=7.2.0"
 pandas = ">=2.2.2"
 polars = ">=1.1.0"
 pyarrow = ">=21.0.0"
+pytest-cov = ">=7.1.0"
 
 [tool.pixi.feature.examples.pypi-dependencies]
 matplotlib = ">=3.10.0"
@@ -109,14 +110,13 @@ toolz = ">=0.12.1"
 python = ">=3.11,<3.14"
 
 [tool.pixi.feature.docs.pypi-dependencies]
-mkdocs = ">=1.6,<2"
-mkdocs-material = ">=9.5"
+zensical = ">=0.0.70,<0.1"
 mkdocstrings = { version = ">=0.26", extras = ["python"] }
-mkdocs-material-extensions = ">=1.3"
 ruff = ">=0.11"
 
 [tool.pixi.tasks]
 test = { cmd = "pytest", default-environment = "test" }
+test-coverage = { cmd = "pytest --cov=tirex2 --cov-report=xml --cov-report=term", default-environment = "test" }
 notebook = { cmd = "jupyter lab examples/getting_started.ipynb", default-environment = "examples" }
 # benchmarking tasks:
 # requires the path to the gifteval storage and a model type; examples/gifteval is added to PYTHONPATH for its local helper modules
@@ -127,9 +127,10 @@ fevbench = { cmd = "python examples/fevbench/run_fevbench.py", default-environme
 fevbench-download = { cmd = "hf download autogluon/fev_datasets --repo-type=dataset --local-dir ", default-environment = "benchmark" }
 # docs tasks:
 # preview the docs site locally
-docs = { cmd = "mkdocs serve", default-environment = "docs" }
+docs = { cmd = "zensical serve", default-environment = "docs" }
 # build the docs site for deployment
-docs-build = { cmd = "mkdocs build --strict", default-environment = "docs" }
+docs-build = { cmd = "zensical build --strict", default-environment = "docs" }
+docs-build-clean = { cmd = "zensical build --clean --strict", default-environment = "docs" }
 # build tasks:
 build = { cmd = "python -m build", default-environment = "pypi-build" }
 
@@ -141,6 +142,7 @@ PYTHONPATH = "$PIXI_PROJECT_ROOT/examples/gifteval:$PYTHONPATH"
 
 [tool.pixi.target."*-cuda*".tasks]
 test = { cmd = "pytest --require-cuda", default-environment = "test" }
+test-coverage = { cmd = "pytest --require-cuda --cov=tirex2 --cov-report=xml --cov-report=term", default-environment = "test" }
 
 # ruff
 [tool.ruff]
@@ -190,3 +192,7 @@ where = ["src"]
 testpaths = [
     "test",
 ]
+
+# coverage
+[tool.coverage.run]
+source = ["src/tirex2"]

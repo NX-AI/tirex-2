@@ -1,0 +1,39 @@
+# Codecov configuration
+# Documentation: https://docs.codecov.com/docs/codecovyml-reference
+
+codecov:
+  require_ci_to_pass: true
+
+coverage:
+  precision: 2
+  round: down
+  range: "70...100"
+
+  # Report only: Codecov never adds a status check to the PR.
+  status:
+    project: off
+    patch: off
+
+flags:
+  core:
+    paths:
+      - src/
+    carryforward: true
+  inference:
+    paths:
+      - inference/
+    carryforward: true
+
+comment:
+  layout: "reach, diff, flags, files"
+  behavior: default
+  require_changes: false
+  hide_project_coverage: false
+
+ignore:
+  - "test/**/*"
+  - "tests/**/*"
+  - "docs/**/*"
+  - "examples/**/*"
+  - "site/**/*"
+  - "scripts/**/*"

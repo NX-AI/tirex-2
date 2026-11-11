@@ -1,0 +1,6 @@
+[run]
+source = app
+patch = subprocess
+concurrency = multiprocessing, thread
+parallel = true
+sigterm = true

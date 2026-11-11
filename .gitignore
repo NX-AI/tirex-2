@@ -9,13 +9,23 @@ output/
 *.egg-info
 /model/
 *.csv
+!docs/data/*.csv
 build/
 dist/
 /site/
+/.cache/
 
 .ipynb_checkpoints/
 .idea/
 /venv
 .venv
+
+# Coverage & test caches
+.coverage
+.coverage.*
+coverage.xml
+coverage.json
+htmlcov/
+.pytest_cache/
 
 .DS_Store
