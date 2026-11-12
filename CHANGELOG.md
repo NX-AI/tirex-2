@@ -8,6 +8,8 @@ All notable changes to TiRex-2 are documented here.
 
 ### Documentation and development
 
+- Documented the model file formats on Hugging Face (`safetensors` default, ONNX, legacy `ckpt`), added the Python requirement and a documentation link to the README, and fixed TiRex/TiRex-2 naming in the README.
+
 ### Security and CI
 
 - Added test coverage collection with `pytest-cov` and Codecov reports for core and inference tests, with PR comments and no Codecov status checks, in [#129](https://github.com/NX-AI/tirex-2/pull/129), contributed by [Maria Zuliani](https://github.com/uruthia) and [Zhihao Dai](https://github.com/daidahao).

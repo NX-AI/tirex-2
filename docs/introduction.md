@@ -1,7 +1,7 @@
 # Introduction
 
 TiRex-2 is introduced in the paper
-[TiRex-2: Generalizing TiRex to Multivariate Data and Streaming](https://arxiv.org/pdf/2607.01204)
+[TiRex-2: Generalizing TiRex to Multivariate Data and Streaming](https://arxiv.org/abs/2607.01204)
 (arXiv:2607.01204).
 
 ## From TiRex to TiRex-2

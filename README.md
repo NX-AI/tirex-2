@@ -21,7 +21,7 @@
 > [!NOTE]
 > 🎉 **News (Sep 2026):** TiRex-2 has been accepted as an **Oral** presentation (0.36%) at **NeurIPS 2026**!
 
-This repository provides the pre-trained multivariate forecasting model TiRex-2 introduced in the paper [TiRex-2: Generalizing TiRex to Multivariate Data and Streaming](https://arxiv.org/pdf/2607.01204).
+This repository provides the pre-trained multivariate forecasting model TiRex-2 introduced in the paper [TiRex-2: Generalizing TiRex to Multivariate Data and Streaming](https://arxiv.org/abs/2607.01204).
 
 > **TiRex-2 PRO:** This repository is our open-source release. TiRex-2 PRO extends it with dedicated support, streaming, hardware-optimized inference (edge, embedded, and industrial PCs, among others), fine-tuning, and classification & regression support — see [TiRex-2 PRO](#tirex-2-pro) below or contact us at [contact@nx-ai.com](mailto:contact@nx-ai.com).
 
@@ -51,11 +51,25 @@ multivariate forecasting with past and future covariates.
 
 ## Installation
 
-Install [PyTorch](https://pytorch.org/get-started/locally/) for your CPU or GPU, then TiRex-2:
+Requires Python 3.11 or newer. Install [PyTorch](https://pytorch.org/get-started/locally/) for your CPU or GPU, then TiRex-2:
 
 ```bash
 pip install tirex-2
 ```
+
+## Documentation
+
+The full documentation, with how-to guides, deployment and the API reference, is available at <https://nx-ai.github.io/tirex-2/>.
+
+## Model files
+
+The pretrained weights are hosted on [Hugging Face](https://huggingface.co/NX-AI/TiRex-2) in several formats:
+
+| File | Format | Notes |
+| --- | --- | --- |
+| [`model.safetensors`](https://huggingface.co/NX-AI/TiRex-2/blob/main/model.safetensors) + [`config.json`](https://huggingface.co/NX-AI/TiRex-2/blob/main/config.json) | [safetensors](https://github.com/huggingface/safetensors) | **Default.** Loaded by `load_model("NX-AI/TiRex-2")` and bundled in the Docker images. Avoids unpickling and loads faster. |
+| [`model.onnx`](https://huggingface.co/NX-AI/TiRex-2/blob/main/model.onnx) | ONNX | Run with only `numpy` and `onnxruntime`, no PyTorch needed. See the [ONNX guide](https://nx-ai.github.io/tirex-2/how-to/onnx/). |
+| `model.ckpt` + `model-config.yaml` | PyTorch checkpoint | Legacy format, kept on Hugging Face for older releases. Not supported by `tirex-2` 0.5.0 and later; use `tirex-2<0.5.0` to load it. |
 
 ## FAQ
 
@@ -83,7 +97,7 @@ Start a new session and ask to forecast with TiRex-2.
 
 ## Getting started
 
-The most easy way for you to get started is by checking out our ["Getting Started" notebook](examples/getting_started.ipynb). Moreover, you can jump straight into testing out TiRex using [Google Colab](https://colab.research.google.com/github/NX-AI/tirex-2/blob/main/examples/getting_started.ipynb). If you have cloned this repository, you can also easily start the notebook via [Pixi](https://pixi.prefix.dev/latest/#installation) by running:
+The most easy way for you to get started is by checking out our ["Getting Started" notebook](examples/getting_started.ipynb). Moreover, you can jump straight into testing out TiRex-2 using [Google Colab](https://colab.research.google.com/github/NX-AI/tirex-2/blob/main/examples/getting_started.ipynb). If you have cloned this repository, you can also easily start the notebook via [Pixi](https://pixi.prefix.dev/latest/#installation) by running:
 ```bash
 pixi run notebook
 ```
@@ -143,7 +157,7 @@ fig.show()
 To reproduce our results for the [GIFT-Eval](https://huggingface.co/spaces/Salesforce/GIFT-Eval) and [fev-bench](https://huggingface.co/spaces/autogluon/fev-bench) leaderboards, follow the instructions in
 [/examples/gifteval/](./examples/gifteval/README.md) and [/examples/fevbench/](./examples/fevbench/README.md), respectively.
 
-## TiRex Docker image
+## TiRex-2 Docker image
 
 For detailed instructions on building and running TiRex-2 in a Docker container, see the [Docker README](./inference/README.md).
 
@@ -162,7 +176,7 @@ See the full feature comparison in the [docs](https://nx-ai.github.io/tirex-2/pr
 
 ## Cite
 
-If you use TiRex in your research, please cite our work:
+If you use TiRex-2 in your research, please cite our work:
 
 ```bibtex
 @inproceedings{podest2026tirex2,
