@@ -18,6 +18,7 @@ dist/
 .ipynb_checkpoints/
 .idea/
 /venv
+.venv
 
 # Coverage & test caches
 .coverage
