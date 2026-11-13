@@ -45,8 +45,10 @@ To start a container from either image, run:
 
     Both images load the bundled model and compile the **univariate** forecast path with
     `torch.compile` at startup
-    (C++ on CPU, Triton on GPU) to enable fast inference. This can take up to 20 seconds. Changing
-    context length or prediction horizon does not trigger recompilation.
+    (C++ on CPU, Triton on GPU) to enable fast inference. Each worker also runs warmup forecasts for
+    batch sizes up to `MAX_WORKER_BATCH_SIZE`. Startup takes about 20–40 seconds, depending on the
+    hardware and the number of workers, and `GET /health` responds once all workers are ready.
+    Changing context length or prediction horizon does not trigger recompilation.
 
     However, the first **multivariate** request requires a separate, one-time compilation.
 
@@ -105,9 +107,29 @@ To start a container from either image, run:
 - **Swagger docs:** [http://localhost:8000/docs](http://localhost:8000/docs).
 - **Liveness probe:** [`GET /health`](http://localhost:8000/health), also used by Docker's `HEALTHCHECK`.
 
-Send a list of series with each request, even if you only need one forecast. The server processes
-requests in batches of up to 512 series and reduces the batch size if device memory runs out.
-A single batch can still exceed available memory, so size your requests for your hardware.
+Send a list of series with each request, even if you only need one forecast. Larger batches use the
+hardware more efficiently. A request can contain at most `MAX_REQUEST_BATCH_SIZE` series (2048 by
+default).
+
+### Request queuing and batching
+
+The server batches requests across clients. While the model is busy, new requests wait in a queue.
+As soon as a worker is free, it takes queued requests and forecasts them together, in batches of up
+to `MAX_WORKER_BATCH_SIZE` series (64 by default). A single batch can still exceed available memory,
+so size your requests and `MAX_WORKER_BATCH_SIZE` for your hardware.
+
+Requests that cannot be served are rejected with a JSON body containing `error_code` and
+`error_message`:
+
+| Status | Cause                                                                                                                                                       |
+| :----- | :---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `503`  | The server is overloaded. A request waited longer than `MAX_QUEUE_WAIT_S` (8 seconds by default) in the queue. Retry later.                                 |
+| `422`  | The request is invalid, for example more than `MAX_REQUEST_BATCH_SIZE` series, a `prediction_length` below 1, or `future_covariates` that are too short.     |
+
+???+ tip "Handling overload"
+
+    A `503` response is a signal to back off. Have clients retry with a delay, or add workers as
+    described in [Choosing the number of workers](#choosing-the-number-of-workers).
 
 ???+ warning "Caution: no authentication"
 
@@ -179,8 +201,8 @@ curl -s -X POST "http://localhost:8000/multivariate/forecast/mean" \
 
     `past_covariates` must have the same length as `target` (the context length).
     `future_covariates` must span at least the context plus the prediction horizon
-    (`context_length + prediction_length`). Any extra trailing steps beyond that are ignored. A wrong length is
-    rejected with a `500` error.
+    (`context_length + prediction_length`). Any extra trailing steps beyond that are ignored.
+    `future_covariates` that are too short are rejected with a `422` error.
 
 Batching multiple multivariate series works the same way, as a list under `context`. See
 [inference/README.md](https://github.com/NX-AI/tirex-2/blob/main/inference/README.md) for the
@@ -311,6 +333,10 @@ Available options are:
 | :--------------------------------- | :-------------------------------------------------------- | :------------------------------------------------------------------------------- |
 | `MODEL_PATH`                       | `/opt/models/tirex2` in Docker; `NX-AI/TiRex-2` otherwise | Local checkpoint directory or Hugging Face model ID.                             |
 | `MODEL_DEVICE`                     | `cpu` (CPU image), `cuda` (GPU image)                     | Device to run the model on (`cpu` or `cuda`).                                    |
+| `MODEL_WORKERS`                    | `1`                                                       | Number of worker processes, each with its own model instance. See [Choosing the number of workers](#choosing-the-number-of-workers). |
+| `MAX_QUEUE_WAIT_S`                 | `8`                                                       | Maximum seconds a request may wait in the queue. Beyond that, requests are rejected with HTTP 503. |
+| `MAX_WORKER_BATCH_SIZE`            | `64`                                                      | Maximum number of series a worker forecasts in one batch.                        |
+| `MAX_REQUEST_BATCH_SIZE`           | `2048`                                                    | Maximum number of series in one request. Larger requests are rejected with HTTP 422. |
 | `HTTP_HOST`                        | `0.0.0.0`                                                 | Host the HTTP server binds to.                                                   |
 | `HTTP_PORT`                        | `8000`                                                    | Port the HTTP server binds to.                                                   |
 | `MQTT_ENABLED`                     | `0`                                                       | Enable MQTT client functionality (`1` = true, `0` = false).                      |
@@ -322,6 +348,38 @@ Available options are:
 | `MQTT_SESSION_EXPIRY`              | `3600`                                                    | Seconds the broker retains the session (and queued requests) while disconnected. |
 | `MQTT_TOPIC_UNIVARIATE_FORECAST`   | `tirex/univariate/forecast/request`                       | Topic to subscribe to for univariate forecast requests.                          |
 | `MQTT_TOPIC_MULTIVARIATE_FORECAST` | `tirex/multivariate/forecast/request`                     | Topic to subscribe to for multivariate forecast requests.                        |
+
+### Choosing the number of workers
+
+Each worker is a separate process with its own copy of the model, and workers process batches in
+parallel. Set the number with `MODEL_WORKERS`.
+
+- **CPU:** the available cores are split between the workers, and CPU limits such as
+  `docker run --cpus` are respected. Use 1 worker for the lowest latency of single requests, and
+  about 8–16 cores per worker for the highest throughput with many concurrent requests.
+- **GPU:** the workers are spread over the available GPUs. Use one worker per GPU.
+
+For example, to run two workers on a machine with two GPUs:
+
+```bash
+docker run --gpus 2 -p 8000:8000 -e MODEL_WORKERS=2 ghcr.io/nx-ai/tirex2-gpu
+```
+
+Every worker loads the model and warms up at startup, so startup takes longer with more workers.
+
+???+ tip "Tune with the load test"
+
+    The best setting depends on your hardware and traffic. The
+    [`loadtest.py`](https://github.com/NX-AI/tirex-2/blob/main/inference/scripts/loadtest.py)
+    script starts a container and runs increasing numbers of concurrent clients against it. It reports
+    throughput, latency percentiles and errors:
+
+    ```bash
+    python scripts/loadtest.py --image ghcr.io/nx-ai/tirex2-cpu --concurrency 1 2 4 8 --duration 30
+    ```
+
+    Run it from the `inference/` directory. Use `--url http://localhost:8000` to target a server that
+    is already running, and see `python scripts/loadtest.py --help` for the remaining options.
 
 ## Building the images yourself
 
