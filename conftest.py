@@ -48,6 +48,38 @@ def pytest_sessionstart(session):
         raise pytest.UsageError("CUDA is required for this test run, but it is unavailable.")
 
 
+@pytest.fixture
+def interpreter_bfloat16(monkeypatch):
+    """Make bfloat16 in Triton's CPU interpreter compute as on a GPU. Use only under the interpreter.
+
+    The interpreter stores bfloat16 as uint16 bit patterns, and ``tl.dot`` multiplies those raw bits; the operands
+    are widened to the float32 values they encode, as a GPU's bfloat16 dot with float32 accumulation computes.
+    It also truncates float32 to bfloat16, where a GPU rounds to nearest even.
+    """
+    import numpy as np
+    import triton.language as tl
+    from triton.runtime.interpreter import InterpreterBuilder, TensorHandle
+
+    create_dot, create_fp_trunc = InterpreterBuilder.create_dot, InterpreterBuilder.create_fp_trunc
+
+    def to_float32(x):
+        if x.dtype != tl.bfloat16:
+            return x
+        return TensorHandle((x.data.astype(np.uint32) << 16).view(np.float32), tl.float32)
+
+    def bfloat16_dot(self, a, b, *args, **kwargs):
+        return create_dot(self, to_float32(a), to_float32(b), *args, **kwargs)
+
+    def rounding_fp_trunc(self, src, dst_type):
+        if src.dtype.scalar != tl.float32 or dst_type.scalar != tl.bfloat16:
+            return create_fp_trunc(self, src, dst_type)
+        bits = src.data.astype(np.float32).view(np.uint32)
+        return TensorHandle(((bits + 0x7FFF + ((bits >> 16) & 1)) >> 16).astype(np.uint16), tl.bfloat16)
+
+    monkeypatch.setattr(InterpreterBuilder, "create_dot", bfloat16_dot)
+    monkeypatch.setattr(InterpreterBuilder, "create_fp_trunc", rounding_fp_trunc)
+
+
 def _build_block(model_type: str, act_fn: nn.Module, device: str) -> MultivariateBlockConfig:
     return MultivariateBlockConfig(
         time_mixer=TimeMixerConfig(

@@ -19,8 +19,9 @@ requires_triton = pytest.mark.skipif(TRITON_DEVICE is None, reason="needs a GPU 
 
 
 @pytest.fixture(autouse=True)
-def _triton_interpreter(monkeypatch):
-    """Fill in what the CPU interpreter lacks: the GPU's SM count (read by the launch heuristic) and libdevice."""
+def _triton_interpreter(monkeypatch, interpreter_bfloat16):
+    """Work around what the CPU interpreter lacks: the GPU's SM count (read by the launch heuristic), libdevice and
+    bfloat16 that computes as on a GPU."""
     if TRITON_DEVICE != "cpu":
         return
     import triton.language as tl
@@ -165,8 +166,6 @@ def test_mlstm_native_gradients_match_recurrent(with_state):
 @pytest.mark.parametrize("dtype", [torch.float32, torch.float16, torch.bfloat16])
 @pytest.mark.parametrize("length,qk_dim,value_dim", [(7, 17, 33), (64, 32, 64), (65, 80, 96), (129, 128, 128)])
 def test_mlstm_triton_matches_native(dtype, length, qk_dim, value_dim):
-    if TRITON_DEVICE == "cpu" and dtype == torch.bfloat16:
-        pytest.skip("Triton's CPU interpreter computes bfloat16 wrongly")
     from tirex2.model.component.kernel.mlstm_native import mlstm_parallel_native
     from tirex2.model.component.kernel.mlstm_triton import mlstm_parallel_triton
 
