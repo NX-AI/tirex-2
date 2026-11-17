@@ -21,7 +21,7 @@ no task-specific training or fine-tuning.
 
 TiRex-2 generalizes the original univariate model, [TiRex](https://github.com/NX-AI/tirex), to
 multivariate forecasting with past and future covariates. See the [Introduction](introduction.md)
-for background and the [paper](https://arxiv.org/pdf/2607.01204) for details.
+for background and the [paper](https://arxiv.org/abs/2607.01204) for details.
 
 !!! info "Looking for TiRex-1?"
     This site documents **TiRex-2**. Documentation for the original univariate TiRex model
@@ -40,11 +40,21 @@ for background and the [paper](https://arxiv.org/pdf/2607.01204) for details.
 
 ## Installation
 
-Install [PyTorch](https://pytorch.org/get-started/locally/) for your CPU or GPU, then TiRex-2:
+Requires Python 3.11 or newer. Install [PyTorch](https://pytorch.org/get-started/locally/) for your CPU or GPU, then TiRex-2:
 
 ```bash
 pip install tirex-2
 ```
+
+## Model files
+
+The pretrained weights are hosted on [Hugging Face](https://huggingface.co/NX-AI/TiRex-2) in several formats:
+
+| File | Format | Notes |
+| --- | --- | --- |
+| [`model.safetensors`](https://huggingface.co/NX-AI/TiRex-2/blob/main/model.safetensors) + [`config.json`](https://huggingface.co/NX-AI/TiRex-2/blob/main/config.json) | [safetensors](https://github.com/huggingface/safetensors) | **Default.** Loaded by `load_model("NX-AI/TiRex-2")` and bundled in the Docker images. Avoids unpickling and loads faster. |
+| [`model.onnx`](https://huggingface.co/NX-AI/TiRex-2/blob/main/model.onnx) | ONNX | Run with only `numpy` and `onnxruntime`, no PyTorch needed. See the [ONNX guide](how-to/onnx.md). |
+| `model.ckpt` + `model-config.yaml` | PyTorch checkpoint | Legacy format, kept on Hugging Face for older releases. Not supported by `tirex-2` 0.5.0 and later; use `tirex-2<0.5.0` to load it. |
 
 ## Where to go next
 
