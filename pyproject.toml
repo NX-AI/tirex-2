@@ -91,6 +91,10 @@ polars = ">=1.1.0"
 pyarrow = ">=21.0.0"
 pytest-cov = ">=7.1.0"
 
+[tool.pixi.feature.test.target.linux-64-cpu.pypi-dependencies]
+# CPU-only torch has no triton; the tests run the Triton kernels in Triton's CPU interpreter instead.
+triton = "*"
+
 [tool.pixi.feature.examples.pypi-dependencies]
 matplotlib = ">=3.10.0"
 plotly = ">=5.12.0"

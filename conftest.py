@@ -1,3 +1,4 @@
+import os
 import sys
 from pathlib import Path
 
@@ -7,6 +8,11 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 import pytest
 import torch
 from torch import nn
+
+# Without a GPU, Triton kernels run in Triton's CPU interpreter so CPU-only CI still tests them.
+# This must be set before triton is first imported (importing tirex2 below does).
+if not torch.cuda.is_available():
+    os.environ.setdefault("TRITON_INTERPRET", "1")
 
 from tirex2.model.component.variate_mixing_block import (
     MultivariateBlockConfig,
