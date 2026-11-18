@@ -2,7 +2,8 @@
 
 import pytest
 import torch
-import torch.nn.functional as F
+
+from tirex2.model.component.kernel.mlstm_native import mlstm_recurrent_native
 
 requires_cuda = pytest.mark.skipif(not torch.cuda.is_available(), reason="Triton kernels require a GPU")
 
@@ -16,26 +17,9 @@ def _inputs(length, qk_dim, value_dim, dtype, device, seed=0):
     return q, k, v, i, f
 
 
-def _recurrent(q, k, v, i, f, initial_state=None, eps=1e-6):
-    """Step-by-step stabilized mLSTM in float64, the reference for H and the last state (C, n, m)."""
-    q, k, v, i, f = (x.double() for x in (q, k, v, i, f))
-    B, NH, S, DHQK = q.shape
-    if initial_state is None:
-        C, n, m = q.new_zeros(B, NH, DHQK, v.shape[-1]), q.new_zeros(B, NH, DHQK), q.new_zeros(B, NH)
-    else:
-        C, n, m = (x.double() for x in initial_state)
-    log_f = F.logsigmoid(f)
-    hs = []
-    for t in range(S):
-        m_next = torch.maximum(log_f[..., t] + m, i[..., t])
-        decay, gain = torch.exp(log_f[..., t] + m - m_next), torch.exp(i[..., t] - m_next)
-        C = decay[..., None, None] * C + gain[..., None, None] * k[..., t, :, None] * v[..., t, None, :]
-        n = decay[..., None] * n + gain[..., None] * k[..., t, :]
-        m = m_next
-        q_t = q[..., t, :] * DHQK**-0.5
-        denom = torch.maximum((q_t * n).sum(-1).abs(), torch.exp(-m))
-        hs.append((q_t[..., None, :] @ C).squeeze(-2) / (denom[..., None] + eps))
-    return torch.stack(hs, dim=-2), (C, n, m)
+def _recurrent(*inputs, initial_state=None):
+    """The step-by-step recurrence in float64, the reference for H and the last state (C, n, m)."""
+    return mlstm_recurrent_native(*(x.double() for x in inputs), initial_state=initial_state)
 
 
 def _unstabilized(state):
@@ -63,7 +47,8 @@ def _initial_state(kind, qk_dim, value_dim, device):
     if kind == "zero":
         return (torch.zeros(2, 2, qk_dim, value_dim, device=device), torch.zeros(2, 2, qk_dim, device=device),
                 torch.zeros(2, 2, device=device))  # fmt: skip
-    return _recurrent(*_inputs(50, qk_dim, value_dim, torch.float64, device, seed=1))[1]
+    zero_state = _initial_state("zero", qk_dim, value_dim, device)
+    return _recurrent(*_inputs(50, qk_dim, value_dim, torch.float64, device, seed=1), initial_state=zero_state)[1]
 
 
 KERNELS = ["native", pytest.param("triton", marks=requires_cuda)]
