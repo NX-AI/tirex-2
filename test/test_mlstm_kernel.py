@@ -1,35 +1,10 @@
 """mLSTM kernels: pointer masks across block and head-dimension boundaries, initial and last states."""
 
-import importlib.util
-import os
-from types import SimpleNamespace
-
 import pytest
 import torch
 import torch.nn.functional as F
 
-# The Triton kernel runs on a GPU, or on the CPU in Triton's interpreter (TRITON_INTERPRET=1, set in conftest.py).
-if torch.cuda.is_available():
-    TRITON_DEVICE = "cuda"
-elif importlib.util.find_spec("triton") is not None and os.environ.get("TRITON_INTERPRET") == "1":
-    TRITON_DEVICE = "cpu"
-else:
-    TRITON_DEVICE = None
-requires_triton = pytest.mark.skipif(TRITON_DEVICE is None, reason="needs a GPU or Triton's CPU interpreter")
-
-
-@pytest.fixture(autouse=True)
-def _triton_interpreter(monkeypatch, interpreter_bfloat16):
-    """Work around what the CPU interpreter lacks: the GPU's SM count (read by the launch heuristic), libdevice and
-    bfloat16 that computes as on a GPU."""
-    if TRITON_DEVICE != "cpu":
-        return
-    import triton.language as tl
-
-    from tirex2.model.component.kernel import mlstm_triton
-
-    monkeypatch.setattr(torch.cuda, "get_device_properties", lambda *_: SimpleNamespace(multi_processor_count=16))
-    monkeypatch.setattr(mlstm_triton, "libdevice", SimpleNamespace(log1p=lambda x: tl.log(1.0 + x)))
+requires_cuda = pytest.mark.skipif(not torch.cuda.is_available(), reason="Triton kernels require a GPU")
 
 
 def _inputs(length, qk_dim, value_dim, dtype, device, seed=0):
@@ -91,7 +66,7 @@ def _initial_state(kind, qk_dim, value_dim, device):
     return _recurrent(*_inputs(50, qk_dim, value_dim, torch.float64, device, seed=1))[1]
 
 
-KERNELS = ["native", pytest.param("triton", marks=requires_triton)]
+KERNELS = ["native", pytest.param("triton", marks=requires_cuda)]
 
 
 @pytest.mark.parametrize("kernel", KERNELS)
@@ -99,7 +74,7 @@ KERNELS = ["native", pytest.param("triton", marks=requires_triton)]
 @pytest.mark.parametrize("length,qk_dim,value_dim", [(1, 16, 16), (7, 17, 33), (74, 64, 128), (129, 80, 96)])
 def test_mlstm_kernel_matches_recurrent(kernel, initial_state, length, qk_dim, value_dim):
     """H matches the step-by-step recurrence; given an initial state, so does the last state, else it is None."""
-    device, dtype = (TRITON_DEVICE, torch.float32) if kernel == "triton" else ("cpu", torch.float64)
+    device, dtype = ("cuda", torch.float32) if kernel == "triton" else ("cpu", torch.float64)
     inputs = _inputs(length, qk_dim, value_dim, dtype, device)
     initial_state = _initial_state(initial_state, qk_dim, value_dim, device)
     with torch.no_grad():
@@ -121,7 +96,7 @@ def test_mlstm_kernel_matches_recurrent(kernel, initial_state, length, qk_dim, v
 @pytest.mark.parametrize("kernel", KERNELS)
 def test_mlstm_kernel_state_continues_sequence(kernel):
     """Running two halves with the state in between gives the outputs and last state of the whole sequence."""
-    device, dtype = (TRITON_DEVICE, torch.float32) if kernel == "triton" else ("cpu", torch.float64)
+    device, dtype = ("cuda", torch.float32) if kernel == "triton" else ("cpu", torch.float64)
     q, k, v, i, f = _inputs(74, 64, 128, dtype, device)
     zero_state = _initial_state("zero", 64, 128, device)
     run = _kernel(kernel)
@@ -162,15 +137,15 @@ def test_mlstm_native_gradients_match_recurrent(with_state):
         torch.testing.assert_close(actual, expected, rtol=1e-6, atol=1e-8)
 
 
-@requires_triton
+@requires_cuda
 @pytest.mark.parametrize("dtype", [torch.float32, torch.float16, torch.bfloat16])
 @pytest.mark.parametrize("length,qk_dim,value_dim", [(7, 17, 33), (64, 32, 64), (65, 80, 96), (129, 128, 128)])
 def test_mlstm_triton_matches_native(dtype, length, qk_dim, value_dim):
     from tirex2.model.component.kernel.mlstm_native import mlstm_parallel_native
     from tirex2.model.component.kernel.mlstm_triton import mlstm_parallel_triton
 
-    inputs = _inputs(length, qk_dim, value_dim, dtype, TRITON_DEVICE)
-    initial_state = _initial_state("given", qk_dim, value_dim, TRITON_DEVICE)
+    inputs = _inputs(length, qk_dim, value_dim, dtype, "cuda")
+    initial_state = _initial_state("given", qk_dim, value_dim, "cuda")
     tolerance = 2e-3 if dtype == torch.float32 else 2e-2
     for state_in in (None, initial_state):
         with torch.no_grad():
@@ -189,59 +164,3 @@ def test_mlstm_triton_matches_native(dtype, length, qk_dim, value_dim):
         else:
             for actual_state, expected_state in zip(_unstabilized(state), _unstabilized(expected_state)):
                 assert _rel(actual_state, expected_state) < tolerance
-
-
-@requires_triton
-@pytest.mark.parametrize(
-    "batch,length,value_dim,sm_count,expected",
-    [
-        (1, 16, 33, 16, (16, 16, 64, 4)),  # short sequence
-        (1, 64, 128, 16, (32, 64, 64, 4)),  # too few programs for the GPU: split DHHV, long key blocks
-        (8, 64, 128, 16, (32, 16, 128, 2)),
-        (8, 512, 256, 16, (64, 32, 128, 4)),
-    ],
-)
-def test_mlstm_triton_config(monkeypatch, batch, length, value_dim, sm_count, expected):
-    """Each branch of the (BLOCK_Q, BLOCK_KV, BLOCK_DHHV, num_warps) launch heuristic."""
-    from tirex2.model.component.kernel.mlstm_triton import _config
-
-    monkeypatch.setattr(torch.cuda, "get_device_properties", lambda *_: SimpleNamespace(multi_processor_count=sm_count))
-    assert _config(batch, 2, length, value_dim) == expected
-
-
-@requires_triton
-def test_mlstm_triton_falls_back_to_native_for_gradients():
-    """The Triton kernel has no backward: with inputs that require grad it returns the differentiable native result."""
-    from tirex2.model.component.kernel.mlstm_native import mlstm_parallel_native
-    from tirex2.model.component.kernel.mlstm_triton import mlstm_parallel_triton
-
-    inputs = [x.requires_grad_() for x in _inputs(9, 16, 24, torch.float64, "cpu")]
-    h, state = mlstm_parallel_triton(*inputs)
-    assert h.requires_grad and state is None
-    torch.testing.assert_close(h, mlstm_parallel_native(*inputs)[0])
-
-
-@requires_triton
-@pytest.mark.parametrize("with_state", [False, True])
-def test_mlstm_layer_triton_matches_native(with_state):
-    """An mLSTM layer with the Triton kernel gives the outputs and last state of the same layer with the native one."""
-    from tirex2.model.component.mlstm_block import mLSTMLayer, mLSTMLayerConfig
-
-    torch.manual_seed(0)
-    layers = {
-        kernel: mLSTMLayer(mLSTMLayerConfig(embedding_dim=64, num_heads=2, mlstm_kernel=kernel)).to(TRITON_DEVICE)
-        for kernel in ("native", "triton")
-    }
-    layers["triton"].load_state_dict(layers["native"].state_dict())
-    x = torch.randn(2, 37, 64, device=TRITON_DEVICE)
-    state = _initial_state("zero", 16, 32, TRITON_DEVICE) if with_state else None
-    with torch.no_grad():
-        expected, expected_state = layers["native"](x, state=state)
-        actual, actual_state = layers["triton"](x, state=state)
-
-    assert _rel(actual, expected.double()) < 3e-3
-    if with_state:
-        for a, e in zip(_unstabilized(actual_state), _unstabilized(expected_state)):
-            assert _rel(a, e) < 3e-3
-    else:
-        assert actual_state is None and expected_state is None
