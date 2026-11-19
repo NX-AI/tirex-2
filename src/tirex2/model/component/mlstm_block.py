@@ -72,9 +72,9 @@ class mLSTMLayer(nn.Module):
         self.ogate_act_fn = nn.Sigmoid()
         # Imported lazily, as triton is not available on every platform.
         if config.mlstm_kernel == "triton":
-            from .kernel.mlstm_triton import mlstm_chunkwise_triton as mlstm_kernel
+            from .kernel.mlstm_triton import mlstm_parallel_triton as mlstm_kernel
         else:
-            from .kernel.mlstm_native import mlstm_chunkwise_native as mlstm_kernel
+            from .kernel.mlstm_native import mlstm_parallel_native as mlstm_kernel
         self.mlstm_kernel = mlstm_kernel
 
         self.multihead_norm = MultiHeadLayerNorm(
@@ -108,8 +108,12 @@ class mLSTMLayer(nn.Module):
             state_dict[f"{prefix}in_proj.bias"] = torch.cat(biases)
         super()._load_from_state_dict(state_dict, prefix, *args, **kwargs)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Process a full sequence through the mlstm."""
+    def forward(self, x: torch.Tensor, state: tuple | None = None) -> tuple[torch.Tensor, tuple | None]:
+        """Process a full sequence through the mlstm.
+
+        ``state`` is the (C, n, m) state to start from; given one, the state after the last step is returned,
+        else None.
+        """
         assert x.ndim == 3, f"Input must have shape [B, S, D], got {x.shape}"
         B, S, _ = x.shape
 
@@ -122,26 +126,10 @@ class mLSTMLayer(nn.Module):
         v = v.reshape(B, S, self.config.num_heads, -1).transpose(1, 2)
         i_preact = i_preact.transpose(1, 2)
         f_preact = f_preact.transpose(1, 2)
-        h = self.mlstm_kernel(
-            q=q,
-            k=k,
-            v=v,
-            i=i_preact,
-            f=f_preact,
-        )
-        expected_h_shape = (
-            B,
-            self.config.num_heads,
-            S,
-            self.v_dim // self.config.num_heads,
-        )
-        assert h.shape == expected_h_shape, f"Got {h.shape}, expected {expected_h_shape}"
+        h, state = self.mlstm_kernel(q=q, k=k, v=v, i=i_preact, f=f_preact, initial_state=state)
 
-        h = h.transpose(1, 2)
-        h_norm = self.multihead_norm(h)
-        h_norm = h_norm.reshape(B, S, -1)
-
+        h_norm = self.multihead_norm(h.transpose(1, 2)).reshape(B, S, -1)
         h_out = self.ogate_act_fn(o_preact) * h_norm
 
         y = self.out_proj(h_out)
-        return y
+        return y, state

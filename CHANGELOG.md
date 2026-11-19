@@ -6,6 +6,8 @@ All notable changes to TiRex-2 are documented here.
 
 ### Improvements
 
+- ⭐️🚀 **Faster CPU inference**: Parallel mLSTM kernels replace chunkwise kernels and speed up CPU forecasts by 5–12%, with unchanged GPU performance and reference-test accuracy, in [#125](https://github.com/NX-AI/tirex-2/pull/125), contributed by [Martin Loretz](https://github.com/martinloretzzz).
+
 ### Documentation and development
 
 - Documented the model file formats on Hugging Face (`safetensors` default, ONNX, legacy `ckpt`), added the Python requirement and a documentation link to the README, and fixed TiRex/TiRex-2 naming in the README.
